@@ -1,0 +1,6 @@
+[submodule "include/debug-php"]
+	path = include/debug-php
+	url = git@github.com:josephtingiris/debug-php
+[submodule "include/debug-bash"]
+	path = include/debug-bash
+	url = git@github.com:josephtingiris/debug-bash
