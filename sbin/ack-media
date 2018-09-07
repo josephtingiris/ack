@@ -1,0 +1,1469 @@
+#!/bin/bash
+
+# This script will ... manipulate ack media.
+
+# 20150628, joseph.tingiris@gmail.com
+
+Debug=25
+
+# begin Ack.bash.include
+
+Ack_Bash="Ack.bash"
+Ack_Bash_Dirs=()
+Ack_Bash_Dirs+=($(dirname $(readlink -e $BASH_SOURCE)))
+for Ack_Bash_Dir in ${Ack_Bash_Dirs[@]}; do
+    while [ "$Ack_Bash_Dir" != "" ] && [ "$Ack_Bash_Dir" != "/" ]; do # search backwards
+        Ack_Bash_Source_Dirs=()
+        Ack_Bash_Source_Dirs+=("${Ack_Bash_Dir}")
+        Ack_Bash_Source_Dirs+=("${Ack_Bash_Dir}/include")
+        for Ack_Bash_Source_Dir in ${Ack_Bash_Source_Dirs[@]}; do
+            Ack_Bash_Source=${Ack_Bash_Source_Dir}/${Ack_Bash}
+            if [ -r "${Ack_Bash_Source}" ]; then
+                source "${Ack_Bash_Source}"
+                break
+            else
+                unset Ack_Bash_Source
+            fi
+        done
+        if [ "$Ack_Bash_Source" != "" ]; then break; fi
+        Ack_Bash_Dir=$(dirname "$Ack_Bash_Dir") # search backwards
+    done
+done
+if [ "$Ack_Bash_Source" == "" ]; then echo "$Ack_Bash file not found"; exit 1; fi
+unset Ack_Bash_Dir Ack_Bash
+
+# end Ack.bash.include
+
+# GLOBAL_VARIABLES
+
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+
+Default_Date=$(date +%Y%m%d)
+
+Default_Domain="${Ack_Domain}"
+
+Default_Install_Server="ack.${Ack_Domain}"
+
+Default_Media_Dir=${Ack_Dir}/media
+Default_Build_Dir=${Default_Media_Dir}/build
+Default_Distribution_Dir=${Default_Media_Dir}/distribution
+Default_Release_Dir=${Default_Media_Dir}/release
+Default_Virt_Dir=${Default_Media_Dir}/vm
+
+Media_Architectures=()
+Media_Architectures+=(i386)
+Media_Architectures+=(x86_64)
+
+Media_Distributions=()
+Media_Distributions+=(centos)
+Media_Distributions+=(fedora)
+Media_Distributions+=(rhel)
+
+Media_Platforms=()
+Media_Platforms+=(ack)
+Media_Platforms+=(bin)
+Media_Platforms+=(server)
+Media_Platforms+=(workstation)
+
+declare -i Build_Flag=0
+declare -i Domain_Flag=0
+declare -i Force_Flag=0
+declare -i Install_Server_Flag=0
+declare -i Mount_Flag=0
+declare -i Remount_Flag=0
+declare -i Unmount_Flag=0
+declare -i Uri_Flag=0
+declare -i Virt_Flag=0
+declare -i Yes_Flag=0
+
+# Function_Names
+
+function ackMediaBuild() {
+    debugFunction $@
+
+    # begin function logic
+
+    local debug_level=7
+
+    local build_arg="$1"
+    debugValue build_arg $debug_level
+
+    local build
+    local builds=()
+    if [ -d "$build_arg" ]; then
+        debugValue build_arg $debug_level dir
+        while read build; do
+            builds+=("$build")
+        done <<< "$(find "${build_arg}/" -maxdepth 1 -type f)"
+        unset build
+    else
+        debugValue build_arg $debug_level file
+        builds+=("$build_arg")
+    fi
+
+    if [ "${builds}" != "" ]; then
+
+        local genisoimage=$(which genisoimage 2> /dev/null)
+        if [ ! -x "$genisoimage" ]; then
+            aborting "genisoimage executable not found" 3
+        fi
+        debugValue genisoimage $debug_level
+
+        local implantisomd5=$(which implantisomd5 2> /dev/null)
+        if [ ! -x "$implantisomd5" ]; then
+            aborting "implantisomd5 executable not found" 3
+        fi
+        debugValue implantisomd5 $debug_level
+
+        local isohybrid=$(which isohybrid 2> /dev/null)
+        if [ ! -x "$isohybrid" ]; then
+            aborting "isohybrid executable not found" 3
+        fi
+        debugValue isohybrid $debug_level
+
+        local isoinfo=$(which isoinfo 2> /dev/null)
+        if [ ! -x "$isoinfo" ]; then
+            aborting "isoinfo executable not found" 3
+        fi
+        debugValue isoinfo $debug_level
+
+        local md5sum=$(which md5sum 2> /dev/null)
+        if [ ! -x "$md5sum" ]; then
+            aborting "md5sum executable not found" 3
+        fi
+        debugValue md5sum $debug_level
+
+    fi
+
+    local build
+    local -i build_count=0
+    for build in ${builds[@]}; do
+        ((++debug_level))
+
+        build=$(readlink -e $build 2> /dev/null)
+        if [ "$build" == "" ]; then
+            printf "\nERROR build readlink failed\n\n"
+            continue
+        fi
+
+        debugValue build $debug_level
+
+        local build_basename=$(basename $build)
+        debugValue build_basename $debug_level
+
+        local build_dirname=$(readlink -e $(dirname $build))
+
+        if [ -a "$build" ]; then
+            # if it's a real file then only seriously consider ISOs
+            build_readlink=$(readlink -e $build)
+            local build_file=$(file $build_readlink 2> /dev/null | grep ISO)
+            debugValue build_file $debug_level "found"
+            if [ "$build_file" == "" ]; then
+                continue
+            fi
+            local build_dirname=$(readlink -e $(dirname $build_readlink))
+        else
+            aborting "$build not found"
+        fi
+
+        debugValue build_dirname $debug_level
+
+        local build_media_uri=$(ackMediaUri "$build" 1)
+        if [ "$build_media_uri" == "/" ] || [ "$build_media_uri" == "" ]; then
+            printf "\nERROR build_media_uri is wrong\n\n"
+            continue
+        fi
+        debugValue build_media_uri $debug_level
+
+        local build_media_dir=$(ackMediaMount "$build" 2> /dev/null | awk '{print $3}')
+        if [ "$build_media_dir" == "/" ] || [ "$build_media_dir" == "" ] || [ ! -d "$build_media_dir" ] || [ ! -r "$build_media_dir" ]; then
+            printf "\nERROR build_media_dir '$build_media_dir' failed\n\n"
+            continue
+        fi
+        debugValue build_media_dir $debug_level
+
+        local build_install_uri="/$(basename $(echo $build_media_dir | sed -e "s!$build_media_uri!!g" 2> /dev/mull))${build_media_uri}"
+        if [ "$build_install_uri" == "/" ] || [ "$build_install_uri" == "" ]; then
+            printf "\nERROR build_install_uri is wrong\n\n"
+            continue
+        fi
+        debugValue build_install_uri $debug_level
+
+        local build_dir=${Build_Dir}${build_media_uri}
+        if [ "$build_dir" == "/" ] || [ "$build_dir" == "" ]; then
+            printf "\nERROR build_dir '$build_dir' is invalid\n\n"
+            continue
+        fi
+        if [ -a "$build_dir" ] && [ ! -d "$build_dir" ]; then
+            printf "\nERROR build_dir '$build_dir' exists but is not a directory\n\n"
+            continue
+        fi
+        if [ ! -d "$build_dir" ]; then
+            mkdir -p "$build_dir" &> /dev/null
+            if [ $? -ne 0 ]; then
+                printf "\nERROR mkdir -p '$build_dir' failed\n\n"
+                continue
+            fi
+        fi
+        debugValue build_dir $debug_level
+
+        local build_uefi=0
+        local build_require
+        local build_requires=()
+        build_requires+=("EFI")
+
+        for build_require in ${build_requires[@]}; do
+            if [ -d ${build_media_dir}/${build_require} ]; then
+                debugValue build_require $debug_level "found"
+            else
+                debugValue build_require $debug_level "not found"
+                local build_uefi=1
+            fi
+            if [ $build_uefi -eq 0 ]; then
+                rsync -a ${build_media_dir}/${build_require}/ ${build_dir}/${build_require}/ &> /dev/null
+                if [ $? -ne 0 ]; then
+                    aborting "'rsync -a ${build_media_dir}/${build_require}/ ${build_dir}/${build_require}/ &> /dev/null' failed"
+                fi
+                if [ ! -a ${build_dir}/${Ack_Label} ] && [ ! -d ${build_dir}/${Ack_Label} ]; then
+                    mkdir -p "${build_dir}/${Ack_Label}" &> /dev/null
+                    if [ $? -ne 0 ]; then
+                        aborting "mkdir ${build_dir}/${Ack_Label} directory failed"
+                    fi
+                fi
+            fi
+        done
+
+        local build_isolinux=0
+        local build_require
+        local build_requires=()
+        build_requires+=("images")
+        build_requires+=("isolinux")
+
+        for build_require in ${build_requires[@]}; do
+            if [ -d ${build_media_dir}/${build_require} ]; then
+                debugValue build_require $debug_level "found"
+            else
+                debugValue build_require $debug_level "not found"
+                local build_isolinux=1
+            fi
+            if [ $build_isolinux -eq 0 ]; then
+                rsync -a ${build_media_dir}/${build_require}/ ${build_dir}/${build_require}/ &> /dev/null
+                if [ $? -ne 0 ]; then
+                    aborting "'rsync -a ${build_media_dir}/${build_require}/ ${build_dir}/${build_require}/ &> /dev/null' failed"
+                fi
+            fi
+        done
+
+        # some checks ...
+
+        if [ $build_uefi -eq 0 ]; then
+
+            if [ ! -f $build_dir/images/efiboot.img ]; then
+                printf "\nERROR $build_dir/images/efiboot.img is missing\n\n"
+                continue
+            fi
+
+        fi
+
+        if [ $build_isolinux -eq 0 ]; then
+
+            if [ ! -f $build_dir/isolinux/boot.cat ]; then
+                printf "\nERROR $build_dir/isolinux/boot.cat is missing\n\n"
+                continue
+            fi
+
+            if [ ! -f $build_dir/isolinux/isolinux.bin ]; then
+                printf "\nERROR $build_dir/isolinux/isolinux.bin is missing\n\n"
+                continue
+            fi
+
+            # remove bloat; TODO make this better
+            if [ -f $build_dir/images/boot.iso ]; then
+                rm $build_dir/images/boot.iso &> /dev/null # this is bloat on 'everything' cds
+            fi
+
+        fi
+
+        debugValue build_uefi $debug_level
+        debugValue build_isolinux $debug_level
+
+        local build_distribution=$(echo "$build_media_uri" | awk -F/ '{print $2}')
+        if [ "$build_distribution" == "" ]; then
+            build_distribution="build_distribution"
+        fi
+        debugValue build_distribution $debug_level
+
+        local build_version=$(echo "$build_media_uri" | awk -F/ '{print $3}')
+        if [ "$build_version" == "" ]; then
+            build_version="build_version"
+        fi
+        debugValue build_version $debug_level
+
+        local build_architecture=$(echo "$build_media_uri" | awk -F/ '{print $(NF-1)}')
+        if [ "$build_architecture" == "" ]; then
+            build_architecture="build_architecture"
+        fi
+        debugValue build_architecture $debug_level
+
+        local build_name=${build_distribution}-${build_version}-${build_architecture}-${Install_Server}
+        debugValue build_name $debug_level
+
+        local ack_etc
+        local build_menu
+        local build_menus=()
+        local build_menu_efi=1
+        local build_menu_isolinux=1
+        for ack_etc in ${Ack_Etcs[@]}; do
+
+            if [ $build_uefi -eq 0 ] && [ $build_menu_efi -eq 1 ]; then
+                if [ -s "${ack_etc}/ack-template-menu-grub-${build_name}" ]; then
+                    build_menus+=("${ack_etc}/ack-template-menu-grub-${build_name}++++EFI/BOOT/grub.cfg")
+                    build_menu_efi=0
+                else
+                    if [ -s "${ack_etc}/ack-template-menu-grub" ]; then
+                        build_menus+=("${ack_etc}/ack-template-menu-grub++++EFI/BOOT/grub.cfg")
+                        build_menu_efi=0
+                    fi
+                fi
+            fi
+
+            if [ $build_isolinux -eq 0 ] && [ $build_menu_isolinux -eq 1 ]; then
+                if [ -s "${ack_etc}/ack-template-menu-isolinux-${build_name}" ]; then
+                    build_menus+=("${ack_etc}/ack-template-menu-isolinux-${build_name}++++isolinux/isolinux.cfg")
+                    build_menu_isolinux=0
+                else
+                    if [ -s "${ack_etc}/ack-template-menu-isolinux" ]; then
+                        build_menus+=("${ack_etc}/ack-template-menu-isolinux++++isolinux/isolinux.cfg")
+                        build_menu_isolinux=0
+                    fi
+                fi
+            fi
+
+        done
+
+        if [ "$build_menus" == "" ]; then
+            printf "\nERROR build_menus not found\n\n"
+            continue
+        fi
+
+        if [ $build_uefi -eq 0 ] && [ $build_menu_efi -eq 1 ]; then
+            printf "\nERROR ack-template-menu for efi not found\n\n"
+            continue
+        fi
+
+        if [ $build_isolinux -eq 0 ] && [ $build_menu_isolinux -eq 1 ]; then
+            printf "\nERROR ack-template-menu for isolinux not found\n\n"
+            continue
+        fi
+
+        local build_iso_rev=$Default_Date
+        debugValue build_iso_rev $debug_level
+
+        local build_iso=${Distribution_Dir}/${build_name}-${build_iso_rev}.iso
+        debugValue build_iso $debug_level
+
+        if [ -f "${build_iso}" ]; then
+            if [ $Force_Flag -ne 1 ]; then
+                if [ $Virt_Flag -eq 1 ]; then
+                    ackMediaVirt "${build_iso}"
+                    if [ ${build_uefi} -eq 1 ]; then
+                        ackMediaVirt "${build_iso}" uefi
+                    fi
+                    continue
+                else
+                    printf "\nWARNING %s already exists (overwrite with --force)\n\n" "${build_iso}"
+                    continue
+                fi
+            fi
+        fi
+
+        local build_action="doing noth"
+
+        if [ -f "$build_iso" ]; then
+            if [ ! -w "$build_iso" ]; then
+                printf "\nERROR $build_iso exists but is not writable\n\n"
+                continue
+            else
+                printf "\nWARNING $build_iso exists and is writable\n\n"
+                if [ $Force_Flag -eq 1 ]; then
+                    local build_action="rebuild"
+                else
+                    continue
+                fi
+
+            fi
+        else
+            local build_action="build"
+        fi
+
+        local build_uri=$(ackMediaUri "$build_iso")
+        if [ "$build_uri" == "/" ] || [ "$build_uri" == "" ]; then
+            printf "\nERROR build_uri is wrong\n\n"
+            continue
+        fi
+        debugValue build_uri $debug_level
+
+        printf "[%s] %sing iso from '%s' for install server '%s' in domain '%s' ...\n\n" "$build_name" "$build_action" "$build" "$Install_Server" "$Domain"
+
+        for build_menu in ${build_menus[@]}; do
+            debugValue build_menu $debug_level
+            local build_menu_template=$(echo "$build_menu" | awk -F++++ '{print $1}')
+            local build_menu_destination=${build_dir}/$(echo "$build_menu" | awk -F++++ '{print $2}')
+            debugValue build_menu_template $debug_level
+            debugValue build_menu_destination $debug_level
+            if [ -r "$build_menu_template" ]; then
+                printf "[%s] %sing menu '%s' from template '%s' ...\n\n" "$build_name" "$build_action" "$build_menu_destination" "$build_menu_template"
+                echo "##" > ${build_menu_destination}
+                echo "## DO NOT EDIT!  This file was automatically generated by $(basename $0)." >> ${build_menu_destination}
+                echo "##" >> ${build_menu_destination}
+                echo >> ${build_menu_destination}
+
+                sed \
+                    -e "s!##ACK_BUILD_ISO##!${build_name}-${build_iso_rev}!g"\
+                    -e "s!##ACK_BUILD_NAME##!${build_name}!g"\
+                    -e "s!##ACK_ENTITY##!${Ack_Entity}!g" \
+                    -e "s!##ACK_INSTALL_SERVER##!${Install_Server}!g" \
+                    -e "s!##ACK_INSTALL_URI##!${build_install_uri}!g" \
+                    -e "s!##ACK_ISO_DATE##!${Default_Date}!g"\
+                    -e "s!##ACK_ISO_REV##!${build_iso_rev}!g" \
+                    -e "s!##ACK_LABEL##!${Ack_Label}!g" \
+                    -e "s!##ACK##!!g" \
+                    "$build_menu_template" >> ${build_menu_destination}
+
+                if [ $? -ne 0 ]; then
+                    aborting "ERROR with build_menu_template '$build_menu_destination'"
+                fi
+
+                if [ $Debug -gt 0 ]; then
+                    echo
+                    cat ${build_menu_destination}
+                    echo
+                fi
+            fi
+        done
+
+        local pwd="$(pwd)"
+        for build_subdir in $(find "${build_dir}/" -type d 2> /dev/null); do
+            debugValue build_subdir $debug_level
+
+            if [ "${build_subdir}" == "" ] || [ "${build_subdir}" == "/" ]; then
+                # warning
+                continue
+            fi
+
+            cd "${build_subdir}"
+            if [ $? -ne 0 ]; then
+                aborting "ERROR failed to cd '${build_subdir}'"
+            fi
+
+            local build_subdir_md5sum=$(basename $build_subdir).md5sum
+
+            printf "[%s] %sing %s%s ...\n\n" "$build_name" "$build_action" "${build_subdir}" "${md5sum}"
+            find . -type f | xargs $md5sum \
+                | egrep -ve "\.md5sum$|\/boot.cat$|\/grub.cfg$|\/isolinux.cfg$|\/BOOT$|\/TRANS.TBL$" \
+                | sort -k 2 > $build_subdir_md5sum
+
+        done
+        cd "$pwd"
+
+        local build_publisher=${build_name}
+        debugValue build_publisher $debug_level
+
+        local build_preparer=$(logname)
+        debugValue build_preparer $debug_level
+
+        local build_volume_id="${Ack_Label}-${build_iso_rev}"
+        debugValue build_volume_id $debug_level
+
+        local build_volume_set_id="${Ack_Label} [${build_iso_rev}]"
+        debugValue build_volume_set_id $debug_level
+
+        printf "[%s] %sing %s ...\n\n" "$build_name" "$build_action" "${build_iso}"
+
+        local pwd=$(pwd)
+        cd "${build_dir}"
+        ${genisoimage} \
+            -appid $(basename ${build_iso}) -V "${build_volume_id}" -volset "${build_volume_set_id}" \
+            -publisher "${build_publisher}" \
+            -preparer "${build_preparer}" \
+            -J -joliet-long -input-charset utf-8 -r -v -T \
+            -untranslated-filenames -o ${build_iso} \
+            -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 \
+            -boot-info-table -eltorito-alt-boot -e images/efiboot.img -no-emul-boot \
+            ${build_dir}
+
+
+        if [ $? -ne 0 ] || [ ! -s ${build_iso} ]; then
+            aborting "ERROR ${genisoimage} ${build_iso} failed"
+        else
+            cd "$pwd"
+        fi
+        printf "\n"
+
+        ${implantisomd5} ${build_iso}
+        if [ $? -ne 0 ]; then
+            aborting "ERROR ${implantisomd5} ${build_iso} failed"
+        fi
+
+        ${isohybrid} ${build_iso}
+        if [ $? -ne 0 ]; then
+            aborting "ERROR ${isohybrid} ${build_iso} failed"
+        fi
+        printf "\n"
+
+        ${isoinfo} -d -J -i ${build_iso}
+        if [ $? -ne 0 ]; then
+            aborting "ERROR ${isoinfo} -i ${build_iso} -d -J failed"
+        fi
+        printf "\n"
+
+        local build_iso_md5sum=${build_iso}.md5sum
+        printf "[%s] %sing %s ...\n\n" "$build_name" "$build_action" "${build_iso_md5sum}"
+        local pwd="$(pwd)"
+        cd "$(dirname ${build_iso})"
+        md5sum "$(basename ${build_iso})" > "${build_iso_md5sum}"
+        cd "$pwd"
+
+        if [ $Virt_Flag -eq 1 ]; then
+            ackMediaVirt "${build_iso}"
+            if [ ${build_uefi} -eq 1 ]; then
+                ackMediaVirt "${build_iso}" uefi
+            fi
+        fi
+
+    done
+
+    # end function logic
+
+    debugFunction $@
+}
+
+# TODO; finish this ...
+function ackMediaFlash() {
+    debugFunction $@
+
+    # begin function logic
+
+    local flash_dev="$1"
+    local flash_iso="$2"
+
+    return
+
+    if [ "$flash_dev" == "/dev/" ]; then
+        Aborting "usb flash device not found" 3
+    fi
+    if [ ! -b "$flash_dev" ]; then
+        Aborting "can't flash $flash_iso; $flash_dev is not a block device!" 3
+    fi
+    debugValue FLASH 2
+
+    dd if=$ISO_FILE of=$FLASH bs=4096
+
+    # end function logic
+
+    debugFunction $@
+}
+
+function ackMediaMount() {
+    debugFunction $@
+
+    # begin function logic
+
+    local debug_level=13
+
+    local mount_arg="$1"
+    debugValue mount_arg $debug_level
+
+    local mount
+    local mounts=()
+    if [ -d "$mount_arg" ]; then
+        debugValue mount_arg $debug_level dir
+        while read mount; do
+            mounts+=("$mount")
+        done <<< "$(find "${mount_arg}/" -maxdepth 1 -type f)"
+        unset mount
+    else
+        debugValue mount_arg $debug_level file
+        mounts+=("$mount_arg")
+    fi
+
+    local mount
+    local -i mount_count=0
+    for mount in ${mounts[@]}; do
+        debugValue mount $debug_level
+
+        local mount_basename=$(basename $mount)
+        debugValue mount_basename $debug_level
+
+        local mount_dirname=$(readlink -e $(dirname $mount))
+
+        if [ -a "$mount" ]; then
+            # if it's a real file then only seriously consider ISOs
+            mount_readlink=$(readlink -e $mount)
+            local mount_file=$(file $mount_readlink 2> /dev/null | grep ISO)
+            debugValue mount_file $debug_level "found"
+            if [ "$mount_file" == "" ]; then
+                continue
+            fi
+            local mount_dirname=$(readlink -e $(dirname $mount_readlink))
+        else
+            aborting "$mount not found"
+        fi
+
+        debugValue mount_dirname $debug_level
+
+        local media_uri=$(ackMediaUri "$mount" 1)
+        debugValue media_uri $debug_level
+
+        if [ "$media_uri" == "/" ] || [ "$media_uri" == "" ]; then
+            printf "\nERROR media_uri is wrong\n\n"
+            continue
+        fi
+
+        local mount_dir=${mount_dirname}${media_uri}
+        debugValue mount_dir $debug_level
+
+        mount ${mount_dir} &> /dev/null
+        if [ $? -eq 1 ]; then
+            # not mounted
+            local mounted=1
+        else
+            # mounted, or busy (etc)
+            local mounted=0
+        fi
+
+        if [ $mounted -eq 1 ]; then
+
+            if [ ! -d "$mount_dir" ]; then
+                if [ -a "$mount_dir" ]; then
+                    debugValue mount_dir $debug_level "not a directory, error"
+                    aborting "$directory is not a directory"
+                else
+                    debugValue mount_dir $debug_level "mkdir"
+                    mkdir -p "$mount_dir" &> /dev/null
+                    if [ $? -ne 0 ]; then
+                        aborting "mkdir $directory directory failed"
+                    fi
+                fi
+
+            else
+                debugValue mount_dir $debug_level "found"
+            fi
+
+            mount -o loop $mount $mount_dir &> /dev/null
+            if [ $? -eq 0 ]; then
+                ((++mount_count))
+                printf "%s -> %s ... mounted\n" "$mount_basename" "$mount_dir"
+            else
+                aborting "mount -o loop '$mount' '$mount_dir' failed"
+            fi
+
+        else
+            printf "%s -> %s ... mounted already\n" "$mount_basename" "$mount_dir"
+        fi
+
+    done
+
+    # end function logic
+
+    debugFunction $@
+}
+
+function ackMediaUnmount() {
+    debugFunction $@
+
+    # begin function logic
+
+    local debug_level=33
+
+    local unmount_arg="$1"
+    debugValue unmount_arg $debug_level
+
+    local unmount
+    local unmounts=()
+    if [ -d "$unmount_arg" ]; then
+        debugValue unmount_arg $debug_level dir
+        while read unmount; do
+            unmounts+=("$unmount")
+        done <<< "$(find "${unmount_arg}/" -maxdepth 1 -type f)"
+        unset unmount
+    else
+        debugValue unmount_arg $debug_level file
+        unmounts+=("$unmount_arg")
+    fi
+
+    local unmount
+    local -i unmount_count=0
+    for unmount in ${unmounts[@]}; do
+        local unmount=$(realpath -e $unmount)
+        local unmount_basename=$(basename $unmount)
+        debugValue unmount $debug_level "$unmount_basename"
+        local unmount_dir=$(mount | grep ^$unmount | awk '{print $3}')
+        debugValue unmount_dir $debug_level
+
+        if [ "$unmount_dir" != "" ]; then
+            umount "$unmount_dir" &> /dev/null
+            local return_code=$?
+            if [ $return_code -ne 0 ]; then
+                aborting "'umount $unmount_dir' failed ($return_code)" 4
+            else
+                ((++unomunt_count))
+                printf "%s -> %s ... unmounted\n" "$unmount_basename" "$unmount_dir"
+            fi
+
+        fi
+    done
+
+    # end function logic
+
+    debugFunction $@
+}
+
+function ackMediaVirt() {
+    debugFunction $@
+
+    # begin function logic
+
+    local debug_level=10
+
+    local virt_arg="$1"
+
+    debugValue virt_arg $debug_level
+
+    local virt_mode="$2"
+    if [ "$virt_mode" != "" ]; then
+        virt_mode=$(echo "$virt_mode" | sed -e '/,/s//g'),
+    fi
+
+    local virsh=$(which virsh 2> /dev/null)
+    if [ ! -x "$virsh" ]; then
+        aborting "virsh executable not found" 3
+    fi
+    debugValue virsh $debug_level
+
+    local virt_install=$(which virt-install 2> /dev/null)
+    if [ ! -x "$virt_install" ]; then
+        aborting "virt_install executable not found" 3
+    fi
+    debugValue virt_install $debug_level
+
+    local virt_basename=$(basename ${virt_arg})
+    debugValue virt_basename $debug_level
+
+    virt_name=${virt_basename}-${virt_boot}
+    debugValue virt_name $debug_value
+
+    local virt_dir=${Virt_Dir}/${virt_basename}
+    debugValue virt_dir $debug_level
+
+    mkdir -p "${virt_dir}" &> /dev/null
+
+    local virt_disk=${virt_dir}/${virt_name}.qcow2
+    debugValue virt_disk $debug_level
+
+    ${virsh} domstate ${virt_name} &> /dev/null
+    if [ $? -eq 0 ]; then
+        # domain already exists
+        local virt_state=$(${virsh} domstate ${virt_name})
+        echo "virt '${virt_name}' is ${virt_state}"
+        echo
+        if [ "$virt_state" == "running" ]; then
+            $virsh destroy "${virt_name}"
+        fi
+        $virsh undefine "${virt_name}"
+    fi
+
+    if [ -r "${virt_disk}" ]; then
+        rm -f "${virt_disk}"
+    fi
+
+    # domain does not exist (or was undefined)
+
+    if [ ! -r "${virt_arg}" ]; then
+        aborting "${virt_arg} file not readable"
+    else
+        # file is readable, so create the domain
+
+        local virt_mac_address_prefix="52:54:00"
+
+         # create a 'consistent' mac address based on the node name
+         # otherwise dhcp leases will quickly run out during testing ...
+         local virt_mac_address_suffix_1=$(echo "${virt_name}" | md5sum 2> /dev/null | cut -c 1-2)
+         if [ "${#virt_mac_address_suffix_1}" -ne 2 ]; then
+             aborting "virt_mac_address_suffix_1 length is not 2 ($virt_mac_address_suffix_1)"
+         fi
+         local virt_mac_address_suffix_2=$(echo "${virt_name}" | md5sum | cut -c 5-6)
+         if [ "${#virt_mac_address_suffix_2}" -ne 2 ]; then
+             aborting "virt_mac_address_suffix_2 length is not 2 ($virt_mac_address_suffix_2)"
+         fi
+         local virt_mac_address_suffix_3=$(echo "${virt_name}" | md5sum | cut -c 9-10)
+         if [ "${#virt_mac_address_suffix_3}" -ne 2 ]; then
+             aborting "virt_mac_address_suffix_3 length is not 2 ($virt_mac_address_suffix_3)"
+         fi
+
+         local virt_mac_address=$(echo "${virt_mac_address_prefix}:${virt_mac_address_suffix_1}:${virt_mac_address_suffix_2}:${virt_mac_address_suffix_3}" | awk '{print tolower($NF)}')
+         if [ "${#virt_mac_address}" -ne 17 ]; then
+             aborting "virt_mac_address length is not 17 ($virt_mac_address)"
+         fi
+
+         debugValue virt_mac_address $debug_level
+
+         local virt_disk_size=8 # G
+         debugValue virt_disk_size $debug_level
+
+         local virt_cpus=1
+         debugValue virt_cpus $debug_level
+
+         local virt_ram=1024
+         debugValue virt_ram $debug_level
+
+         if [ "$Ack_Gateway_Interface" == "br0" ]; then
+             local virt_network="bridge=${Ack_Gateway_Interface}"
+         else
+             if [ "$Ack_Gateway_Interface" == "" ]; then
+                 local virt_network="eth0"
+             else
+                 local virt_network="${Ack_Gateway_Interface}"
+             fi
+         fi
+
+         if [ "$virt_mac_address" != "" ]; then
+             virt_network+=",mac=$virt_mac_address"
+         fi
+
+         debugValue virt_network $debug_level
+
+         ${virt_install} \
+             --name ${virt_name} \
+             --boot ${virt_mode}hd,cdrom,menu=on,useserial=on \
+             --cdrom ${virt_arg} \
+             --console pty,target_type=virtio \
+             --cpus ${virt_cpus} \
+             --disk path=${virt_disk},device=disk,bus=virtio,size=${virt_disk_size},sparse=true,format=qcow2 \
+             --graphics none \
+             --network ${virt_network} \
+             --metadata name=${virt_name},title=${virt_name} \
+             --os-type=linux \
+             --os-variant=virtio26 \
+             --ram ${virt_ram} \
+             --serial pty \
+             --rng /dev/urandom
+
+     fi
+
+    # virt-viewer ${virt_basename} # works with --vnc
+
+    # end function logic
+
+    debugFunction $@
+}
+
+# This function is an attempt to formulate a consistent, repeatable URI naming structure for various
+# Enterprise Linux distrubtions that have changed naming conventions over the course of many releases.
+# The bottom line is that CentOS, Fedora, RedHat (et al) have different naming schemes for the same things.
+# If a URI name *can* be formulated then it will be output, otherwise the original input will be output.
+function ackMediaUri() {
+    # * must be lowercase
+
+    # distribution (centos, fedora, rhel)
+    # major version
+    # minor version (release) [optional]
+    # platform (bin, server, workstation) [optional]
+    # image
+    # architecture (i386, x86_64)
+
+    # http(s)://<hostname>/<distribution>/<major>[.minor]/[platform]/<image>/<architecture>
+
+    local debug_level=33
+
+    local uri_arg="$1"
+
+    if [ "$uri_arg" == "" ]; then return 1; fi
+
+    local -i uri_continue=$2
+
+    local uri
+    local uris=()
+    if [ -d "$uri_arg" ]; then
+        debugValue uri_arg $debug_level dir
+        while read uri; do
+            uris+=("$uri")
+        done <<< "$(find "${uri_arg}/" -maxdepth 1 -type f)"
+        unset uri
+    else
+        debugValue uri_arg $debug_level file
+        uris+=("$uri_arg")
+    fi
+
+    local uri
+    for uri in ${uris[@]}; do
+        debugValue uri $debug_level
+
+        local uri_basename=$(basename $uri)
+        local uri_dirname=$(readlink -e $(dirname $uri))
+
+        debugValue uri_basename $debug_level
+
+        if [ -a "$uri" ]; then
+            # if it's a real file then only seriously consider ISOs
+            uri_readlink=$(readlink -e $uri)
+            local uri_file=$(file $uri_readlink 2> /dev/null | grep ISO)
+            debugValue uri_file $debug_level
+            if [ "$uri_file" == "" ]; then
+                #printf "%s\n" "$uri"
+                continue
+            fi
+            local uri_dirname=$(readlink -e $(dirname $uri_readlink))
+        fi
+
+        debugValue uri_dirname $debug_level
+
+        local -l uri_lower=$(echo "$uri_basename" | sed -e '/\.iso.*$/s///g')
+
+        local uri_left=$uri_lower
+
+        #
+        # figure out if the name is a 'media' (by this algorithm) distribution
+        #
+
+        local distribution media_distribution
+        for media_distribution in ${Media_Distributions[@]}; do
+            local valid_distribution=$(echo "$uri_lower" | grep "$media_distribution")
+            if [ "$valid_distribution" != "" ]; then
+                distribution=$media_distribution
+                break
+            fi # media distribution
+        done
+        unset media_distribution
+        if [ "$valid_distribution" == "" ]; then
+            # unmedia distribution
+            #printf "%s\n" "$uri"
+            continue
+        fi
+        if [ "$distribution" != "" ]; then
+            uri_left=$(echo "$uri_left" | sed -e "/$distribution/s///g")
+        fi
+
+        #
+        # figure out if the name is a 'media' (by this algorithm) architecture
+        #
+
+        local architecture media_architecture
+        for media_architecture in ${Media_Architectures[@]}; do
+            local valid_architecture=$(echo "$uri_lower" | grep "$media_architecture")
+            if [ "$valid_architecture" != "" ]; then
+                architecture=$media_architecture
+                break
+            fi # media architecture
+        done
+        unset media_architecture
+        if [ "$valid_architecture" == "" ]; then
+            # unmedia architecture
+            #printf "%s\n" "$uri"
+            continue
+        fi
+        if [ "$architecture" != "" ]; then
+            uri_left=$(echo "$uri_left" | sed -e "/$architecture/s///g")
+        fi
+
+        #
+        # figure out if the name is a 'media' (by this algorithm) platform
+        #
+
+        local platform media_platform
+        for media_platform in ${Media_Platforms[@]}; do
+            local valid_platform=$(echo "$uri_lower" | grep "$media_platform")
+            if [ "$valid_platform" != "" ]; then
+                platform=$media_platform
+                break
+            fi # media platform
+        done
+        unset media_platform
+        # 'unmedia' platforms are a special case ...
+        #if [ "$valid_platform" == "" ]; then
+        #unmedia platform
+        #printf "%s" "$uri"
+        #continue
+        #fi
+        if [ "$platform" != "" ]; then
+            uri_left=$(echo "$uri_left" | sed -e "/^$platform-/s//-/g" -e "/-$platform-/s//-/g" -e "/-${platform}$/s//-/g")
+        fi
+
+        #echo "uri_left      = $uri_left"
+
+        local image_left=""
+        for valid_version in $(echo "$uri_left" | sed -e '/-/s// /g'); do
+
+            for valid_major_version in {1..100}; do
+                if [ "$valid_major_version" == "$valid_version" ] && [ "$version_major" == "" ]; then
+                    version_major=$valid_version
+                    break
+                fi
+            done
+
+            if [ "$valid_major_version" != "$valid_version" ]; then
+                if [ "$(echo $valid_version | grep ^[0-9])" ]; then
+                    # it starts with a number
+
+                    if [ "$version_major" == "" ]; then
+                        # version_major is not set
+                        if [ "$(echo $valid_version | grep \.)" ]; then
+                            #echo "valid_version (major) = $valid_version (dot)"
+                            version_major=$(echo $valid_version | awk -F. '{print $1}')
+                            version_minor="$(echo $valid_version | awk -F. '{for (i=2; i<NF; i++) printf $i "."; print $NF}')-"
+                        else
+                            #echo "valid_version (major) = $valid_version"
+                            version_major=$valid_version
+                        fi
+                    else
+                        # version_major is set
+                        #echo "valid_version (minor) = $valid_version"
+                        if [ "$(echo $valid_version | grep ^${version_major})" ]; then
+                            # the minor version starts with the same number as the major version (that's already set)
+                            # this is an issue with iso names e.g. supp-server-6.10-rhel-6-i386-dvd
+                            image_left+="${valid_version}-"
+                        else
+                            version_minor+="$valid_version."
+                        fi
+                    fi
+                else
+                    image_left+="${valid_version}-"
+                fi
+            fi
+
+        done
+
+        if [ "$image_left" != "" ]; then
+            image_left=$(echo "$image_left" | sed -e '/^-/s///g' -e '/^\./s///g' -e '/-$/s///g' -e '/\.$/s///g')
+            image=$image_left
+        fi
+
+        if [ "$version_major" != "" ]; then
+            version_major=$(echo "$version_major" | sed -e '/^-/s///g' -e '/^\./s///g' -e '/-$/s///g' -e '/\.$/s///g')
+        fi
+
+        if [ "$version_minor" != "" ]; then
+            version_minor=$(echo "$version_minor" | sed -e '/^-/s///g' -e '/^\./s///g' -e '/-$/s///g' -e '/\.$/s///g')
+        fi
+
+        local media_uri="/"
+
+        if [ "$distribution" != "" ]; then
+            media_uri+="${distribution}/"
+        fi
+        #echo "distribution   = $distribution"
+
+        if [ "$version_major" != "" ]; then
+            media_uri+="${version_major}."
+        fi
+        #echo "version_major  = $version_major"
+
+        if [ "$version_minor" != "" ]; then
+            media_uri+="${version_minor}/"
+        fi
+        #echo "version_minor  = $version_minor"
+
+        if [ "$platform" != "" ]; then
+            media_uri+="${platform}/"
+        fi
+        #echo "platform       = $platform"
+
+        if [ "$image" != "" ]; then
+            if [ "$platform" != "ack" ]; then
+                media_uri+="${image}/"
+            else
+                media_uri+=$(echo "$image" | awk -F- '{print $1}')/
+            fi
+        fi
+        #echo "image          = $image"
+
+        if [ "$architecture" != "" ]; then
+            media_uri+="${architecture}/"
+        fi
+        #echo "architecture   = $architecture"
+
+        debugValue uri_lower $debug_level
+        if [ "$media_uri" != "/" ]; then
+            printf "%s\n" "$media_uri"
+        fi
+        #echo
+
+        unset distribution architecture version_major version_minor platform
+
+        if [ $uri_continue -ne 0 ]; then
+            break
+        fi
+
+    done
+    unset uri
+}
+
+function usage() {
+    debugFunction $@
+
+    # begin function logic
+
+    echo
+    echo "usage: $0 <options>"
+    echo
+    echo "options:"
+    echo
+    echo "  -D | --debug [level]            = print debug messages (less than) [level]"
+    echo
+    echo "  -b | --build <iso>              = build ack install media from (distribution) <iso(s)> [DEFAULT=$Default_Distribution_Dir]"
+    # TODO add --flash flag
+    echo "  -d | --domain <name>            = set build domain <name> [DEFAULT=$Default_Domain]"
+    echo "  -s | --server <name>            = set build (install) server <name> [DEFAULT=http(s)://$Default_Install_Server/]"
+    echo
+    echo "  -v | --virt <iso>               = create and boot an iso with virsh utilities [DEFAULT=none]"
+    echo
+    echo "  -m | --mount <iso>              = mount iso file(s) [DEFAULT=$Default_Distribution_Dir]"
+    echo "  -r | --remount <iso>            = remount iso file(s) [DEFAULT=$Default_Distribution_Dir]"
+    echo "  -u | --unmount <iso>            = unmount iso file(s) [DEFAULT=$Default_Distribution_Dir)"
+    echo
+    echo "  -p | --uri <iso>                = display the media URI path(s) [DEFAULT=$Default_Distribution_Dir)"
+    echo
+    if [ "$1" != "" ]; then
+        echo "Note: $1"
+        echo
+    fi
+
+    # end function logic
+
+    debugFunction $@
+
+    exit 1
+}
+
+# Validation Logic
+
+# Options Logic
+
+# expand upon the base Options function (careful, same named switches will be processed twice)
+
+# for each command line argument, evaluate them case by case, process them, and shift to the next
+ARGUMENTS=$#
+for ((ARGUMENT=1; ARGUMENT <= $ARGUMENTS; ARGUMENT++)); do
+    case "$1" in
+        -D | --D | --debug | -debug)
+            let Debug=$2
+            if [ "$Debug" != "" ] && [ ${Debug:0:1} == "-" ]; then
+                let Debug=0
+            fi
+            if [ "$Debug" == "" ]; then
+                let Debug=0
+            else
+                let Debug=$2
+                shift
+            fi
+            ;;
+        -b | --build | -build)
+            Build_Flag=1
+            Build="$2"
+            if [ "$Build" != "" ] && [ ${Build:0:1} == "-" ]; then
+                Build=""
+            fi
+            if [ "$Build" == "" ]; then
+                Build=""
+            else
+                declare Build=$2
+                shift
+            fi
+            ;;
+        -d | --domain | -domain)
+            Domain_Flag=1
+            Domain="$2"
+            if [ "$Domain" != "" ] && [ ${Domain:0:1} == "-" ]; then
+                Domain=""
+            fi
+            if [ "$Domain" == "" ]; then
+                Domain=""
+            else
+                declare Domain=$2
+                shift
+            fi
+            ;;
+        -f | --force | -force)
+            Force_Flag=1
+            ;;
+        -m | --mount | -mount)
+            Mount_Flag=1
+            Mount="$2"
+            if [ "$Mount" != "" ] && [ ${Mount:0:1} == "-" ]; then
+                Mount=""
+            fi
+            if [ "$Mount" == "" ]; then
+                Mount=""
+            else
+                declare Mount=$2
+                shift
+            fi
+            ;;
+        -r | --remount | -remount | --rmount | -rmount)
+            Remount_Flag=1
+            Remount="$2"
+            if [ "$Remount" != "" ] && [ ${Remount:0:1} == "-" ]; then
+                Remount=""
+            fi
+            if [ "$Remount" == "" ]; then
+                Remount=""
+            else
+                declare Remount=$2
+                shift
+            fi
+            ;;
+        -s | --server | -server | --install-server | -install-server)
+            Install_Server_Flag=1
+            Install_Server="$2"
+            if [ "$Install_Server" != "" ] && [ ${Install_Server:0:1} == "-" ]; then
+                Install_Server=""
+            fi
+            if [ "$Install_Server" == "" ]; then
+                Install_Server=""
+            else
+                declare Install_Server=$2
+                shift
+            fi
+            ;;
+        -u | --unmount | -unmount | --umount | -umount)
+            Unmount_Flag=1
+            Unmount="$2"
+            if [ "$Unmount" != "" ] && [ ${Unmount:0:1} == "-" ]; then
+                Unmount=""
+            fi
+            if [ "$Unmount" == "" ]; then
+                Unmount=""
+            else
+                declare Unmount=$2
+                shift
+            fi
+            ;;
+        -p | --uri | -uri)
+            Uri_Flag=1
+            Uri="$2"
+            if [ "$Uri" != "" ] && [ ${Uri:0:1} == "-" ]; then
+                Uri=""
+            fi
+            if [ "$Uri" == "" ]; then
+                Uri=""
+            else
+                declare Uri=$2
+                shift
+            fi
+            ;;
+        -v | --virt | -virt | --vm | -vm)
+            Virt_Flag=1
+            Virt="$2"
+            if [ "$Virt" != "" ] && [ ${Virt:0:1} == "-" ]; then
+                Virt=""
+            fi
+            if [ "$Virt" == "" ]; then
+                Virt=""
+            else
+                declare Virt=$2
+                shift
+            fi
+            ;;
+        -y | --yes | -yes)
+            Yes_Flag=1
+            ;;
+    esac
+    shift
+done
+
+# Main Logic
+
+debugValue Debug 2
+debugValue Build_Flag 20 "$Build"
+debugValue Domain_Flag 20 "$Domain"
+debugValue Force_Flag 20 "$Force"
+debugValue Install_Server_Flag 20 "$Install_Server"
+debugValue Mount_Flag 20 "$Mount"
+debugValue Remount_Flag 20 "$Remount"
+debugValue Unmount_Flag 20 "$Unmount"
+debugValue Uri_Flag 20 "$Uri"
+debugValue Virt_Flag 20 "$Virt"
+
+# meh .. one of these flags is required
+if [ $Build_Flag -eq 0 ]; then
+    if [ $Mount_Flag -eq 0 ]; then
+        if [ $Remount_Flag -eq 0 ]; then
+            if [ $Unmount_Flag -eq 0 ]; then
+                if [ $Uri_Flag -eq 0 ]; then
+                    if [ $Virt_Flag -eq 0 ]; then
+                        usage
+                    fi
+                fi
+            fi
+        fi
+    fi
+fi
+
+Media_Dir=$(readlink -e $Media_Dir 2> /dev/null)
+if [ "$Media_Dir" == "" ] || [ "$Media_Dir" == "/" ]; then
+    Media_Dir=$(readlink -e $Default_Media_Dir 2> /dev/null)
+fi
+if [ "$Media_Dir" == "" ] || [ "$Media_Dir" == "/" ] || [ ! -d "$Media_Dir" ]; then
+    aborting "Media_Dir directory not found"
+fi
+debugValue Media_Dir 12
+
+Build_Dir=$(readlink -e $Build_Dir 2> /dev/null)
+if [ "$Build_Dir" == "" ] || [ "$Build_Dir" == "/" ]; then
+    Build_Dir=$(readlink -e ${Default_Build_Dir} 2> /dev/null)
+    if [ "$Build_Dir" == "" ] || [ "$Build_Dir" == "/" ]; then
+        Build_Dir="${Default_Build_Dir}"
+    fi
+fi
+if [ "$Build_Dir" == "" ] || [ "$Build_Dir" == "/" ] || [ ! -d "$Build_Dir" ]; then
+    mkdir -p "${Build_Dir}" &> /dev/null
+    if [ $? -ne 0 ]; then
+        aborting "mkdir -p '${Build_Dir}' failed"
+    fi
+fi
+debugValue Build_Dir 12
+
+Distribution_Dir=$(readlink -e $Distribution_Dir 2> /dev/null)
+if [ "$Distribution_Dir" == "" ] || [ "$Distribution_Dir" == "/" ]; then
+    Distribution_Dir=$(readlink -e ${Default_Distribution_Dir} 2> /dev/null)
+    if [ "$Distribution_Dir" == "" ] || [ "$Distribution_Dir" == "/" ]; then
+        Distribution_Dir="${Default_Distribution_Dir}"
+    fi
+fi
+if [ "$Distribution_Dir" == "" ] || [ "$Distribution_Dir" == "/" ] || [ ! -d "$Distribution_Dir" ]; then
+    mkdir -p "${Distribution_Dir}" &> /dev/null
+    if [ $? -ne 0 ]; then
+        aborting "mkdir -p '${Distribution_Dir}' failed"
+    fi
+fi
+debugValue Distribution_Dir 12
+
+Release_Dir=$(readlink -e $Release_Dir 2> /dev/null)
+if [ "$Release_Dir" == "" ] || [ "$Release_Dir" == "/" ]; then
+    Release_Dir=$(readlink -e ${Default_Release_Dir} 2> /dev/null)
+    if [ "$Release_Dir" == "" ] || [ "$Release_Dir" == "/" ]; then
+        Release_Dir="${Default_Release_Dir}"
+    fi
+fi
+if [ "$Release_Dir" == "" ] || [ "$Release_Dir" == "/" ] || [ ! -d "$Release_Dir" ]; then
+    mkdir -p "${Release_Dir}" &> /dev/null
+    if [ $? -ne 0 ]; then
+        aborting "mkdir -p '${Release_Dir}' failed"
+    fi
+fi
+debugValue Release_Dir 12
+
+Virt_Dir=$(readlink -e $Virt_Dir 2> /dev/null)
+if [ "$Virt_Dir" == "" ] || [ "$Virt_Dir" == "/" ]; then
+    Virt_Dir=$(readlink -e ${Default_Virt_Dir} 2> /dev/null)
+    if [ "$Virt_Dir" == "" ] || [ "$Virt_Dir" == "/" ]; then
+        Virt_Dir="${Default_Virt_Dir}"
+    fi
+fi
+if [ "$Virt_Dir" == "" ] || [ "$Virt_Dir" == "/" ] || [ ! -d "$Virt_Dir" ]; then
+    mkdir -p "${Virt_Dir}" &> /dev/null
+    if [ $? -ne 0 ]; then
+        aborting "mkdir -p '${Virt_Dir}' failed"
+    fi
+fi
+debugValue Virt_Dir 12
+
+if [ "$Uri" == "" ]; then
+    Uri=$Distribution_Dir
+fi
+debugValue Uri 20
+if [ $Uri_Flag -eq 1 ]; then
+    ackMediaUri "$Uri"
+    exit # --uri by itself does nothing else
+fi
+
+if [ "$Virt" == "" ]; then
+    Virt=$Distribution_Dir
+fi
+debugValue Virt 20
+if [ $Virt_Flag -eq 1 ] && [ $Build_Flag -eq 0 ]; then
+    ackMediaVirt "$Virt"
+    exit # --virt by itself does nothing else
+fi
+
+if [ "$Unmount" == "" ]; then
+    Unmount=$Distribution_Dir
+fi
+if [ $Unmount_Flag -eq 1 ]; then
+    ackMediaUnmount "$Unmount"
+fi
+
+if [ "$Remount" == "" ]; then
+    Remount=$Distribution_Dir
+fi
+if [ $Remount_Flag -eq 1 ]; then
+    ackMediaUnmount "$Remount"
+    ackMediaMount "$Remount"
+fi
+
+if [ "$Mount" == "" ]; then
+    Mount=$Distribution_Dir
+fi
+if [ $Mount_Flag -eq 1 ]; then
+    ackMediaMount "$Mount"
+fi
+
+if [ $Build_Flag -eq 0 ]; then
+    exit # if not building then exit here
+fi
+
+# build needs these variables
+
+if [ "${Install_Server}" == "" ]; then
+    if [ "${Default_Install_Server}" == "" ]; then
+        if [ "${Domain}" == "" ]; then
+            Install_Server="ack.localdomain"
+        else
+            Install_Server="ack.${Domain}"
+        fi
+    else
+        if [ "${Domain}" == "" ]; then
+            Install_Server="${Default_Install_Server}"
+        else
+            Install_Server="ack.${Domain}"
+        fi
+    fi
+fi
+
+if [ "${Domain}" == "" ]; then
+    if [ "${Default_Domain}" == "" ]; then
+        if [ "${Install_Server}" == "" ]; then
+            Domain="localdomain"
+        else
+            Install_Server_Dots=$(echo "${Install_Server}" | grep -o \\. | wc -l)
+            debugValue Install_Server 31 $Install_Server_Dots
+            if [ $Install_Server_Dots -gt 1 ]; then
+                Domain="$(echo ${Install_Server} | awk -F. '{for (i=2; i<NF; i++) printf $i "."; print $NF}')"
+            else
+                Domain="${Install_Server}"
+            fi
+        fi
+    else
+        if [ "${Install_Server}" == "" ]; then
+            Domain="${Default_Domain}"
+        else
+            Install_Server_Dots=$(echo "${Install_Server}" | grep -o \\. | wc -l)
+            debugValue Install_Server 31 $Install_Server_Dots
+            if [ $Install_Server_Dots -gt 1 ]; then
+                Domain="$(echo ${Install_Server} | awk -F. '{for (i=2; i<NF; i++) printf $i "."; print $NF}')"
+            else
+                Domain=${Install_Server}
+            fi
+        fi
+    fi
+fi
+
+debugValue Install_Server 12
+debugValue Domain 12
+
+if [ "$Build" == "" ]; then
+    Build=$Distribution_Dir
+fi
+if [ $Build_Flag -eq 1 ]; then
+    ackMediaBuild "$Build"
+fi

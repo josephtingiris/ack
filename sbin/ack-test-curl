@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# helpful for testing the ack http interface
+
+DEBUG=50
+
+source ../include/Ack.bash
+
+if [ -f /etc/os-release ]; then
+    source /etc/os-release
+fi
+
+Ack_Server="local.ack"
+
+curl \
+    --header "X-ANACONDA-ARCHITECTURE: $(uname -m)" \
+    --header "X-ANACONDA-SYSTEM-RELEASE: $ID" \
+    --header "X-RHN-PROVISIONING-MAC-0: $Ack_Gateway_Interface $(ip link show $Ack_Gateway_Interface | grep link\/ether | awk '{print $2}')" \
+    --header "X-SYSTEM-SERIAL-NUMBER: $(basename $0)" \
+    $Ack_Server

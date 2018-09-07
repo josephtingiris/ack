@@ -1,0 +1,47 @@
+set default="0"
+
+function load_video {
+  insmod efi_gop
+  insmod efi_uga
+  insmod video_bochs
+  insmod video_cirrus
+  insmod all_video
+}
+
+load_video
+set gfxpayload=keep
+insmod gzio
+insmod part_gpt
+insmod ext2
+
+terminal_output console
+if [ x$feature_timeout_style = xy ] ; then
+    set timeout_style=menu
+    set timeout=60
+    # Fallback normal timeout code in case the timeout_style feature is unavailable.
+else
+    set timeout=60
+fi
+
+search --no-floppy --set=root -l '##ACK_ISO_REV## [UEFI]'
+
+menuentry 'Boot ##ACK_INSTALL_SERVER## [UEFI]' --class fedora --class gnu-linux --class gnu --class os --class ##ACK_LABEL## {
+    linuxefi /images/pxeboot/vmlinuz biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=tty0 inst.syslog=##ACK_INSTALL_SERVER## inst.ks=https://##ACK_INSTALL_SERVER##/?install=##ACK_INSTALL_URI##
+    initrdefi /images/pxeboot/initrd.img
+}
+
+submenu '.' {
+
+    menuentry 'rescue-server' --class fedora --class gnu-linux --class gnu --class os --class ##ACK_LABEL## {
+        linuxefi /images/pxeboot/vmlinuz biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=tty0 rescue inst.syslog=##ACK_INSTALL_SERVER## inst.stage2=https://##ACK_INSTALL_SERVER##/rescue/
+    }
+
+    menuentry 'static-ip' --class fedora --class gnu-linux --class gnu --class os --class ##ACK_LABEL## {
+        # ip=ip::gateway:netmask:hostname:interface:none
+        linuxefi /images/pxeboot/vmlinuz biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=tty0 inst.syslog=##ACK_INSTALL_SERVER## inst.ks=https://##ACK_INSTALL_SERVER##/?install=##ACK_INSTALL_URI## dns=8.8.8.8 ip=1.2.3.4::1.2.3.1:255.255.255.0::eth0:none
+        initrdefi /images/pxeboot/initrd.img
+    }
+
+
+}
+
