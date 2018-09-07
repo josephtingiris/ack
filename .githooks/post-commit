@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# automatically push to remote
+git push
