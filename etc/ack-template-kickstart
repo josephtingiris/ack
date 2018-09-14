@@ -1,0 +1,48 @@
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/installation_guide/sect-kickstart-syntax
+
+install
+
+eula --agreed
+
+services --enabled=NetworkManager,sshd
+
+lang en_US.UTF-8
+
+keyboard --vckeymap=us --xlayouts='us'
+
+skipx
+
+url --url="##ACK_CLIENT_INSTALL_SERVER_URL##" --noverifyssl
+
+network --onboot yes --bootproto ##ACK_CLIENT_BOOTPROTO## --hostname ##ACK_CLIENT_HOSTNAME##
+
+rootpw --iscrypted ##ACK_CLIENT_PASSWORD##
+
+sshpw --iscrypted --username=root ##ACK_CLIENT_PASSWORD##
+
+firewall --enabled --ssh
+
+selinux --disabled
+
+authconfig --enableshadow --passalgo=sha512
+
+timezone ##ACK_TIMEZONE## --isUtc --ntpservers=pool.ntp.org
+
+%packages
+@base
+@core
+kexec-tools
+bind-utils
+net-tools
+nmap
+ntp
+ntpdate
+php-cli
+svn
+telnet
+vim-enhanced
+wget
+whois
+%end
+
+##ACK_PPI##

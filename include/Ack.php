@@ -1,6 +1,24 @@
 <?php
+/*
 
-# 20151025, joseph.tingiris@gmail.com, v0.01
+aNAcONDA kICKSTART (ack)
+
+Copyright (C) 2015 Joseph Tingiris
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+ */
 
 # Global (debug)
 
@@ -12,6 +30,17 @@ if (!empty($_GET) && is_array($_GET)) {
 
 if (isset($_GET_lower['debug'])) {
     $DEBUG=(int)$_GET_lower['debug'];
+}
+
+if (!empty($_POST) && is_array($_POST)) {
+    $_POST_lower = array_change_key_case($_POST, CASE_LOWER);
+} else {
+    $_POST_lower=array();
+}
+
+// _POST_lower['debug'] overrides _GET_lower['debug']
+if (isset($_POST_lower['debug'])) {
+    $DEBUG=(int)$_POST_lower['debug'];
 }
 
 if (empty($Default_Timezone)) {
@@ -50,15 +79,11 @@ function ackAuthorized($ack_mac=null, $ack_ip=null, $ack_config=null) {
 
     global $Debug;
 
+    $ack_ip=ackIpv4($ack_ip);
     $ack_mac=ackMac($ack_mac);
 
-    if (!filter_var($ack_ip, FILTER_VALIDATE_IP)) {
-        ackLog("invalid ack_ip '$ack_ip'","WARNING");
-        $ack_ip=null;
-    }
-
-    if (empty($ack_mac) && empty($ack_ip)) {
-        ackLog("unauthorized [NULL ack_mac & ack_ip]","ERROR");
+    if (empty($ack_ip) && empty($ack_mac)) {
+        ackLog("unauthorized [NULL ack_ip & ack_mac]","ERROR");
         return false;
     }
 
@@ -106,7 +131,7 @@ function ackAuthorized($ack_mac=null, $ack_ip=null, $ack_config=null) {
                 $ack_authorized=true;
             }
 
-            if (!$ack_authorized && ackAuthorizedIp($ack_ip, $ack_authorized_ip)) {
+            if (!$ack_authorized && ackIpv4Authorized($ack_ip, $ack_authorized_ip)) {
                 $ack_authorized_method="cidr ip match ($ack_authorized_ip)";
                 $ack_authorized=true;
             }
@@ -140,27 +165,6 @@ function ackAuthorized($ack_mac=null, $ack_ip=null, $ack_config=null) {
     }
 
     ackLog("unauthorized [$ack_ip][$ack_mac][failsafe]","ERROR");
-    return false;
-
-    # end function logic
-
-}
-
-# if an ip is in a cidr range return true else return false
-function ackAuthorizedIp($ip, $cidr) {
-
-    # begin function logic
-
-    if (strpos($cidr,"/") !== false) {
-        list ($subnet, $bits) = explode('/', $cidr);
-        $ip = ip2long($ip);
-        $subnet = ip2long($subnet);
-        $mask = -1 << (32 - $bits);
-        $subnet &= $mask; # nb: in case the supplied subnet wasn't correctly aligned
-
-        return ($ip & $mask) == $subnet;
-    }
-
     return false;
 
     # end function logic
@@ -212,34 +216,49 @@ function ackConfigGet($ack_config_attribute,$ack_config=null) {
     global $Debug;
 
     if (is_string($ack_config_attribute)) $ack_config_attribute=trim($ack_config_attribute);
-    if (empty($ack_config_attribute)) return null;
+    if (empty($ack_config_attribute)) {
+        return null;
+    }
 
     $ack_config=ackFile($ack_config);
-    if (empty($ack_config)) return null;
+    if (empty($ack_config)) {
+        return null;
+    }
 
-    $Debug->debug("get ack_config_attribute=$ack_config_attribute, ack_config=$ack_config",22);
+    $debug_level=22;
+    $debug_string="get ack_config=$ack_config, attribute=$ack_config_attribute";
 
     $attribute_found=false;
 
     $ini_stack=parse_ini_file($ack_config,true);
-    if (empty($ini_stack)) return null;
+    if (empty($ini_stack)) {
+        $debug_string.=" (empty ini)";
+        $Debug->debug($debug_string,$debug_level);
+        return null;
+    }
 
     if (!$attribute_found && is_string($ack_config_attribute)) {
-        if (isset($ini_stack[$ack_config_attribute]) || array_key_exists($ack_config_attribute,$ini_stack)) $attribute_found=true;
+        if (isset($ini_stack[$ack_config_attribute]) || array_key_exists($ack_config_attribute,$ini_stack)) {
+            $attribute_found=true;
+        }
     }
 
     if (!$attribute_found && is_array($ack_config_attribute) || is_object($ack_config_attribute)) {
         foreach($ack_config_attribute as $get_attribute) {
             if (is_string($get_attribute)) {
-                if (isset($ini_stack[$get_attribute]) || array_key_exists($get_attribute,$ini_stack)) $attribute_found=true;
+                if (isset($ini_stack[$get_attribute]) || array_key_exists($get_attribute,$ini_stack)) {
+                    $attribute_found=true;
+                }
             }
         }
         unset($get_attribute);
     }
 
-    if (!$attribute_found) return null;
-
-    #print_r($ini_stack);
+    if (!$attribute_found) {
+        $debug_string.=" (attribute not found)";
+        $Debug->debug($debug_string,$debug_level);
+        return null;
+    }
 
     if (is_string($ack_config_attribute)) {
         $return_string=null;
@@ -248,6 +267,8 @@ function ackConfigGet($ack_config_attribute,$ack_config=null) {
         } else if (is_array($ini_stack[$ack_config_attribute]) || is_object($ini_stack[$ack_config_attribute])) {
             $return_string=end($ini_stack[$ack_config_attribute]);
         }
+        $debug_string.=" ($return_string)";
+        $Debug->debug($debug_string,$debug_level);
         return $return_string;
     }
 
@@ -258,7 +279,7 @@ function ackConfigGet($ack_config_attribute,$ack_config=null) {
 
         foreach($ack_config_attribute as $get_attribute) {
             foreach($ini_stack as $ini_attribute => $ini_value) {
-                #$Debug->debug("get_attribute=$get_attribute, ini_attribute=$ini_attribute",2);
+                $debug_string.=", get_attribute=$get_attribute, ini_attribute=$ini_attribute";
                 if ($ini_attribute == $get_attribute) {
                     $return_stack[$ini_attribute]=$ini_value;
                 }
@@ -268,9 +289,11 @@ function ackConfigGet($ack_config_attribute,$ack_config=null) {
         }
         unset($get_attribute);
 
+        $Debug->debug($debug_string,$debug_level);
         return $return_stack;
     }
 
+    $Debug->debug($debug_string,$debug_level);
     return null;
 
     # end function logic
@@ -339,8 +362,8 @@ function ackConfigSet($ack_config_attribute,$ack_config=null) {
         $ack_config_modifier.="[".trim($_SERVER["SERVER_NAME"])."]";
     }
 
-    if (isset($_SERVER["SCRIPT_NAME"])) {
-        $ack_config_modifier.="[".trim($_SERVER["SCRIPT_NAME"])."]";
+    if (isset($_SERVER["SCRIPT_FILENAME"])) {
+        $ack_config_modifier.="[".trim($_SERVER["SCRIPT_FILENAME"])."]";
     }
 
     if (isset($_SERVER["REMOTE_ADDR"])) {
@@ -370,6 +393,19 @@ function ackConfigSet($ack_config_attribute,$ack_config=null) {
 
     # end function logic
 
+}
+
+function ackExec($cmd, &$stdout=null, &$stderr=null) {
+    $cmd = escapeshellcmd($cmd);
+    $proc = proc_open($cmd,[
+        1 => ['pipe','w'],
+        2 => ['pipe','w'],
+    ],$pipes);
+    $stdout = stream_get_contents($pipes[1]);
+    fclose($pipes[1]);
+    $stderr = stream_get_contents($pipes[2]);
+    fclose($pipes[2]);
+    return proc_close($proc);
 }
 
 function ackFile($ack_file=null, $ack_ini=true) {
@@ -427,11 +463,12 @@ function ackGlobals() {
     # begin function logic
 
     global $Debug;
+
     $ack_globals=$GLOBALS;
     ksort($ack_globals);
     foreach ($ack_globals as $ack_global_key => $ack_global_value) {
-        if (stristr($ack_global_key,"ack")) {
-            $Debug->debugValue($ack_global_key,25);
+        if (preg_match("/^ack/i",$ack_global_key)) {
+            $Debug->debugValue($ack_global_key,9);
         }
     }
     unset($ack_global_key, $ack_global_value);
@@ -440,21 +477,205 @@ function ackGlobals() {
 
 }
 
+function ackGlobalsReplace($ack_content=null) {
+
+    # begin function logic
+
+    global $Debug;
+
+    $ack_content_replace=$ack_content;
+    $ack_replace_key=null;
+
+    if (is_string($ack_content)) {
+
+        $ack_globals=$GLOBALS;
+        ksort($ack_globals);
+        foreach ($ack_globals as $ack_global_key => $ack_global_value) {
+            if (is_string($ack_global_value)) {
+                if (preg_match("/^ack/i",$ack_global_key)) {
+                    $ack_replace_key="##".strtoupper($ack_global_key)."##";
+                    $ack_content_replace=str_replace($ack_replace_key,$ack_global_value,$ack_content_replace);
+                }
+            }
+        }
+        unset($ack_global_key, $ack_global_value, $ack_replace_key);
+
+    }
+
+    return $ack_content_replace;
+
+    # end function logic
+
+}
+
+# optionally convert an integer (or hex) to a decimal IP, validate it, & return it (or null)
+function ackIpv4($ip=null, $int_ip=false, $hex_ip=false, $little_endian=false) {
+    if ($ip == null) return null;
+
+    $return_ip=$ip;
+
+    if ($hex_ip) {
+        if ($little_endian) {
+            $return_ip=hexdec(implode('',array_reverse(str_split($ip,2)))); // little to big endian
+        } else {
+            // big endian
+            $return_ip=hexdec($ip);
+        }
+        if (!empty($return_ip)) {
+            $int_ip=true;
+        }
+    }
+
+    if ($int_ip) {
+        $return_ip=long2ip($return_ip);
+    }
+
+    if (!filter_var($return_ip, FILTER_VALIDATE_IP)) {
+        ackLog("invalid ack_ip '$ip'","WARNING");
+        $return_ip=null;
+    }
+
+    return $return_ip;
+}
+
+# return an array with an inteface's address(es), cidr, & mask, or optionally a string of the (first) address, cidr, or mask
+function ackIpv4Address($interface=null, $address=false, $cidr=false, $mask=false) {
+
+    $interface=trim($interface);
+    if (empty($interface)) {
+        return null;
+    }
+
+    global $Debug;
+
+    $return_address=null;
+    $return_addresses=array();
+    $return_cidr=null;
+    $return_cidrs=array();
+    $return_mask=null; // TODO convert cidr to mask
+    $return_masks=array();
+
+    $ip_cmd="ip -4 -o addr show $interface";
+    $ip_rc=ackExec($ip_cmd,$ip_stdout,$ip_stderr);
+    if ($ip_rc == 0) {
+        // success
+        $ip_stdout_lines=explode("\n",$ip_stdout);
+        if (!empty($ip_stdout_lines)) {
+            foreach($ip_stdout_lines as $ip_stdout_line) {
+                $ip_stdout_line=trim($ip_stdout_line);
+                if ($ip_stdout_line == null || $ip_stdout_line == "") {
+                    continue;
+                }
+                $ip_explode_line=explode(" ",$ip_stdout_line);
+                if (isset($ip_explode_line[1]) && $ip_explode_line[1] == "$interface") {
+                    // this line matches $interface
+                    if (isset($ip_explode_line[6]) && strpos($ip_explode_line[6],"/") !== false) {
+                        list ($ip_address, $ip_cidr) = explode('/', $ip_explode_line[6]);
+
+                        $ip_address=ackIpv4($ip_address);
+                        if (!empty($ip_address)) {
+                            $Debug->debugValue("ip_address",15,$ip_address);
+                            if ($address && !$cidr && !$mask) {
+                                return $ip_address;
+                            } else {
+                                $Debug->debugValue($ip_explode_line,15);
+                            }
+                        }
+
+                        $ip_cidr=trim($ip_cidr);
+                        $ip_cidr=(int)$ip_cidr;
+                        if (isset($ip_cidr) && is_int($ip_cidr)) {
+                            $Debug->debugValue("ip_cidr",15,$ip_cidr);
+                            if (!$address && $cidr && !$mask) {
+                                return $ip_cidr;
+                            } else {
+                                $Debug->debugValue($ip_explode_line,15);
+                            }
+                        }
+                        if (isset($ip_cidr) && is_int($ip_cidr)) {
+                            $Debug->debugValue("ip_cidr",15,$ip_cidr);
+                            if (!$address && !$cidr && $mask) {
+                                return ackIpv4Netmask($ip_cidr);
+                            } else {
+                                $Debug->debugValue($ip_explode_line,15);
+                            }
+                        }
+
+                    }
+                }
+            }
+            unset($ip_explode_line, $ip_stdout_line);
+        }
+        exit(0);
+    } else {
+        // failure
+        ackLog("'$ip_cmd' failed","ERROR");
+    }
+}
+
+# if an ip is in a cidr range return true else return false
+function ackIpv4Authorized($ip, $cidr) {
+
+    # begin function logic
+
+    if (strpos($cidr,"/") !== false) {
+        list ($subnet, $bits) = explode('/', $cidr);
+        $ip = ip2long($ip);
+        $subnet = ip2long($subnet);
+        $mask = -1 << (32 - $bits);
+        $subnet &= $mask; # nb: in case the supplied subnet wasn't correctly aligned
+
+        return ($ip & $mask) == $subnet;
+    }
+
+    return false;
+
+    # end function logic
+
+}
+
+function ackIpv4Netmask($ip) {
+
+    if (strpos($ip, '/') !== false) {
+        $cidr = substr ($ip, strpos ($ip, '/') + 1) * 1;
+    } else {
+        $ip = trim($ip);
+        $cidr = (int)$ip;
+    }
+
+    $netmask = str_split (str_pad (str_pad ('', $cidr, '1'), 32, '0'), 8);
+
+    foreach ($netmask as &$element)
+        $element = bindec ($element);
+
+    return join ('.', $netmask);
+
+}
+
 function ackLog($log_message, $log_level="INFO", $log=null) {
 
     # begin function logic
 
+    global $Debug;
+
     if (empty($log)) {
         if (!empty($GLOBALS["Ack_Log"])) $log=$GLOBALS["Ack_Log"];
     }
-    if (empty($log)) $log="/tmp/entry.log";
+    if (empty($log)) $log="/tmp/ack.log";
 
     $log_message_header="[".$log_level."]";
     $log_message="$log_message_header $log_message";
 
     $error_log=false;
     if (is_writable(dirname($log))) {
-        if (is_writable($log)) {
+
+        if (!file_exists($log)) {
+            if (!touch($log)) {
+                $error_log=true;
+            }
+        }
+
+        if (is_writable($log) && !$error_log) {
             $fp=fopen($log,"a+");
             if ($fp) {
                 fwrite($fp,ackTimestamp($log_message)."\n");
@@ -571,41 +792,27 @@ $Debug = new \josephtingiris\Debug();
 if (!empty($_SERVER) && is_array($_SERVER)) {
     $Debug->debug("----------------> _SERVER key/value pairs",10);
     foreach ($_SERVER as $_SERVER_KEY => $_SERVER_VALUE) {
-        $Debug->debug("$_SERVER_KEY = $_SERVER_VALUE", 10);
+        $Debug->debugValue("$_SERVER_KEY",10,$_SERVER_VALUE);
     }
     $Debug->debug("----------------< _SERVER key/value pairs",10);
 }
 
 # Global (defaults)
 
-if (empty($Ack_0)) {
-    if (!empty($_SERVER["PHP_SELF"])) {
-        $Ack_0=$_SERVER["PHP_SELF"];
-    } else {
-        $Ack_0=__FILE__;
-    }
-}
-if (is_link($Ack_0)) $Ack_0=readlink($Ack_0);
-
-if (empty($Ack_Php)) {
-    $Ack_Php=__FILE__;
-}
-
-if (is_readable($Ack_Dir . "/etc/ack-abbreviation")) {
-    $Ack_Label=trim(file_get_contents($Ack_Dir . "/etc/ack-label"));
+if (!empty($_SERVER["SCRIPT_FILENAME"])) {
+    $Ack_0=$_SERVER["SCRIPT_FILENAME"];
 } else {
-    $Ack_Label="ack";
+    $Ack_0=__FILE__;
 }
+if (is_link($Ack_0)) $Ack_0=realpath($Ack_0);
 
 $Ack_Dir=dirname(dirname(realpath(__FILE__)));
 
 $Ack_Aaa_Dir=$Ack_Dir ."/aaa";
 
+$Ack_Etc_Dir=$Ack_Dir . "/etc";
+
 $Ack_Aaa_Cache=$Ack_Aaa_Dir."/aaa.cache";
-
-$Ack_Aaa_Ini=$Ack_Aaa_Dir."/000000000000";
-
-$Ack_Anaconda_Client=false;
 
 $Ack_Authorized_Ips=array(
     "127.0.0.0/8",
@@ -614,11 +821,65 @@ $Ack_Authorized_Ips=array(
     "10.0.0.0/8",
 );
 
-if (is_readable($Ack_Dir . "/etc/ack-domain")) {
-    $Ack_Domain=trim(file_get_contents($Ack_Dir . "/etc/ack-domain"));
-} else {
-    $Ack_Domain="localdomain";
+$Ack_Authorized_Ssh_Key_Files=array();
+if (is_readable($Ack_Etc_Dir."/ack-authorized_keys")) {
+    array_push($Ack_Authorized_Ssh_Key_Files,$Ack_Etc_Dir."/ack-authorized_keys");
 }
+
+$Ack_Authorized_Ssh_Keys=array();
+foreach ($Ack_Authorized_Ssh_Key_Files as $Ack_Authorized_Ssh_Key_File) {
+    if (is_readable($Ack_Authorized_Ssh_Key_File)) {
+        foreach(file($Ack_Authorized_Ssh_Key_File) as $line) {
+            array_push($Ack_Authorized_Ssh_Keys,$line);
+        }
+        unset($line);
+    }
+}
+# unique keys, only
+$Ack_Authorized_Ssh_Keys=array_unique($Ack_Authorized_Ssh_Keys);
+usort($Ack_Authorized_Ssh_Keys, "strcasecmp");
+
+$Ack_Client_Aaa=$Ack_Aaa_Dir."/000000000000";
+
+$Ack_Client_Anaconda=false;
+
+$Ack_Client_Architecture=null;
+
+$Ack_Client_Authorized=false;
+
+$Ack_Client_Bootproto="dhcp";
+
+$Ack_Client_Hostname=null;
+
+$Ack_Client_Install_Uri=null;
+
+$Ack_Client_Install_Url=null;
+
+$Ack_Client_Ip=null;
+
+$Ack_Client_Ip_0_Interface=null;
+
+$Ack_Client_Ip_0_Address=null;
+
+$Ack_Client_Log_Level="INFO";
+
+$Ack_Client_Mac=null;
+
+$Ack_Client_Mac_0_Interface="eth0";
+
+$Ack_Client_Mac_0_Address="000000000000";
+
+$Ack_Client_Password=null;
+
+$Ack_Client_Ppi=false;
+
+$Ack_Client_Serial_Number=null;
+
+$Ack_Client_System_Release=null;
+
+$Ack_Client_Template=null;
+
+$Ack_Client_Type=null;
 
 if (is_readable($Ack_Dir . "/etc/ack-entity")) {
     $Ack_Entity=trim(file_get_contents($Ack_Dir . "/etc/ack-entity"));
@@ -626,120 +887,268 @@ if (is_readable($Ack_Dir . "/etc/ack-entity")) {
     $Ack_Entity="anonymous";
 }
 
-$Ack_Etc_Dir=$Ack_Dir . "/etc";
+$Ack_Default_Interface=null; // lowest metric?
+
+$Ack_Ipv4_Default_Address=null;
+$Ack_Ipv4_Default_Cidr=null;
+$Ack_Ipv4_Default_Interface=null;
+$Ack_Ipv4_Default_Destination=null;
+$Ack_Ipv4_Default_Gateway=null;
+$Ack_Ipv4_Default_Mac=null;
+$Ack_Ipv4_Default_Netmask=null;
+
+$Ack_Ipv6_Default_Interface=null; // lowest metric
 
 $Ack_Id="base";
+
+if (is_readable($Ack_Dir . "/etc/ack-label")) {
+    $Ack_Label=trim(file_get_contents($Ack_Dir . "/etc/ack-label"));
+}
+if (empty($Ack_Label)) {
+    $Ack_Label="ack";
+}
 
 $Ack_Log_Dir=$Ack_Dir . "/log";
 if (!is_writable($Ack_Log_Dir)) {
     $Ack_Log_Dir="/tmp";
 }
 
-$Ack_Log=$Ack_Log_Dir."/".str_replace(".php","",basename(__FILE__)).".php.log";
+$Ack_Log=$Ack_Log_Dir."/".$Ack_Label.".log";
 
 $Ack_Install_Server="localhost";
 
 $Ack_Install_Servers="debug";
 
-$Ack_Local_Ip="127.0.0.1";
-
-$Ack_Local_Interface="eth0";
-
-$Ack_Local_Mac="000000000000";
-
 $Ack_Privacy=$Ack_Etc_Dir."/privacy";
-
-$Ack_Remote_Ip="";
-
-$Ack_Remote_Interface="";
-
-$Ack_Remote_Mac="";
-
-$Ack_Sn="";
 
 $Ack_Uuid=ackUuid();
 
-
+# These are http headers set by Anaconda, e.g.
+#
 # HTTP_X_ANACONDA_ARCHITECTURE=x86_64
 # HTTP_X_ANACONDA_SYSTEM_RELEASE=CentOS
 # HTTP_X_RHN_PROVISIONING_MAC_0=eth0 00:0c:29:2f:64:ad
 # HTTP_X_SYSTEM_SERIAL_NUMBER=VMware-56 4d c1 86 1e 45 27 53-0b 17 58 e1 06 2f 64 ad
 
 if (isset($_SERVER["HTTP_X_ANACONDA_ARCHITECTURE"])) {
-    $GLOBALS["Ack_Anaconda_Architecture"]=trim($_SERVER["HTTP_X_ANACONDA_ARCHITECTURE"]);
-    $GLOBALS["Ack_Anaconda_Client"]=true;
+    $Ack_Client_Architecture=trim($_SERVER["HTTP_X_ANACONDA_ARCHITECTURE"]);
+}
+if (empty($Ack_Client_Architecture)) {
+    $Ack_Client_Architecture=null;
 } else {
-    $GLOBALS["Ack_Anaconda_Architecture"]="";
+    $Ack_Client_Anaconda=true;
 }
 
 if (isset($_SERVER["HTTP_X_ANACONDA_SYSTEM_RELEASE"])) {
-    $GLOBALS["ANACONDA_SYSTEM_RELEASE"]=trim($_SERVER["HTTP_X_ANACONDA_SYSTEM_RELEASE"]);
-    $GLOBALS["Ack_Anaconda_Client"]=true;
-} else {
-    $GLOBALS["ANACONDA_SYSTEM_RELEASE"]="";
+    $Ack_Client_System_Release=trim($_SERVER["HTTP_X_ANACONDA_SYSTEM_RELEASE"]);
 }
-
-if (isset($_SERVER["HTTP_X_PROVISIONING_IP_0"])) {
-    if (strpos($_SERVER["HTTP_X_PROVISIONING_IP_0"]," ") !== false) {
-        $PROVISIONING_IP_0=explode(" ",$_SERVER["HTTP_X_PROVISIONING_IP_0"]);
-        if (isset($PROVISIONING_IP_0[0])) $GLOBALS["Ack_Local_Interface"]=trim($PROVISIONING_IP_0[0]);
-        if (isset($PROVISIONING_IP_0[1])) $GLOBALS["Ack_Local_Ip"]=trim($PROVISIONING_IP_0[1]);
-    }
-    $GLOBALS["Ack_Anaconda_Client"]=true;
+if (empty($Ack_Client_System_Release)) {
+    $Ack_Client_System_Release=null;
+} else {
+    $Ack_Client_Anaconda=true;
 }
 
 if (isset($_SERVER["HTTP_X_RHN_PROVISIONING_MAC_0"])) {
     if (strpos($_SERVER["HTTP_X_RHN_PROVISIONING_MAC_0"]," ") !== false) {
-        $RHN_PROVISIONING_MAC_0=explode(" ",$_SERVER["HTTP_X_RHN_PROVISIONING_MAC_0"]);
-        if (isset($RHN_PROVISIONING_MAC_0[0])) $GLOBALS["Ack_Local_Interface"]=trim($RHN_PROVISIONING_MAC_0[0]);
-        if (isset($RHN_PROVISIONING_MAC_0[1])) $GLOBALS["Ack_Local_Mac"]=trim($RHN_PROVISIONING_MAC_0[1]);
+        $Ack_Client_Provisioning_Mac_0=explode(" ",$_SERVER["HTTP_X_RHN_PROVISIONING_MAC_0"]);
+        if (isset($Ack_Client_Provisioning_Mac_0[0])) $Ack_Client_Mac_0_Interface=trim($Ack_Client_Provisioning_Mac_0[0]);
+        if (isset($Ack_Client_Provisioning_Mac_0[1])) $Ack_Client_Mac_0_Address=trim($Ack_Client_Provisioning_Mac_0[1]);
+        unset($Ack_Client_Provisioning_Mac_0);
     }
-    $GLOBALS["Ack_Anaconda_Client"]=true;
+    $GLOBALS["Ack_Client_Anaconda"]=true;
 }
-
-if (isset($_GET_lower['mac'])) $GLOBALS["Ack_Local_Mac"]=ackMac($_GET_lower['mac']);
-if (isset($_GET_lower['provisioning_mac'])) $GLOBALS["Ack_Local_Mac"]=ackMac($_GET_lower['provisioning_mac']);
-
-if (!empty($_SERVER["REMOTE_ADDR"])) $Ack_Remote_Ip=trim($_SERVER["REMOTE_ADDR"]);
-
-$Ack_Local_Mac=strtolower($Ack_Local_Mac);
-
-$Ack_Aaa_Ini=$Ack_Aaa_Dir."/".strtolower($Ack_Local_Mac);
+if (empty($Ack_Client_Mac_0_Address)) {
+    $Ack_Client_Mac_0_Address=null;
+} else {
+    $Ack_Client_Anaconda=true;
+}
+if (empty($Ack_Client_Mac_0_Interface)) {
+    $Ack_Client_Mac_0_Interface=null;
+} else {
+    $Ack_Client_Anaconda=true;
+}
 
 if (isset($_SERVER["HTTP_X_SYSTEM_SERIAL_NUMBER"])) {
-    $GLOBALS["Ack_Sn"]=trim($_SERVER["HTTP_X_SYSTEM_SERIAL_NUMBER"]);
-    $GLOBALS["Ack_Anaconda_Client"]=true;
+    $Ack_Client_Serial_Number=trim($_SERVER["HTTP_X_SYSTEM_SERIAL_NUMBER"]);
+    $Ack_Client_Anaconda=true;
+}
+if (empty($Ack_Client_Serial_Number)) {
+    $Ack_Client_Serial_Number=null;
+} else {
+    $Ack_Client_Anaconda=true;
 }
 
-if  (isset($_SERVER["SERVER_NAME"])) {
-    $GLOBALS["Ack_Install_Server"]=trim($_SERVER["SERVER_NAME"]);
-    if (stristr($GLOBALS["Ack_Install_Server"],".")) {
-        $GLOBALS["Ack_Domain"]=trim(substr($GLOBALS["Ack_Install_Server"],strpos($GLOBALS["Ack_Install_Server"],".")+1));
-        if (!empty($GLOBALS["Ack_Domain"])) {
-            $GLOBALS["Ack_Install_Servers"]=$GLOBALS["Ack_Domain"]." ".$GLOBALS["Ack_Install_Servers"];
-        }
+# These are http headers set by ack-ppi, e.g.
+#
+# HTTP_X_ACK_PROVISIONING_IP_0=eth0 1.2.3.4
+
+if (isset($_SERVER["HTTP_X_ACK_PROVISIONING_IP_0"])) {
+    if (strpos($_SERVER["HTTP_X_ACK_PROVISIONING_IP_0"]," ") !== false) {
+        $Ack_Client_Provisioning_Ip_0=explode(" ",$_SERVER["HTTP_X_ACK_PROVISIONING_IP_0"]);
+        if (isset($Ack_Client_Provisioning_Ip_0[0])) $Ack_Client_Ip_0_Interface=trim($Ack_Client_Provisioning_Ip_0[0]);
+        if (isset($Ack_Client_Provisioning_Ip_0[1])) $Ack_Client_Ip_0_Address=trim($Ack_Client_Provisioning_Ip_0[1]);
+        unset($Ack_Client_Provisioning_Ip_0);
+    }
+    $GLOBALS["Ack_Client_Anaconda"]=true;
+}
+if (empty($Ack_Client_Ip_0_Address)) {
+    $Ack_Client_Ip_0_Address=null;
+} else {
+    $Ack_Client_Ppi=true;
+}
+if (empty($Ack_Client_Ip_0_Interface)) {
+    $Ack_Client_Ip_0_Interface=null;
+} else {
+    $Ack_Client_Ppi=true;
+}
+
+# These are server variables that are automatically set, or could be set via the environment
+
+// this will be the value of the client's NAT IP, if the client is NAT'ing.  otherwise it will match Ack_Client_Ip_0_Address or be null
+if (!empty($_SERVER["REMOTE_ADDR"])) {
+    $Ack_Client_Ip=trim($_SERVER["REMOTE_ADDR"]);
+} else {
+    if (!empty($Ack_Client_Ip_0_Address)) {
+        $Ack_Client_Ip=$Ack_Client_Ip_0_Address;
+    } else {
+        $Ack_Client_Ip=null;
     }
 }
 
-if (stristr($GLOBALS["Ack_Install_Server"],"debug.") || stristr($GLOBALS["Ack_Install_Server"],"dev.") || stristr($GLOBALS["Ack_Install_Server"],"dt.") || stristr($GLOBALS["Ack_Install_Server"],"vm.")) {
-    $GLOBALS["Ack_Crypt_Pw"]=crypt("password", '$6$ackD');
-} else {
-    $GLOBALS["Ack_Crypt_Pw"]=crypt($GLOBALS["Ack_Local_Mac"], '$6$ackM');
+# These are request variables that can be set by GET/POST
+
+// Notes:
+//
+// * _REQUEST_lower should always override (what's set via) http headers
+// * _POST_lower should always override _GET_lower
+
+
+if (!empty($_GET_lower["install"])) {
+    $Ack_Client_Install_Uri="install=".$_GET_lower["install"];
+}
+if (!empty($_POST_lower["install"])) {
+    $Ack_Client_Install_Uri="install=".$_POST_lower["install"];
+}
+if (empty($Ack_Client_Install_Uri)) {
+    $Ack_Client_Install_Uri="install=default";
 }
 
-if ($GLOBALS["Ack_Anaconda_Client"] === false) {
-    ackLog($GLOBALS["Ack_Remote_Ip"]." is not an anaconda client","NOTICE");
+if (isset($_GET_lower["mac"])) {
+    $Ack_Client_Mac=ackMac($_GET_lower["mac"]);
+}
+if (isset($_POST_lower["mac"])) {
+    $Ack_Client_Mac=ackMac($_POST_lower["mac"]);
+}
+if (empty($Ack_Client_Mac) && !empty($Ack_Client_Mac_0_Address)) {
+    $Ack_Client_Mac=ackMac($Ack_Client_Mac_0_Address);
+    $Ack_Client_Aaa=$Ack_Aaa_Dir."/".$Ack_Client_Mac;
 } else {
-    ackLog($GLOBALS["Ack_Remote_Ip"]." is an anaconda client (Ack_Anaconda_Architecture=".$GLOBALS["Ack_Anaconda_Architecture"].")","NOTICE");
-    ackLog($GLOBALS["Ack_Remote_Ip"]." is an anaconda client (ANACONDA_SYSTEM_RELEASE=".$GLOBALS["ANACONDA_SYSTEM_RELEASE"].")","NOTICE");
-    ackLog($GLOBALS["Ack_Remote_Ip"]." is an anaconda client (Ack_Local_Interface=".$GLOBALS["Ack_Local_Interface"].")","NOTICE");
-    ackLog($GLOBALS["Ack_Remote_Ip"]." is an anaconda client (Ack_Local_Ip=".$GLOBALS["Ack_Local_Ip"].")","NOTICE");
-    ackLog($GLOBALS["Ack_Remote_Ip"]." is an anaconda client (Ack_Local_Mac=".$GLOBALS["Ack_Local_Mac"].")","NOTICE");
-    ackLog($GLOBALS["Ack_Remote_Ip"]." is an anaconda client (Ack_Sn=".$GLOBALS["Ack_Sn"].")","NOTICE");
+    $Ack_Client_Mac=null;
+    $Ack_Client_Aaa=null;
 }
 
-$Debug->debug("Ack_Anaconda_Client = ".$Ack_Anaconda_Client,99);
-$Debug->debug("Ack_Anaconda_Architecture = ".$Ack_Anaconda_Architecture,99);
-$Debug->debug("ANACONDA_SYSTEM_RELEASE = ".$ANACONDA_SYSTEM_RELEASE,99);
+if (isset($_GET_lower["hostname"])) {
+    $Ack_Client_Hostname=$_GET_lower["hostname"];
+}
+if (isset($_POST_lower["hostname"])) {
+    $Ack_Client_Hostname=$_POST_lower["hostname"];
+}
+if (empty($Ack_Client_Hostname)) {
+    $Ack_Client_Hostname=$Ack_Client_Mac;
+}
+
+# variables used for replacements
+
+if  (isset($_SERVER["HTTP_HOST"])) {
+    $Ack_Install_Server=trim($_SERVER["HTTP_HOST"]);
+    if (stristr($Ack_Install_Server,".")) {
+        $Ack_Domain=trim(substr($Ack_Install_Server,strpos($Ack_Install_Server,".")+1));
+        if (!empty($Ack_Domain)) {
+            $Ack_Install_Servers=$Ack_Domain." ".$Ack_Install_Servers;
+        }
+    }
+} else {
+    if (is_readable($Ack_Dir . "/etc/ack-domain")) {
+        $Ack_Domain=trim(file_get_contents($Ack_Dir . "/etc/ack-domain"));
+        $Ack_Install_Server=$Ack_Label.".".$Ack_Domain;
+    } else {
+        $Ack_Domain="localdomain";
+        $Ack_Install_Server="localhost";
+    }
+}
+
+if (isset($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] == strtolower("on")) {
+    $Ack_Install_Server_Url="https://".$Ack_Install_Server."/?";
+} else {
+    $Ack_Install_Server_Url="http://".$Ack_Install_Server."/?";
+}
+
+$Ack_Client_Install_Server_Url=$Ack_Install_Server_Url.$Ack_Client_Install_Uri;
+
+// the root password (is the lowercase mac address without the colons)
+$Ack_Client_Password=crypt($Ack_Client_Mac, '$6$ackM');
+
+// TODO crude ... set default interface globals
+if (is_readable("/proc/net/route")) {
+    foreach(file("/proc/net/route") as $route) {
+        $route_explode=explode("\t",$route);
+        if (isset($route_explode[1]) && $route_explode[1] == "00000000") {
+            $Debug->debugValue("route",15);
+            $Debug->debugValue("route_explode",15);
+            if (isset($route_explode[0])) { // Iface
+                $Ack_Ipv4_Default_Interface=trim($route_explode[0]);
+            }
+            if (isset($route_explode[1])) { // Destination
+                $Ack_Ipv4_Default_Destination=ackIpv4($route_explode[1],true,true,true);
+            }
+            if (isset($route_explode[2])) { // Gateway
+                $Ack_Ipv4_Default_Gateway=ackIpv4($route_explode[2],true,true,true);
+            }
+            #if (isset($route_explode[3])) { // Flags
+            #if (isset($route_explode[4])) { // Use
+            #if (isset($route_explode[5])) { // Metric
+            #if (isset($route_explode[6])) { // Mask
+            #if (isset($route_explode[7])) { // MTU
+            #if (isset($route_explode[8])) { // Window
+            #if (isset($route_explode[9])) { // IRTT
+        }
+    }
+    unset($route, $route_explode, $route_ip_hex, $route_ip_dec);
+}
+
+if (!empty($Ack_Ipv4_Default_Interface)) {
+    $Ack_Ipv4_Default_Address=ackIpv4Address($Ack_Ipv4_Default_Interface,true,false,false);
+    $Ack_Ipv4_Default_Cidr=ackIpv4Address($Ack_Ipv4_Default_Interface,false,true,false);
+    $Ack_Ipv4_Default_Netmask=ackIpv4Address($Ack_Ipv4_Default_Interface,false,false,true);
+}
+
+# log some stuff ...
+
+if ($Ack_Client_Anaconda) {
+    $Ack_Client_Type="anaconda";
+    if ($Ack_Client_Ppi) {
+        $Ack_Client_Type.=" & ack-ppi";
+    }
+} else {
+    if ($Ack_Client_Ppi) {
+        $Ack_Client_Type="ack-ppi";
+        $Ack_Client_Log_Level="WARNING";
+    } else {
+        $Ack_Client_Type="unknown";
+        $Ack_Client_Log_Level="ERROR";
+    }
+}
+
+$Ack_Timezone=$Default_Timezone;
+
+ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Architecture=".$Ack_Client_Architecture.")","INFO");
+ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Ip=".$Ack_Client_Ip.")","INFO");
+ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Ip_0_Address=".$Ack_Client_Ip_0_Address.")","INFO");
+ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Ip_0_Interface=".$Ack_Client_Ip_0_Interface.")","INFO");
+ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Mac=".$Ack_Client_Mac.")","INFO");
+ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Mac_0_Address=".$Ack_Client_Mac_0_Address.")","INFO");
+ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Mac_0_Interface=".$Ack_Client_Mac_0_Interface.")","INFO");
+ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Serial_Number=".$Ack_Client_Serial_Number.")","INFO");
+ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_System_Release=".$Ack_Client_System_Release.")","INFO");
 
 ?>

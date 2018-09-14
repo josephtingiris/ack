@@ -140,13 +140,27 @@ function ackMediaBuild() {
     for build in ${builds[@]}; do
         ((++debug_level))
 
+        debugValue build $debug_level
+
+        if [ "$build" == "" ]; then
+            debug "empty build value" $debug_level
+            continue
+        fi
+
+        if [ ! -f "$build" ]; then
+            if [ -f "${Distribution_Dir}/$build" ]; then
+                build="${Distribution_Dir}/${build}"
+            else
+                printf "\nERROR $build file not found\n\n"
+                continue
+            fi
+        fi
+
         build=$(readlink -e $build 2> /dev/null)
         if [ "$build" == "" ]; then
             printf "\nERROR build readlink failed\n\n"
             continue
         fi
-
-        debugValue build $debug_level
 
         local build_basename=$(basename $build)
         debugValue build_basename $debug_level

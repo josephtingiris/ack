@@ -1,6 +1,26 @@
 <?php $DEBUG=25;
+/*
 
-# 20170723, joseph.tingiris@gmail.com
+aNAcONDA kICKSTART (ack)
+
+Copyright (C) 2015 Joseph Tingiris
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+ */
+
+header("Content-Type: text/plain;charset=UTF-8");
 
 # Global (debug)
 
@@ -46,113 +66,162 @@ unset($Ack_Php_Dir, $Ack_Php);
 
 # Anaconda/Kickstart (AcK)
 Function ackIndex() {
-global $ACK_LABEL,$CONSOLE,$CNC_SERVER,$ENTITY,$CRYPT_PW,$INSTALL_DOMAIN,$INSTALL_ID,$INSTALL_SERVER,$INSTALL_SERVERS,$LOG_DIR,$LOG_FILE,$ANACONDA_ARCHITECTURE,$ANACONDA_SYSTEM_RELEASE,$PROVISIONING_INTERFACE,$PROVISIONING_MAC,$PROVISIONING_SN,$Ack_Dir, $ACK_CACHE_FILE,$CONFIG_DIR,$Ack_Config,$PROVISIONING_IP_LOCAL,$PROVISIONING_IP_REMOTE,$MEDIA_ALIAS;
 
-if (isset($Ack_Config)) {
-    if(stristr($Ack_Config, ":")){
-        $Ack_Config =str_replace(":","",$Ack_Config);
+global $Debug;
+
+// config overrides everything
+if (isset($GLOBALS["Ack_Client_Aaa"])) {
+    $ack_client_debug=ackConfigGet("debug",$GLOBALS["Ack_Client_Aaa"]);
+    $ack_client_entity=ackConfigGet("entity",$GLOBALS["Ack_Client_Aaa"]);
+    $ack_client_hostname=ackConfigGet("hostname",$GLOBALS["Ack_Client_Aaa"]);
+    $ack_client_install_disk_percent=ackConfigGet("install_disk_percent",$GLOBALS["Ack_Client_Aaa"]);
+    $ack_client_install_server=ackConfigGet("install_server",$GLOBALS["Ack_Client_Aaa"]);
+    $ack_client_install_uri=ackConfigGet("install_uri",$GLOBALS["Ack_Client_Aaa"]);
+    $ack_client_label=ackConfigGet("label",$GLOBALS["Ack_Client_Aaa"]);
+    $ack_client_mac=ackConfigGet("mac",$GLOBALS["Ack_Client_Aaa"]);
+    $ack_client_template=ackConfigGet("template",$GLOBALS["Ack_Client_Aaa"]);
+}
+
+// client debug is *not* server Debug
+if (empty($ack_client_debug)) {
+    $ack_client_debug=0;
+}
+$ack_client_debug=(int)$ack_client_debug; // recast, to be sure
+
+if (empty($ack_client_entity)) {
+    if (!empty($GLOBALS["Ack_Entity"])) {
+        $ack_client_entity=$GLOBALS["Ack_Entity"];
+    } else {
+        $ack_client_entity="ack";
     }
 }
 
-$ack_debug=ackConfigGet("debug",$Ack_Config);
-if (empty($ack_debug)) {
-    $ack_debug=0;
-} else {
-    $ack_debug=(int)$ack_debug;
-}
-
-#print_r($ack_hostname);
-$ack_hostname=ackConfigGet("hostname",$Ack_Config);
-if (empty($ack_hostname) && !empty($PROVISIONING_MAC)) {
-    $ack_hostname=strtolower(trim(str_replace(":","",$PROVISIONING_MAC)));
-    ackConfigSet("hostname=$ack_hostname",$Ack_Config);
-} else {
-    if (empty($PROVISIONING_MAC)) {
-        $ack_hostname="anonymous";
-        ackConfigSet("hostname=$ack_hostname",$Ack_Config);
+if (empty($ack_client_label)) {
+    if (!empty($GLOBALS["Ack_Label"])) {
+        $ack_client_label=$GLOBALS["Ack_Label"];
+    } else {
+        $ack_client_label="ack";
     }
 }
 
-echo "#\n";
-echo "# aNAcONDA kICKSTART ($ACK_LABEL) - Automatic Install [$PROVISIONING_MAC] - $Ack_Dir ". realpath(__FILE__);;
-if ($ack_debug >= 1) echo " [DEBUG=$ack_debug]";
-echo "\n";
-echo "#\n";
-echo "# $ENTITY - $INSTALL_SERVER (".  date("Y-m-d H:i:s") .")\n";
-echo "#\n";
-echo "\n";
+if (empty($ack_client_mac)) {
+    if (!empty($GLOBALS["Ack_Client_Mac"])) {
+        $ack_client_mac=$GLOBALS["Ack_Client_Mac"];
+    }
+}
 
-echo "install\n";
-echo "\n";
+if (empty($ack_client_hostname)) {
+    if (!empty($GLOBALS["Ack_Label"])) {
+        $ack_client_hostname=$GLOBALS["Ack_Label"];
+    } else {
+        $ack_client_hostname="ack";
+    }
+}
 
-echo "eula --agreed\n";
-echo "\n";
+if (empty($ack_client_install_server)) {
+    if (!empty($GLOBALS["Ack_Install_Server"])) {
+        $ack_client_install_server=$GLOBALS["Ack_Install_Server"];
+    } else {
+        $ack_client_install_server="localhost";
+    }
+}
 
-echo "services --enabled=NetworkManager,sshd\n";
-echo "\n";
+if (empty($ack_client_template)) {
+    if (!empty($GLOBALS["Ack_Client_Template"])) {
+        $ack_client_template=$GLOBALS["Ack_Client_Template"];
+    } else {
+        $ack_client_template="ack-template-kickstart";
+    }
+}
+if (!is_readable($ack_client_template)) {
+    if (isset($GLOBALS["Ack_Etc_Dir"]) && is_dir($GLOBALS["Ack_Etc_Dir"]) && is_readable($GLOBALS["Ack_Etc_Dir"])) {
+        if (is_readable($GLOBALS["Ack_Etc_Dir"]."/".$ack_client_template)) {
+            $ack_client_template=$GLOBALS["Ack_Etc_Dir"]."/".$ack_client_template;
+        }
+    } else {
+        $ack_client_template=null;
+    }
+}
 
-# Specifies the language
-echo "lang en_US.UTF-8\n";
-echo "\n";
+$ack_index_header=null;
+$ack_index_header.="#";
+$ack_index_header.="\n";
+$ack_index_header.="#";
+if (!empty($ack_client_entity)) {
+    $ack_index_header.=" ".$ack_client_entity;
+}
+$ack_index_header.=" kickstart";
+if (!empty($ack_client_label)) {
+    $ack_index_header.=" (".$ack_client_label.")";
+}
+$ack_index_header.=" - Install Server [$ack_client_install_server]";
+$ack_index_header.=" - Template [$ack_client_template]";
+if (!empty($ack_client_debug)) {
+    $ack_index_header.=" - [DEBUG=$ack_client_debug]";
+}
+$ack_index_header.="\n";
+$ack_index_header.="#";
+$ack_index_header.="\n";
+$ack_index_header.="# [".  date("Y-m-d H:i:s") ."]";
+$ack_index_header.=" - template";
+if (!empty($GLOBALS["Ack_Client_Ip"])) {
+    $ack_index_header.=" - ".$GLOBALS["Ack_Client_Ip"];
+}
+if (!empty($GLOBALS["Ack_Client_Ip_0_Address"])) {
+    $ack_index_header.=" - ".$GLOBALS["Ack_Client_Ip_0_Address"];
+}
+if (!empty($GLOBALS["Ack_Client_Mac"])) {
+    $ack_index_header.=" - ".$GLOBALS["Ack_Client_Mac"];
+}
+$ack_index_header.=" - start";
+$ack_index_header.="\n";
+$ack_index_header.="#";
+$ack_index_header.="\n";
+$ack_index_header.="\n";
 
-# Specifies the keyboard layout
-echo "keyboard --vckeymap=us --xlayouts='us'\n";
-echo "\n";
+echo $ack_index_header;
 
-# Forces the text installer to be used (saves time)
-#echo "text\n";
-#echo "\n";
+$ack_client_template_contents=file_get_contents($ack_client_template);
+if ($ack_client_template_contents !== false) {
+    $ack_client_template_contents=ackGlobalsReplace($ack_client_template_contents);
+}
 
-# Forces the cmdline installer to be used (debugging)
-#echo "cmdline\n";
-#echo "\n";
+$ack_client_ppi=ackPpi();
+if (!empty($ack_client_ppi)) {
+    $ack_index_ppi=null;
+    $ack_index_ppi.="\n";
+    $ack_index_ppi.=$ack_client_ppi;
 
-# Skips the display of any GUI during install (saves time)
-echo "skipx\n";
-echo "\n";
+    $ack_client_template_contents=str_replace("##ACK_PPI##",$ack_index_ppi,$ack_client_template_contents);
 
-# Used with an HTTP install to specify where the install files are located
-#$media_alias="/media/".$ANACONDA_SYSTEM_RELEASE."-".$ANACONDA_ARCHITECTURE."/"; // the trailing / is annoying
-#$media_alias="/media/".$ANACONDA_SYSTEM_RELEASE."-".$ANACONDA_ARCHITECTURE;
-if (isset($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] == strtolower("on")) {
-    $url="\"https://".$INSTALL_SERVER.$MEDIA_ALIAS."\" --noverifyssl";
-} else $url="\"http://".$INSTALL_SERVER.$MEDIA_ALIAS."\"";
-echo "url --url=$url\n";
-echo "\n";
+}
 
-# Assign a static IP address upon first boot & set the hostname
-echo "network --onboot yes --bootproto dhcp --hostname $ack_hostname\n";
-echo "\n";
-#echo "network --onboot yes --bootproto dhcp --hostname $ack_hostname --ipv6=off\n";
-#echo "\n";
+echo $ack_client_template_contents;
 
-# Give the second interface a DHCP address (if you are not using a second interface comment this line out)
-#echo "network --device eth1 --bootproto=dhcp\n";
-#echo "\n";
+$ack_index_footer=null;
+$ack_index_footer.="\n";
+$ack_index_footer.="\n";
+$ack_index_footer.="#";
+$ack_index_footer.="\n";
+$ack_index_footer.="# [".  date("Y-m-d H:i:s") ."]";
+$ack_index_footer.=" - template";
+if (!empty($GLOBALS["Ack_Client_Ip"])) {
+    $ack_index_footer.=" - ".$GLOBALS["Ack_Client_Ip"];
+}
+if (!empty($GLOBALS["Ack_Client_Ip_0_Address"])) {
+    $ack_index_footer.=" - ".$GLOBALS["Ack_Client_Ip_0_Address"];
+}
+if (!empty($GLOBALS["Ack_Client_Mac"])) {
+    $ack_index_footer.=" - ".$GLOBALS["Ack_Client_Mac"];
+}
+$ack_index_footer.=" - end";
+$ack_index_footer.="\n";
+$ack_index_footer.="#";
+$ack_index_footer.="\n";
 
-# Set the (pre-install) ssh password
-echo "rootpw --iscrypted ".$CRYPT_PW."\n";
-echo "\n";
+echo $ack_index_footer;
 
-# Set the (install) root password
-echo "sshpw --username=root ".$CRYPT_PW." --iscrypted\n";
-echo "\n";
-
-# Enable the firewall and open port 22 for SSH remote administration
-echo "firewall --enabled --ssh\n";
-echo "\n";
-
-# Disable selinux
-echo "selinux --disabled\n";
-echo "\n";
-
-# Setup security and SELinux levels
-echo "authconfig --enableshadow --passalgo=sha512\n";
-echo "\n";
-
-# Set the timezone
-echo "timezone ".$GLOBALS['Default_Timezone']." --isUtc --ntpservers=pool.ntp.org\n";
-echo "\n";
+return;
 
 # Do NOT Zero out the MBR
 #echo "zerombr\n";
@@ -160,30 +229,6 @@ echo "\n";
 
 # Include the dynamically generated 'smartpart' configuration (created by ack-ks)
 echo "%include /tmp/smartpart\n";
-echo "\n";
-
-# reboot when installation completes
-#echo "reboot\n";
-#echo "\n";
-
-# Install the Core software packages, groups like "minimal", or individual package names
-echo "%packages\n";
-echo "@base\n";
-echo "@core\n";
-echo "kexec-tools\n";
-echo "bind-utils\n";
-#echo "epel-release\n"; # this will break older versions of centos 7 installing from Everything media
-echo "net-tools\n";
-echo "nmap\n";
-echo "ntp\n";
-echo "ntpdate\n";
-echo "php-cli\n";
-echo "svn\n";
-echo "telnet\n";
-echo "vim-enhanced\n";
-echo "wget\n";
-echo "whois\n";
-echo "%end\n";
 echo "\n";
 
 $ack_ppi=ackPpi();
@@ -201,9 +246,12 @@ if (!empty($ack_ppi)) {
 }
 
 function ackPpi($ppi_file=null) {
+
     global $ACK_LABEL,$CONSOLE,$CNC_SERVER,$ENTITY,$CRYPT_PW,$INSTALL_DOMAIN,$INSTALL_ID,$INSTALL_SERVER,$INSTALL_SERVERS,$LOG_DIR,$LOG_FILE,$ANACONDA_ARCHITECTURE,$ANACONDA_SYSTEM_RELEASE,$PROVISIONING_INTERFACE,$PROVISIONING_MAC,$PROVISIONING_SN,$Ack_Dir,$ACK_CACHE_FILE,$CONFIG_DIR,$Ack_Config,$PROVISIONING_IP_LOCAL,$PROVISIONING_IP_REMOTE;
 
-    if (empty($ppi_file)) $ppi_file="../sbin/ack-ppi";
+    if (empty($ppi_file)) {
+        $ppi_file="../sbin/ack-ppi";
+    }
 
     $ppi_return=null;
     if (is_readable($ppi_file)) {
@@ -276,9 +324,7 @@ function ackPpi($ppi_file=null) {
             $ppi_return.="\n";
         }
     } else {
-        $ppi_return.="\n";
         $ppi_return.="# ack-ppi file not found";
-        $ppi_return.="\n";
         ackLog("$ppi_file not found from ".getcwd()."","WARNING");
     }
 
@@ -288,6 +334,43 @@ function ackPpi($ppi_file=null) {
 #
 # Main Logic
 #
+
+if (isset($Ack_Client_Mac) && isset($Ack_Client_Ip) && isset($Ack_Client_Aaa)) {
+    $Ack_Client_Authorized=ackAuthorized($Ack_Client_Mac,$Ack_Client_Ip,$Ack_Client_Aaa);
+} else {
+    $Ack_Client_Authorized=false;
+}
+if ($Ack_Client_Authorized === false) {
+    ackLog($Ack_Client_Ip." is unauthorized [".$Ack_Client_Mac."]","WARNING");
+    ackCacheSet(array($Ack_Client_Mac,"unauthorized"),$Ack_Aaa_Cache);
+    echo "\nunauthorized";
+    exit(1);
+} else {
+    ackCacheSet(array($Ack_Client_Mac,"authorized"),$Ack_Aaa_Cache);
+}
+
+ackGlobals();
+
+ackCacheSet(array($Ack_Client_Mac,$Ack_Client_Serial_Number,$Ack_Client_Ip,$Ack_Client_Architecture,$Ack_Client_System_Release),$Ack_Aaa_Cache);
+
+if (isset($_GET['ack-ppi'])) {
+    echo ackPpi();
+} else {
+    if (isset($_GET['init']) && $_GET['init']=="ack") {
+        echo date("YmdHis") ."\n";
+    } else {
+        ackIndex();
+    }
+}
+
+exit();
+
+
+
+
+
+
+
 
 if (isset($GLOBALS["ACK_ENTITY"])) {
     $ENTITY=$GLOBALS["ACK_ENTITY"];
@@ -318,18 +401,6 @@ $LOG_FILE=$LOG_DIR."/".str_replace(".php","",basename(__FILE__)).".log";
 $Debug->debug(__FILE__.", LOG_FILE=$LOG_FILE",10);
 
 $PRIVACY_FILE=$ETC_DIR."/privacy";
-
-ackGlobals();
-
-$Ack_Authorized=ackAuthorized($Ack_Local_Mac,$Ack_Remote_Ip,$Ack_Aaa_Ini);
-if ($Ack_Authorized === false) {
-    ackLog($Ack_Remote_Ip." is unauthorized [".$Ack_Local_Mac."]","WARNING");
-    ackCacheSet(array($Ack_Local_Mac,"unauthorized"),$Ack_Aaa_Cache);
-    echo "\nunauthorized";
-    exit(1);
-} else {
-    ackCacheSet(array($Ack_Local_Mac,"authorized"),$Ack_Aaa_Cache);
-}
 
 if (is_readable("../etc/ack-label")) {
     $ACK_LABEL=trim(file_get_contents("../etc/ack-label"));
@@ -408,8 +479,6 @@ if (isset($_SERVER["HTTP_X_RHN_PROVISIONING_MAC_0"])) {
 
 if (isset($_SERVER["REMOTE_ADDR"])) $PROVISIONING_IP_REMOTE=trim($_SERVER["REMOTE_ADDR"]);
 
-if (isset($_GET_lower["mac"])) $PROVISIONING_MAC=$_GET_lower["mac"];
-
 if (isset($_GET_lower["provisioning_mac"])) $PROVISIONING_MAC=$_GET_lower["provisioning_mac"];
 
 $PROVISIONING_MAC=strtolower($PROVISIONING_MAC);
@@ -448,8 +517,6 @@ if (!empty($INSTALL_DOMAIN)) {
     $INSTALL_SERVERS="$INSTALL_DOMAIN $INSTALL_SERVERS";
 }
 
-header("Content-Type: text/plain;charset=UTF-8");
-
 if ($ANACONDA_CLIENT === false) {
     ackLog("$PROVISIONING_IP_REMOTE is not an anaconda client","WARNING");
     #echo Private_Property();
@@ -467,7 +534,6 @@ $Debug->debug("CNC_SERVER=$CNC_SERVER",25);
 $Debug->debug("CONFIG_DIR=$CONFIG_DIR",25);
 $Debug->debug("CONSOLE=$CONSOLE",25);
 $Debug->debug("CRYPT_PW=$CRYPT_PW",25);
-$Debug->debug("ENTITY=$ENTITY",25);
 $Debug->debug("LOG_DIR=$LOG_DIR",25);
 $Debug->debug("LOG_FILE=$LOG_FILE",25);
 $Debug->debug("ANACONDA_ARCHITECTURE=$ANACONDA_ARCHITECTURE",25);
@@ -481,16 +547,5 @@ $Debug->debug("PROVISIONING_IP_REMOTE=$PROVISIONING_IP_REMOTE",25);
 $Debug->debug("PROVISIONING_MAC=$PROVISIONING_MAC",25);
 $Debug->debug("PROVISIONING_SN=$PROVISIONING_SN",25);
 
-ackCacheSet(array($PROVISIONING_MAC,$PROVISIONING_SN,$PROVISIONING_INTERFACE,$ANACONDA_ARCHITECTURE,$ANACONDA_SYSTEM_RELEASE),$ACK_CACHE_FILE);
-
-if (isset($_GET['ack-ppi'])) {
-    echo ackPpi();
-} else {
-    if (isset($_GET['init']) && $_GET['init']=="ack") {
-        echo date("YmdHis") ."\n";
-    } else {
-        ackIndex();
-    }
-}
 
 ?>

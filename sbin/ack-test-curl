@@ -1,20 +1,156 @@
-#!/bin/bash
+#!/bin/env php
+<?php $DEBUG=15;
+/*
+
+aNAcONDA kICKSTART (ack)
+
+Copyright (C) 2015 Joseph Tingiris
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+ */
+
+# Global (debug)
+
+if (!empty($_GET) && is_array($_GET)) {
+    $_GET_lower = array_change_key_case($_GET, CASE_LOWER);
+} else {
+    $_GET_lower=array();
+}
+
+if (isset($_GET_lower['debug'])) {
+    $DEBUG=(int)$_GET_lower['debug'];
+}
+
+if (empty($Default_Timezone)) {
+    $Default_Timezone="America/New_York";
+}
+date_default_timezone_set($Default_Timezone);
+
+# begin Ack.php.include
+
+$Ack_Php="Ack.php";
+$Ack_Php_Dir=dirname(__FILE__);
+if (is_link($Ack_Php_Dir)) $Ack_Php_Dir=readlink($Ack_Php_Dir);
+while (!empty($Ack_Php_Dir) && $Ack_Php_Dir != "/" && is_dir($Ack_Php_Dir)) { # search backwards
+    foreach (array($Ack_Php_Dir, $Ack_Php_Dir."/include/debug-php", $Ack_Php_Dir."/include") as $Ack_Php_Source_Dir) {
+        $Ack_Php_Source=$Ack_Php_Source_Dir."/".$Ack_Php;
+        if (is_readable($Ack_Php_Source)) {
+            require_once($Ack_Php_Source);
+            break;
+        } else {
+            unset($Ack_Php_Source);
+        }
+    }
+    if (!empty($Ack_Php_Source)) break;
+    $Ack_Php_Dir=dirname("$Ack_Php_Dir");
+}
+if (empty($Ack_Php_Source)) { echo "$Ack_Php file not found\n"; exit(1); }
+unset($Ack_Php_Dir, $Ack_Php);
+
+# end Ack.php.include
+
+ackGlobals();
+
+$Ack_Test_Url=null;
+
+if (!empty($argv[1])) {
+    $Debug->debugValue("argv[1]",2,$argv[1]);
+    if (filter_var($argv[1],FILTER_VALIDATE_URL)) {
+        $Test_Parse_Url=parse_url($argv[1]);
+    } else {
+        if (filter_var($argv[1],FILTER_VALIDATE_DOMAIN,FILTER_FLAG_HOSTNAME)) {
+            $Test_Parse_Url=array("host" => $argv[1]);
+        }
+    }
+}
+
+if (empty($Test_Parse_Url["scheme"])) {
+    $Ack_Test_Url="http://";
+} else {
+    $Ack_Test_Url=$Test_Parse_Url["scheme"]."://";
+}
+
+if (empty($Test_Parse_Url["host"])) {
+    if (!empty($Ack_Install_Server)) {
+        $Ack_Test_Url.=$Ack_Install_Server;
+    } else {
+        $Ack_Test_Url.="localhost";
+    }
+} else {
+    $Ack_Test_Url.=$Test_Parse_Url["host"];
+}
+
+if (!empty($Test_Parse_Url["port"])) {
+    $Ack_Test_Url.=":".$Test_Parse_Url["port"];
+}
+
+if (!empty($Test_Parse_Url["path"])) {
+    $Ack_Test_Url.=$Test_Parse_Url["path"];
+} else {
+    $Ack_Test_Url.="/";
+}
+
+if (!empty($Test_Parse_Url["query"])) {
+    $Ack_Test_Url.="?".$Test_Parse_Url["query"];
+} else {
+    $Ack_Test_Url.="?install=";
+}
+
+if (filter_var($Ack_Test_Url,FILTER_VALIDATE_URL)) {
+    $Debug->debugValue("Ack_Test_Url",3);
+
+    $curl_init=curl_init();
+
+    $curl_headers=array();
+    array_push($curl_headers,"X-ACK-PROVISIONING-IP-0: $Ack_Ipv4_Default_Interface $Ack_Ipv4_Default_Interface");
+
+} else {
+    printf("'%s' failed validation\n",$Ack_Test_Url);
+}
+
+exit();
+?>
 
 # helpful for testing the ack http interface
 
 DEBUG=50
 
-source ../include/Ack.bash
-
 if [ -f /etc/os-release ]; then
     source /etc/os-release
 fi
 
-Ack_Server="local.ack"
+if [ "$1" != "" ]; then
+    Test_Install_Server="$1"
+else
+    if [ "$Ack_Install_Server" != "" ]; then
+        Test_Install_Server="$Ack_Install_Server"
+    else
+        Test_Install_Server="localhost"
+    fi
+fi
+
+Test_Uri="install="
+Test_Url="https://${Test_Install_Server}/?"
+
+source ../include/Ack.bash
 
 curl \
+    --insecure \
+    --header "X-ACK-PROVISIONING-IP-0: $Ack_Gateway_Interface $Ack_Gateway_Interface_Ipv4" \
     --header "X-ANACONDA-ARCHITECTURE: $(uname -m)" \
     --header "X-ANACONDA-SYSTEM-RELEASE: $ID" \
     --header "X-RHN-PROVISIONING-MAC-0: $Ack_Gateway_Interface $(ip link show $Ack_Gateway_Interface | grep link\/ether | awk '{print $2}')" \
     --header "X-SYSTEM-SERIAL-NUMBER: $(basename $0)" \
-    $Ack_Server
+    ${Test_Url}
