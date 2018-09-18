@@ -12,7 +12,7 @@ keyboard --vckeymap=us --xlayouts='us'
 
 skipx
 
-url --url="##ACK_CLIENT_INSTALL_SERVER_URL##" --noverifyssl
+url --url="##ACK_CLIENT_INSTALL_URL##" --noverifyssl
 
 network --onboot yes --bootproto ##ACK_CLIENT_BOOTPROTO## --hostname ##ACK_CLIENT_HOSTNAME##
 

@@ -742,11 +742,20 @@ function ackMac($ack_mac=null) {
         if (preg_match('/([a-fA-F0-9]{2}[:|\-]?){6}/', $ack_mac) == 1) {
             $ack_mac=str_replace("-", '',$ack_mac);
             $ack_mac=str_replace(":", '',$ack_mac);
-            $ack_mac=trim($ack_mac);
         } else {
             $ack_mac=null;
         }
+    } else {
+        if (empty($GLOBALS["Ack_Client_Ip"])) {
+            $ack_mac=implode('', str_split(substr(md5(mt_rand()), 0, 12), 2)); // random mac
+        } else {
+            $ack_client_ip_md5=md5($GLOBALS["Ack_Client_Ip"]);
+            $ack_mac=substr($ack_client_ip_md5,0,12);
+        }
     }
+
+    $ack_mac=trim($ack_mac);
+    $ack_mac=strtolower($ack_mac);
 
     return $ack_mac;
 
@@ -849,6 +858,48 @@ function ackRevoke() {
 
 }
 
+function ackTemplate($template_name=null) {
+
+    # begin function logic
+
+    if ($template_name == null || $template_name == '') {
+        return null;
+    }
+
+    if (is_readable($template_name)) {
+        return $template_name;
+    }
+
+    $template_file=null;
+    $template_files=array();
+
+    if (!empty($GLOBALS["Ack_Client_Mac"])) {
+        array_push($template_files, $template_name."-".$GLOBALS["Ack_Client_Mac"]);
+    }
+
+    array_push($template_files, $template_name); // last on the stack
+
+
+    foreach ($template_files as $template_file) {
+        if (!empty($GLOBALS["Ack_Etc_Dirs"]) && is_array($GLOBALS["Ack_Etc_Dirs"])) {
+            foreach ($GLOBALS["Ack_Etc_Dirs"] as $ack_etc_dir) {
+                if (is_readable($ack_etc_dir."/".$template_name)) {
+                    $template_file=realpath($ack_etc_dir."/".$template_name);
+                    break;
+                }
+            }
+        }
+        if ($template_file != null) {
+            break;
+        }
+    }
+
+    return $template_file;
+
+    # end function logic
+
+}
+
 function ackTimestamp($timestamp_message=null,$timestamp_force=true) {
 
     # begin function logic
@@ -941,9 +992,9 @@ $Ack_Aaa_Dir=$Ack_Dir ."/aaa";
 $Ack_Etc_Dir=$Ack_Dir . "/etc";
 
 $Ack_Etc_Dirs=array(
-    $Ack_Etc_Dir,
     "/etc/ack",
-    "/etc"
+    "/etc",
+    $Ack_Etc_Dir,
 );
 
 $Ack_Aaa_Cache=$Ack_Aaa_Dir."/aaa.cache";
@@ -993,7 +1044,7 @@ $Ack_Client_Serial_Number=null;
 
 $Ack_Client_System_Release=null;
 
-$Ack_Client_Template=null;
+$Ack_Client_Template_Kickstart=null;
 
 $Ack_Client_Type=null;
 
@@ -1054,6 +1105,10 @@ if (empty($Ack_Label)) {
     $Ack_Label="ack";
 }
 
+$Ack_Install_Server="localhost";
+
+$Ack_Install_Servers="debug";
+
 $Ack_Log_Dir=$Ack_Dir . "/log";
 if (!is_writable($Ack_Log_Dir)) {
     $Ack_Log_Dir="/tmp";
@@ -1061,9 +1116,30 @@ if (!is_writable($Ack_Log_Dir)) {
 
 $Ack_Log=$Ack_Log_Dir."/".$Ack_Label.".log";
 
-$Ack_Install_Server="localhost";
+$Ack_Media_Dir=$Ack_Dir . "/media";
+if (!is_readable($Ack_Media_Dir)) {
+    $Ack_Media_Dir="/var/tmp";
+}
 
-$Ack_Install_Servers="debug";
+$Ack_Build_Dir=$Ack_Media_Dir . "/build";
+if (!is_writable($Ack_Build_Dir)) {
+    $Ack_Build_Dir="/var/tmp";
+}
+
+$Ack_Distribution_Dir=$Ack_Media_Dir . "/distribution";
+if (!is_writable($Ack_Distribution_Dir)) {
+    $Ack_Distribution_Dir="/var/tmp";
+}
+
+$Ack_Release_Dir=$Ack_Media_Dir . "/release";
+if (!is_writable($Ack_Release_Dir)) {
+    $Ack_Release_Dir="/var/tmp";
+}
+
+$Ack_Virt_Dir=$Ack_Media_Dir . "/vm";
+if (!is_writable($Ack_Virt_Dir)) {
+    $Ack_Virt_Dir="/var/tmp";
+}
 
 $Ack_Privacy=$Ack_Etc_Dir."/privacy";
 
@@ -1188,13 +1264,13 @@ if (!empty($_SERVER["REMOTE_ADDR"])) {
 
 
 if (!empty($_GET_lower["install"])) {
-    $Ack_Client_Install_Uri="install=".$_GET_lower["install"];
+    $Ack_Client_Install_Uri=$_GET_lower["install"];
 }
 if (!empty($_POST_lower["install"])) {
-    $Ack_Client_Install_Uri="install=".$_POST_lower["install"];
+    $Ack_Client_Install_Uri=$_POST_lower["install"];
 }
 if (empty($Ack_Client_Install_Uri)) {
-    $Ack_Client_Install_Uri="install=default";
+    $Ack_Client_Install_Uri=null;
 }
 
 if (isset($_GET_lower["mac"])) {
@@ -1205,10 +1281,14 @@ if (isset($_POST_lower["mac"])) {
 }
 if (empty($Ack_Client_Mac) && !empty($Ack_Client_Mac_0_Address)) {
     $Ack_Client_Mac=ackMac($Ack_Client_Mac_0_Address);
-    $Ack_Client_Aaa=$Ack_Aaa_Dir."/".$Ack_Client_Mac;
 } else {
-    $Ack_Client_Mac=null;
-    $Ack_Client_Aaa=null;
+    if (empty($Ack_Client_Mac)) {
+        $Ack_Client_Mac=ackMac();
+    }
+}
+
+if (!empty($Ack_Client_Mac)) {
+    $Ack_Client_Aaa=$Ack_Aaa_Dir."/".$Ack_Client_Mac;
 }
 
 if (isset($_GET_lower["hostname"])) {
@@ -1242,15 +1322,27 @@ if  (isset($_SERVER["HTTP_HOST"])) {
 }
 
 if (isset($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] == strtolower("on")) {
-    $Ack_Install_Server_Url="https://".$Ack_Install_Server."/?";
+    $Ack_Install_Server_Url="https://".$Ack_Install_Server."/";
 } else {
-    $Ack_Install_Server_Url="http://".$Ack_Install_Server."/?";
+    $Ack_Install_Server_Url="http://".$Ack_Install_Server."/";
 }
 
-$Ack_Client_Install_Server_Url=$Ack_Install_Server_Url.$Ack_Client_Install_Uri;
+$Ack_Client_Install_Url=$Ack_Install_Server_Url;
+if (!empty($Ack_Client_Install_Uri)) {
+    // TODO; debt
+    if (preg_match("/-kickstart$/",$Ack_Client_Install_Uri)) {
+        // strip off the /<IP>-kickstart suffix
+        $Ack_Client_Install_Uri=dirname($Ack_Client_Install_Uri);
+    }
+    if (is_readable($Ack_Media_Dir."/".$Ack_Client_Install_Uri."/.treeinfo")) {
+        $Ack_Client_Install_Url=$Ack_Install_Server_Url.str_replace("//","/","/media/".$Ack_Client_Install_Uri);
+    }
+}
 
 // the root password (is the lowercase mac address without the colons)
 $Ack_Client_Password=crypt($Ack_Client_Mac, '$6$ackM');
+
+$Ack_Client_Template_Kickstart=ackTemplate("ack-template-kickstart");
 
 // TODO crude, improve (use ip -4 -o r s) ... ipv4 set default interface globals
 if (is_readable("/proc/net/route")) {

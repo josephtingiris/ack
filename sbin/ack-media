@@ -40,11 +40,11 @@ Default_Domain="${Ack_Domain}"
 
 Default_Install_Server="ack.${Ack_Domain}"
 
-Default_Media_Dir=${Ack_Dir}/media
-Default_Build_Dir=${Default_Media_Dir}/build
-Default_Distribution_Dir=${Default_Media_Dir}/distribution
-Default_Release_Dir=${Default_Media_Dir}/release
-Default_Virt_Dir=${Default_Media_Dir}/vm
+Default_Media_Dir=${Ack_Media_Dir}
+Default_Build_Dir=${Ack_Build_Dir}
+Default_Distribution_Dir=${Ack_Distribution_Dir}
+Default_Release_Dir=${Ack_Release_Dir}
+Default_Virt_Dir=${Ack_Virt_Dir}
 
 Media_Architectures=()
 Media_Architectures+=(i386)

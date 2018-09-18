@@ -1,4 +1,4 @@
-<?php $DEBUG=25;
+<?php $Debug=25;
 /*
 
 aNAcONDA kICKSTART (ack)
@@ -65,183 +65,206 @@ unset($Ack_Php_Dir, $Ack_Php);
 # Functions
 
 # Anaconda/Kickstart (AcK)
-Function ackIndex() {
+function ackIndex() {
 
-global $Debug;
+    global $_GET_lower,$Ack_Dir,$Debug;
 
-// config overrides everything
-if (isset($GLOBALS["Ack_Client_Aaa"])) {
-    $ack_client_debug=ackConfigGet("debug",$GLOBALS["Ack_Client_Aaa"]);
-    $ack_client_entity=ackConfigGet("entity",$GLOBALS["Ack_Client_Aaa"]);
-    $ack_client_hostname=ackConfigGet("hostname",$GLOBALS["Ack_Client_Aaa"]);
-    $ack_client_install_disk_percent=ackConfigGet("install_disk_percent",$GLOBALS["Ack_Client_Aaa"]);
-    $ack_client_install_server=ackConfigGet("install_server",$GLOBALS["Ack_Client_Aaa"]);
-    $ack_client_install_uri=ackConfigGet("install_uri",$GLOBALS["Ack_Client_Aaa"]);
-    $ack_client_label=ackConfigGet("label",$GLOBALS["Ack_Client_Aaa"]);
-    $ack_client_mac=ackConfigGet("mac",$GLOBALS["Ack_Client_Aaa"]);
-    $ack_client_template=ackConfigGet("template",$GLOBALS["Ack_Client_Aaa"]);
-}
+    $debug_level=20;
 
-// client debug is *not* server Debug
-if (empty($ack_client_debug)) {
-    $ack_client_debug=0;
-}
-$ack_client_debug=(int)$ack_client_debug; // recast, to be sure
-
-if (empty($ack_client_entity)) {
-    if (!empty($GLOBALS["Ack_Entity"])) {
-        $ack_client_entity=$GLOBALS["Ack_Entity"];
-    } else {
-        $ack_client_entity="ack";
+    // config overrides everything
+    if (isset($GLOBALS["Ack_Client_Aaa"])) {
+        $ack_client_debug=ackConfigGet("debug",$GLOBALS["Ack_Client_Aaa"]);
+        $ack_client_entity=ackConfigGet("entity",$GLOBALS["Ack_Client_Aaa"]);
+        $ack_client_hostname=ackConfigGet("hostname",$GLOBALS["Ack_Client_Aaa"]);
+        $ack_client_install_disk_percent=ackConfigGet("install_disk_percent",$GLOBALS["Ack_Client_Aaa"]);
+        $ack_client_install_server=ackConfigGet("install_server",$GLOBALS["Ack_Client_Aaa"]);
+        $ack_client_install_uri=ackConfigGet("install_uri",$GLOBALS["Ack_Client_Aaa"]);
+        $ack_client_label=ackConfigGet("label",$GLOBALS["Ack_Client_Aaa"]);
+        $ack_client_mac=ackConfigGet("mac",$GLOBALS["Ack_Client_Aaa"]);
+        $ack_client_template_kickstart=ackConfigGet("template",$GLOBALS["Ack_Client_Aaa"]);
     }
-}
 
-if (empty($ack_client_label)) {
-    if (!empty($GLOBALS["Ack_Label"])) {
-        $ack_client_label=$GLOBALS["Ack_Label"];
-    } else {
-        $ack_client_label="ack";
+    // client debug is *not* server Debug
+    if (empty($ack_client_debug)) {
+        $ack_client_debug=0;
     }
-}
+    $ack_client_debug=(int)$ack_client_debug; // recast, to be sure
+    $Debug->debug("ack_client_debug=".$ack_client_debug,$debug_level);
 
-if (empty($ack_client_mac)) {
-    if (!empty($GLOBALS["Ack_Client_Mac"])) {
-        $ack_client_mac=$GLOBALS["Ack_Client_Mac"];
-    }
-}
-
-if (empty($ack_client_hostname)) {
-    if (!empty($GLOBALS["Ack_Label"])) {
-        $ack_client_hostname=$GLOBALS["Ack_Label"];
-    } else {
-        $ack_client_hostname="ack";
-    }
-}
-
-if (empty($ack_client_install_server)) {
-    if (!empty($GLOBALS["Ack_Install_Server"])) {
-        $ack_client_install_server=$GLOBALS["Ack_Install_Server"];
-    } else {
-        $ack_client_install_server="localhost";
-    }
-}
-
-if (empty($ack_client_template)) {
-    if (!empty($GLOBALS["Ack_Client_Template"])) {
-        $ack_client_template=$GLOBALS["Ack_Client_Template"];
-    } else {
-        $ack_client_template="ack-template-kickstart";
-    }
-}
-if (!is_readable($ack_client_template)) {
-    if (isset($GLOBALS["Ack_Etc_Dir"]) && is_dir($GLOBALS["Ack_Etc_Dir"]) && is_readable($GLOBALS["Ack_Etc_Dir"])) {
-        if (is_readable($GLOBALS["Ack_Etc_Dir"]."/".$ack_client_template)) {
-            $ack_client_template=$GLOBALS["Ack_Etc_Dir"]."/".$ack_client_template;
+    if (empty($ack_client_entity)) {
+        if (!empty($GLOBALS["Ack_Entity"])) {
+            $ack_client_entity=$GLOBALS["Ack_Entity"];
+        } else {
+            $ack_client_entity="ack";
         }
-    } else {
-        $ack_client_template=null;
     }
-}
+    $Debug->debug("ack_client_entity=".$ack_client_entity,$debug_level);
 
-$ack_index_header=null;
-$ack_index_header.="#";
-$ack_index_header.="\n";
-$ack_index_header.="#";
-if (!empty($ack_client_entity)) {
-    $ack_index_header.=" ".$ack_client_entity;
-}
-$ack_index_header.=" kickstart";
-if (!empty($ack_client_label)) {
-    $ack_index_header.=" (".$ack_client_label.")";
-}
-$ack_index_header.=" - Install Server [$ack_client_install_server]";
-$ack_index_header.=" - Template [$ack_client_template]";
-if (!empty($ack_client_debug)) {
-    $ack_index_header.=" - [DEBUG=$ack_client_debug]";
-}
-$ack_index_header.="\n";
-$ack_index_header.="#";
-$ack_index_header.="\n";
-$ack_index_header.="# [".  date("Y-m-d H:i:s") ."]";
-$ack_index_header.=" - template";
-if (!empty($GLOBALS["Ack_Client_Ip"])) {
-    $ack_index_header.=" - ".$GLOBALS["Ack_Client_Ip"];
-}
-if (!empty($GLOBALS["Ack_Client_Ip_0_Address"])) {
-    $ack_index_header.=" - ".$GLOBALS["Ack_Client_Ip_0_Address"];
-}
-if (!empty($GLOBALS["Ack_Client_Mac"])) {
-    $ack_index_header.=" - ".$GLOBALS["Ack_Client_Mac"];
-}
-$ack_index_header.=" - start";
-$ack_index_header.="\n";
-$ack_index_header.="#";
-$ack_index_header.="\n";
-$ack_index_header.="\n";
+    if (empty($ack_client_label)) {
+        if (!empty($GLOBALS["Ack_Label"])) {
+            $ack_client_label=$GLOBALS["Ack_Label"];
+        } else {
+            $ack_client_label="ack";
+        }
+    }
+    $Debug->debug("ack_client_label=".$ack_client_label,$debug_level);
 
-echo $ack_index_header;
+    if (empty($ack_client_mac)) {
+        if (!empty($GLOBALS["Ack_Client_Mac"])) {
+            $ack_client_mac=$GLOBALS["Ack_Client_Mac"];
+        }
+    }
+    $Debug->debug("ack_client_mac=".$ack_client_mac,$debug_level);
 
-$ack_client_template_contents=file_get_contents($ack_client_template);
-if ($ack_client_template_contents !== false) {
-    $ack_client_template_contents=ackGlobalsReplace($ack_client_template_contents);
-}
+    if (empty($ack_client_hostname)) {
+        if (!empty($GLOBALS["Ack_Label"])) {
+            $ack_client_hostname=$GLOBALS["Ack_Label"];
+        } else {
+            $ack_client_hostname="ack";
+        }
+    }
 
-$ack_client_ppi=ackPpi();
-if (!empty($ack_client_ppi)) {
-    $ack_index_ppi=null;
-    $ack_index_ppi.="\n";
-    $ack_index_ppi.=$ack_client_ppi;
+    if (empty($ack_client_install_server)) {
+        if (!empty($GLOBALS["Ack_Install_Server"])) {
+            $ack_client_install_server=$GLOBALS["Ack_Install_Server"];
+        } else {
+            if (!empty($_SERVER["SERVER_NAME"])) {
+                $ack_client_install_server=$_SERVER["SERVER_NAME"];
+            } else {
+                $ack_client_install_server="localhost";
+            }
+        }
+    }
+    $Debug->debug("ack_client_install_server=".$ack_client_install_server,$debug_level);
 
-    $ack_client_template_contents=str_replace("##ACK_PPI##",$ack_index_ppi,$ack_client_template_contents);
+    if (empty($ack_client_install_uri)) {
+        if (!empty($_GET_lower['install'])) {
+            $ack_client_install_uri=$_GET_lower['install'];
+        }
+    }
+    $Debug->debug("ack_client_install_uri=".$ack_client_install_uri,$debug_level);
 
-}
+    if (!empty($ack_client_install_uri)) {
+        if (!is_readable($Ack_Dir."/media/".$ack_client_install_uri."/.treeinfo")) {
+            #http_response_code(404);
+            #echo "404 - $ack_client_install_uri not found";
+            #exit(3);
+        }
+    }
 
-echo $ack_client_template_contents;
+    if (empty($ack_client_template_kickstart)) {
+        if (!empty($GLOBALS["Ack_Client_Template_Kickstart"])) {
+            $ack_client_template_kickstart=$GLOBALS["Ack_Client_Template_Kickstart"];
+        } else {
+            $ack_client_template_kickstart=ackTemplate("ack-template-kickstart");
+        }
+    }
+    if (!is_readable($ack_client_template_kickstart)) {
+        http_response_code(404);
+        echo "404 - $ack_client_template_kickstart file not found";
+        exit(3);
+    }
+    $Debug->debug("ack_client_template_kickstart=".$ack_client_template_kickstart,$debug_level);
 
-$ack_index_footer=null;
-$ack_index_footer.="\n";
-$ack_index_footer.="\n";
-$ack_index_footer.="#";
-$ack_index_footer.="\n";
-$ack_index_footer.="# [".  date("Y-m-d H:i:s") ."]";
-$ack_index_footer.=" - template";
-if (!empty($GLOBALS["Ack_Client_Ip"])) {
-    $ack_index_footer.=" - ".$GLOBALS["Ack_Client_Ip"];
-}
-if (!empty($GLOBALS["Ack_Client_Ip_0_Address"])) {
-    $ack_index_footer.=" - ".$GLOBALS["Ack_Client_Ip_0_Address"];
-}
-if (!empty($GLOBALS["Ack_Client_Mac"])) {
-    $ack_index_footer.=" - ".$GLOBALS["Ack_Client_Mac"];
-}
-$ack_index_footer.=" - end";
-$ack_index_footer.="\n";
-$ack_index_footer.="#";
-$ack_index_footer.="\n";
+    $ack_index_header=null;
+    $ack_index_header.="#";
+    $ack_index_header.="\n";
+    $ack_index_header.="#";
+    if (!empty($ack_client_entity)) {
+        $ack_index_header.=" ".$ack_client_entity;
+    }
+    $ack_index_header.=" kickstart";
+    if (!empty($ack_client_label)) {
+        $ack_index_header.=" (".$ack_client_label.")";
+    }
+    $ack_index_header.=" - Install Server [$ack_client_install_server]";
+    $ack_index_header.=" - Template [$ack_client_template_kickstart]";
+    if (!empty($ack_client_debug)) {
+        $ack_index_header.=" - [DEBUG=$ack_client_debug]";
+    }
+    $ack_index_header.="\n";
+    $ack_index_header.="#";
+    $ack_index_header.="\n";
+    $ack_index_header.="# [".  date("Y-m-d H:i:s") ."]";
+    $ack_index_header.=" - template";
+    if (!empty($GLOBALS["Ack_Client_Ip"])) {
+        $ack_index_header.=" - ".$GLOBALS["Ack_Client_Ip"];
+    }
+    if (!empty($GLOBALS["Ack_Client_Ip_0_Address"])) {
+        $ack_index_header.=" - ".$GLOBALS["Ack_Client_Ip_0_Address"];
+    }
+    if (!empty($GLOBALS["Ack_Client_Mac"])) {
+        $ack_index_header.=" - ".$GLOBALS["Ack_Client_Mac"];
+    }
+    $ack_index_header.=" - start";
+    $ack_index_header.="\n";
+    $ack_index_header.="#";
+    $ack_index_header.="\n";
+    $ack_index_header.="\n";
 
-echo $ack_index_footer;
+    echo $ack_index_header;
 
-return;
+    $ack_client_template_kickstart_contents=file_get_contents($ack_client_template_kickstart);
+    if ($ack_client_template_kickstart_contents !== false) {
+        $ack_client_template_kickstart_contents=ackGlobalsReplace($ack_client_template_kickstart_contents);
+    }
 
-# Do NOT Zero out the MBR
-#echo "zerombr\n";
-#echo "\n";
+    $ack_client_ppi=ackPpi();
+    if (!empty($ack_client_ppi)) {
+        $ack_index_ppi=null;
+        $ack_index_ppi.="\n";
+        $ack_index_ppi.=$ack_client_ppi;
 
-# Include the dynamically generated 'smartpart' configuration (created by ack-ks)
-echo "%include /tmp/smartpart\n";
-echo "\n";
+        $ack_client_template_kickstart_contents=str_replace("##ACK_PPI##",$ack_index_ppi,$ack_client_template_kickstart_contents);
 
-$ack_ppi=ackPpi();
-if (!empty($ack_ppi)) {
-    echo "%pre --log=/var/tmp/install.pre.log\n";
-    echo $ack_ppi;
-    echo "%end\n";
+    }
+
+    echo $ack_client_template_kickstart_contents;
+
+    $ack_index_footer=null;
+    $ack_index_footer.="\n";
+    $ack_index_footer.="\n";
+    $ack_index_footer.="#";
+    $ack_index_footer.="\n";
+    $ack_index_footer.="# [".  date("Y-m-d H:i:s") ."]";
+    $ack_index_footer.=" - template";
+    if (!empty($GLOBALS["Ack_Client_Ip"])) {
+        $ack_index_footer.=" - ".$GLOBALS["Ack_Client_Ip"];
+    }
+    if (!empty($GLOBALS["Ack_Client_Ip_0_Address"])) {
+        $ack_index_footer.=" - ".$GLOBALS["Ack_Client_Ip_0_Address"];
+    }
+    if (!empty($GLOBALS["Ack_Client_Mac"])) {
+        $ack_index_footer.=" - ".$GLOBALS["Ack_Client_Mac"];
+    }
+    $ack_index_footer.=" - end";
+    $ack_index_footer.="\n";
+    $ack_index_footer.="#";
+    $ack_index_footer.="\n";
+
+    echo $ack_index_footer;
+
+    return;
+
+    # Do NOT Zero out the MBR
+    #echo "zerombr\n";
+    #echo "\n";
+
+    # Include the dynamically generated 'smartpart' configuration (created by ack-ks)
+    echo "%include /tmp/smartpart\n";
     echo "\n";
-    echo "%post --log=/mnt/sysimage/var/tmp/install/install.post.log --nochroot\n";
-    echo $ack_ppi;
-    echo "%end\n";
-    echo "\n";
-}
+
+    $ack_ppi=ackPpi();
+    if (!empty($ack_ppi)) {
+        echo "%pre --log=/var/tmp/install.pre.log\n";
+        echo $ack_ppi;
+        echo "%end\n";
+        echo "\n";
+        echo "%post --log=/mnt/sysimage/var/tmp/install/install.post.log --nochroot\n";
+        echo $ack_ppi;
+        echo "%end\n";
+        echo "\n";
+    }
 
 }
 
@@ -350,7 +373,7 @@ if (isset($Ack_Client_Mac) && isset($Ack_Client_Ip) && isset($Ack_Client_Aaa)) {
 if ($Ack_Client_Authorized === false) {
     ackLog($Ack_Client_Ip." is unauthorized [".$Ack_Client_Mac."]","WARNING");
     ackCacheSet(array($Ack_Client_Mac,"unauthorized"),$Ack_Aaa_Cache);
-    echo "\nunauthorized";
+    echo "unauthorized";
     exit(1);
 } else {
     ackCacheSet(array($Ack_Client_Mac,"authorized"),$Ack_Aaa_Cache);

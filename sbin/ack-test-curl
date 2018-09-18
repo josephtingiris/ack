@@ -115,6 +115,7 @@ if (filter_var($Ack_Test_Url,FILTER_VALIDATE_URL)) {
 
     curl_setopt($curl_init,CURLOPT_URL,$Ack_Test_Url); 
     curl_setopt($curl_init,CURLOPT_FOLLOWLOCATION,true); 
+    curl_setopt($curl_init,CURLOPT_SSL_VERIFYPEER,false); 
 
     $curl_headers=array();
     array_push($curl_headers,"X-ACK-PROVISIONING-IP-0: $Ack_Default_Ip_Interface $Ack_Default_Ip_Address");
@@ -166,35 +167,3 @@ if (filter_var($Ack_Test_Url,FILTER_VALIDATE_URL)) {
 
 exit();
 ?>
-
-# helpful for testing the ack http interface
-
-DEBUG=50
-
-if [ -f /etc/os-release ]; then
-    source /etc/os-release
-fi
-
-if [ "$1" != "" ]; then
-    Test_Install_Server="$1"
-else
-    if [ "$Ack_Install_Server" != "" ]; then
-        Test_Install_Server="$Ack_Install_Server"
-    else
-        Test_Install_Server="localhost"
-    fi
-fi
-
-Test_Uri="install="
-Test_Url="https://${Test_Install_Server}/?"
-
-source ../include/Ack.bash
-
-curl \
-    --insecure \
-    --header "X-ACK-PROVISIONING-IP-0: $Ack_Gateway_Interface $Ack_Gateway_Interface_Ipv4" \
-    --header "X-ANACONDA-ARCHITECTURE: $(uname -m)" \
-    --header "X-ANACONDA-SYSTEM-RELEASE: $ID" \
-    --header "X-RHN-PROVISIONING-MAC-0: $Ack_Gateway_Interface $(ip link show $Ack_Gateway_Interface | grep link\/ether | awk '{print $2}')" \
-    --header "X-SYSTEM-SERIAL-NUMBER: $(basename $0)" \
-    ${Test_Url}
