@@ -338,7 +338,14 @@ function ackPpi($ppi_file=null) {
 if (isset($Ack_Client_Mac) && isset($Ack_Client_Ip) && isset($Ack_Client_Aaa)) {
     $Ack_Client_Authorized=ackAuthorized($Ack_Client_Mac,$Ack_Client_Ip,$Ack_Client_Aaa);
 } else {
-    $Ack_Client_Authorized=false;
+    if (isset($_SERVER["REMOTE_ADDR"])) {
+        $Ack_Client_Ip=ackIpv4($_SERVER["REMOTE_ADDR"]);
+        $Ack_Client_Mac=(ackMac("000000000000"));
+        $Ack_Client_Aaa=$Ack_Aaa_Dir."/".$Ack_Client_Mac;
+        $Ack_Client_Authorized=ackAuthorized($Ack_Client_Mac,$Ack_Client_Ip,$Ack_Client_Aaa);
+    } else {
+        $Ack_Client_Authorized=false;
+    }
 }
 if ($Ack_Client_Authorized === false) {
     ackLog($Ack_Client_Ip." is unauthorized [".$Ack_Client_Mac."]","WARNING");

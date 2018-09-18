@@ -147,7 +147,7 @@ function ackAuthorized($ack_mac=null, $ack_ip=null, $ack_config=null) {
 
     if ($ack_config_update && !empty($ack_authorized_method) && !empty($ack_config)) {
         $ack_config_set=array(
-            "authorized = true",
+            //"authorized = true", // add permanent authorization?
             "authorized_method = \"$ack_authorized_method\"",
             "ip = $ack_ip",
             "mac = $ack_mac",
@@ -401,9 +401,9 @@ function ackExec($cmd, &$stdout=null, &$stderr=null) {
         1 => ['pipe','w'],
         2 => ['pipe','w'],
     ],$pipes);
-    $stdout = stream_get_contents($pipes[1]);
+    $stdout = trim(stream_get_contents($pipes[1]));
     fclose($pipes[1]);
-    $stderr = stream_get_contents($pipes[2]);
+    $stderr = trim(stream_get_contents($pipes[2]));
     fclose($pipes[2]);
     return proc_close($proc);
 }
@@ -458,20 +458,57 @@ function ackFile($ack_file=null, $ack_ini=true) {
 
 }
 
-function ackGlobals() {
+function ackGlobals($bash=false) {
 
     # begin function logic
 
     global $Debug;
 
-    $ack_globals=$GLOBALS;
-    ksort($ack_globals);
-    foreach ($ack_globals as $ack_global_key => $ack_global_value) {
-        if (preg_match("/^ack/i",$ack_global_key)) {
-            $Debug->debugValue($ack_global_key,9);
+    $ack_globals=array();
+
+    $ack_export="";
+
+    foreach ($GLOBALS as $ack_global_key => $ack_global_value) {
+        if (is_string($ack_global_key)) {
+            if (preg_match("/^ack/i",$ack_global_key)) {
+                if ($bash) {
+                    if (is_string($ack_global_value)) {
+                        $ack_export.= "export $ack_global_key=\"".trim($ack_global_value)."\"\n";
+                    } else {
+                        if (is_array($ack_global_value) || is_object($ack_global_value)) {
+                            $ack_export.= "export $ack_global_key=(";
+                            foreach($ack_global_value as $ack_global_value_value) {
+                                if (is_string($ack_global_value_value)) {
+                                    $ack_export.= "\"".trim($ack_global_value_value)."\" ";
+                                }
+                            }
+                            $ack_export=trim($ack_export);
+                            $ack_export.= ")\n";
+                        }
+                    }
+                } else {
+                    $ack_globals[$ack_global_key]=$ack_global_value;
+                }
+            }
         }
     }
     unset($ack_global_key, $ack_global_value);
+
+
+    if ($bash) {
+        if (!empty($_SERVER["PATH"]) && !empty($GLOBALS["Ack_Path"])) {
+            $ack_path=$GLOBALS["Ack_Path"];
+            $ack_export.= "export PATH=\"$ack_path\"\n";
+            $ack_export.= "set PATH=$ack_path\n";
+        }
+        echo $ack_export;
+        exit(0);
+    } else {
+        ksort($ack_globals);
+        foreach ($ack_globals as $ack_global_key => $ack_global_value) {
+            $Debug->debugValue($ack_global_key,9);
+        }
+    }
 
     # end function logic
 
@@ -718,6 +755,76 @@ function ackMac($ack_mac=null) {
 
 }
 
+function ackPath($ack_dir=null) {
+
+    # begin function logic
+
+    $path=array();
+    if (!empty($_SERVER["path"])) {
+        $path=explode(":",$_SERVER["PATH"]);
+    }
+
+    $ack_path="";
+
+    if (is_dir($ack_dir)) {
+
+        $ack_files=array_diff(scandir($ack_dir), array('..', '.'));
+        foreach($ack_files as $ack_file) {
+            if ($ack_file == "bin" || $ack_file == "sbin") {
+                if (is_dir($ack_dir."/".$ack_file)) {
+                    if (!in_array($ack_dir."/".$ack_file,$path)) {
+                        $ack_path.=$ack_dir."/".$ack_file.":";
+                    }
+                    continue;
+                }
+            } else {
+                if (is_dir($ack_dir."/".$ack_file."/bin")) {
+                    if (!in_array($ack_dir."/".$ack_file."/bin",$path)) {
+                        $ack_path.=$ack_dir."/".$ack_file."/bin:";
+                    }
+                    continue;
+                } else {
+                    if (is_dir($ack_dir."/".$ack_file."/sbin")) {
+                        if (!in_array($ack_dir."/".$ack_file."/sbin",$path)) {
+                            $ack_path.=$ack_dir."/".$ack_file."/sbin:";
+                        }
+                        continue;
+                    }
+                }
+            }
+        }
+    }
+
+    $ack_required_paths=array(
+        "/bin",
+        "/usr/bin",
+        "/sbin",
+        "/usr/sbin",
+        "./",
+    );
+    foreach ($ack_required_paths as $ack_required_path) {
+        $ack_path.=$ack_required_path.":";
+    }
+
+    if (!empty($path)) {
+        $ack_path_exploded=explode(":",$ack_path);
+        foreach ($path as $pathdir) {
+            if (!in_array($pathdir,$ack_path_exploded)) {
+                $ack_path.=$pathdir.":";
+            }
+        }
+    }
+
+    $ack_path=trim($ack_path,":");
+
+    putenv("PATH=$ack_path");
+
+    return $ack_path;
+
+    # end function logic
+
+}
+
 function ackRevoke() {
 
     # begin function logic
@@ -799,18 +906,46 @@ if (!empty($_SERVER) && is_array($_SERVER)) {
 
 # Global (defaults)
 
-if (!empty($_SERVER["SCRIPT_FILENAME"])) {
-    $Ack_0=$_SERVER["SCRIPT_FILENAME"];
+if (empty($_SERVER["Ack_0"])) {
+    if (!empty($_SERVER["SCRIPT_FILENAME"])) {
+        $Ack_0=$_SERVER["SCRIPT_FILENAME"];
+    } else {
+        $Ack_0=__FILE__;
+    }
 } else {
-    $Ack_0=__FILE__;
+    $Ack_0=$_SERVER["Ack_0"];
 }
-if (is_link($Ack_0)) $Ack_0=realpath($Ack_0);
+$Ack_0=realpath($Ack_0);
 
+$Ack_Basename=basename($Ack_0);
+
+if (strpos($Ack_Basename,"-") !== false) {
+    $Ack_Basename_Exploded=explode("-",$Ack_Basename);
+    if (isset($Ack_Basename_Exploded[0]) && $Ack_Basename_Exploded[0] == 'ack') {
+        $Ack_Basename_Shift=array_shift($Ack_Basename_Exploded);
+        $Ack_Component=implode('-',$Ack_Basename_Exploded);
+    }
+    unset($Ack_Basename_Exploded, $Ack_Basename_Shift);
+}
+
+if (!isset($Ack_Component)) {
+    $Ack_Component=$Ack_Basename;
+}
+
+# assuming this file is in include/ (or another ack subdirectory)
 $Ack_Dir=dirname(dirname(realpath(__FILE__)));
+
+$Ack_Dirname=dirname($Ack_0);
 
 $Ack_Aaa_Dir=$Ack_Dir ."/aaa";
 
 $Ack_Etc_Dir=$Ack_Dir . "/etc";
+
+$Ack_Etc_Dirs=array(
+    $Ack_Etc_Dir,
+    "/etc/ack",
+    "/etc"
+);
 
 $Ack_Aaa_Cache=$Ack_Aaa_Dir."/aaa.cache";
 
@@ -820,24 +955,6 @@ $Ack_Authorized_Ips=array(
     "192.168.0.0/24",
     "10.0.0.0/8",
 );
-
-$Ack_Authorized_Ssh_Key_Files=array();
-if (is_readable($Ack_Etc_Dir."/ack-authorized_keys")) {
-    array_push($Ack_Authorized_Ssh_Key_Files,$Ack_Etc_Dir."/ack-authorized_keys");
-}
-
-$Ack_Authorized_Ssh_Keys=array();
-foreach ($Ack_Authorized_Ssh_Key_Files as $Ack_Authorized_Ssh_Key_File) {
-    if (is_readable($Ack_Authorized_Ssh_Key_File)) {
-        foreach(file($Ack_Authorized_Ssh_Key_File) as $line) {
-            array_push($Ack_Authorized_Ssh_Keys,$line);
-        }
-        unset($line);
-    }
-}
-# unique keys, only
-$Ack_Authorized_Ssh_Keys=array_unique($Ack_Authorized_Ssh_Keys);
-usort($Ack_Authorized_Ssh_Keys, "strcasecmp");
 
 $Ack_Client_Aaa=$Ack_Aaa_Dir."/000000000000";
 
@@ -865,9 +982,9 @@ $Ack_Client_Log_Level="INFO";
 
 $Ack_Client_Mac=null;
 
-$Ack_Client_Mac_0_Interface="eth0";
+$Ack_Client_Mac_0_Interface=null;
 
-$Ack_Client_Mac_0_Address="000000000000";
+$Ack_Client_Mac_0_Address=null;
 
 $Ack_Client_Password=null;
 
@@ -887,7 +1004,31 @@ if (is_readable($Ack_Dir . "/etc/ack-entity")) {
     $Ack_Entity="anonymous";
 }
 
-$Ack_Default_Interface=null; // lowest metric?
+// lowest metric? ipv4 or ipv6 ??
+$Ack_Default_Ip_Address=null;
+$Ack_Default_Ip_Cidr=null;
+$Ack_Default_Ip_Interface=null;
+$Ack_Default_Ip_Destination=null;
+$Ack_Default_Ip_Gateway=null;
+$Ack_Default_Ip_Mac=null;
+$Ack_Default_Ip_Netmask=null;
+
+$Ack_Interfaces=array();
+if (is_readable("/sys/class/net") && is_dir("/sys/class/net")) {
+    $Ack_Interfaces=array_diff(scandir("/sys/class/net"), array('..', '.'));
+}
+
+if (empty($_SERVER["Ack_User"])) {
+    $Ack_User="root";
+} else {
+    $Ack_User=$_SERVER["Ack_User"];
+}
+
+if (empty($_SERVER["Ack_Group"])) {
+    $Ack_Group="root";
+} else {
+    $Ack_Group=$_SERVER["Ack_Group"];
+}
 
 $Ack_Ipv4_Default_Address=null;
 $Ack_Ipv4_Default_Cidr=null;
@@ -897,7 +1038,13 @@ $Ack_Ipv4_Default_Gateway=null;
 $Ack_Ipv4_Default_Mac=null;
 $Ack_Ipv4_Default_Netmask=null;
 
-$Ack_Ipv6_Default_Interface=null; // lowest metric
+$Ack_Ipv6_Default_Address=null;
+$Ack_Ipv6_Default_Cidr=null;
+$Ack_Ipv6_Default_Interface=null;
+$Ack_Ipv6_Default_Destination=null;
+$Ack_Ipv6_Default_Gateway=null;
+$Ack_Ipv6_Default_Mac=null;
+$Ack_Ipv6_Default_Netmask=null;
 
 $Ack_Id="base";
 
@@ -920,6 +1067,24 @@ $Ack_Install_Server="localhost";
 $Ack_Install_Servers="debug";
 
 $Ack_Privacy=$Ack_Etc_Dir."/privacy";
+
+$Ack_Ssh_Authorized_Key_Files=array();
+if (is_readable($Ack_Etc_Dir."/ack-authorized_keys")) {
+    array_push($Ack_Ssh_Authorized_Key_Files,$Ack_Etc_Dir."/ack-authorized_keys");
+}
+
+$Ack_Ssh_Authorized_Keys=array();
+foreach ($Ack_Ssh_Authorized_Key_Files as $Ack_Ssh_Authorized_Key_File) {
+    if (is_readable($Ack_Ssh_Authorized_Key_File)) {
+        foreach(file($Ack_Ssh_Authorized_Key_File) as $line) {
+            array_push($Ack_Ssh_Authorized_Keys,$line);
+        }
+        unset($line);
+    }
+}
+# unique keys, only
+$Ack_Ssh_Authorized_Keys=array_unique($Ack_Ssh_Authorized_Keys);
+usort($Ack_Ssh_Authorized_Keys, "strcasecmp");
 
 $Ack_Uuid=ackUuid();
 
@@ -955,7 +1120,7 @@ if (isset($_SERVER["HTTP_X_RHN_PROVISIONING_MAC_0"])) {
         if (isset($Ack_Client_Provisioning_Mac_0[1])) $Ack_Client_Mac_0_Address=trim($Ack_Client_Provisioning_Mac_0[1]);
         unset($Ack_Client_Provisioning_Mac_0);
     }
-    $GLOBALS["Ack_Client_Anaconda"]=true;
+    $Ack_Client_Anaconda=true;
 }
 if (empty($Ack_Client_Mac_0_Address)) {
     $Ack_Client_Mac_0_Address=null;
@@ -1088,7 +1253,7 @@ $Ack_Client_Install_Server_Url=$Ack_Install_Server_Url.$Ack_Client_Install_Uri;
 // the root password (is the lowercase mac address without the colons)
 $Ack_Client_Password=crypt($Ack_Client_Mac, '$6$ackM');
 
-// TODO crude ... set default interface globals
+// TODO crude, improve (use ip -4 -o r s) ... ipv4 set default interface globals
 if (is_readable("/proc/net/route")) {
     foreach(file("/proc/net/route") as $route) {
         $route_explode=explode("\t",$route);
@@ -1120,6 +1285,34 @@ if (!empty($Ack_Ipv4_Default_Interface)) {
     $Ack_Ipv4_Default_Address=ackIpv4Address($Ack_Ipv4_Default_Interface,true,false,false);
     $Ack_Ipv4_Default_Cidr=ackIpv4Address($Ack_Ipv4_Default_Interface,false,true,false);
     $Ack_Ipv4_Default_Netmask=ackIpv4Address($Ack_Ipv4_Default_Interface,false,false,true);
+    if (is_readable("/sys/class/net/".$Ack_Ipv4_Default_Interface."/address")) {
+        $Ack_Ipv4_Default_Mac=file_get_contents("/sys/class/net/".$Ack_Ipv4_Default_Interface."/address");
+    }
+}
+
+// prefer ipv4, for now ...
+
+if (!empty($Ack_Ipv4_Default_Address) && empty($Ack_Default_Address)) {
+    $Ack_Default_Ip_Address=$Ack_Ipv4_Default_Address;
+    $Ack_Default_Ip_Cidr=$Ack_Ipv4_Default_Cidr;
+    $Ack_Default_Ip_Interface=$Ack_Ipv4_Default_Interface;
+    $Ack_Default_Ip_Destination=$Ack_Ipv4_Default_Destination;
+    $Ack_Default_Ip_Gateway=$Ack_Ipv4_Default_Gateway;
+    $Ack_Default_Ip_Mac=$Ack_Ipv4_Default_Mac;
+    $Ack_Default_Ip_Netmask=$Ack_Ipv4_Default_Netmask;
+}
+
+// TODO add (use ip -6 -o r s) ... set ipv6 default interface globals
+
+
+if (!empty($Ack_Ipv6_Default_Address) && empty($Ack_Default_Address)) {
+    $Ack_Default_Ip_Address=$Ack_Ipv6_Default_Address;
+    $Ack_Default_Ip_Cidr=$Ack_Ipv6_Default_Cidr;
+    $Ack_Default_Ip_Interface=$Ack_Ipv6_Default_Interface;
+    $Ack_Default_Ip_Destination=$Ack_Ipv6_Default_Destination;
+    $Ack_Default_Ip_Gateway=$Ack_Ipv6_Default_Gateway;
+    $Ack_Default_Ip_Mac=$Ack_Ipv6_Default_Mac;
+    $Ack_Default_Ip_Netmask=$Ack_Ipv6_Default_Netmask;
 }
 
 # log some stuff ...
@@ -1139,16 +1332,21 @@ if ($Ack_Client_Anaconda) {
     }
 }
 
+$Ack_Path=ackPath($Ack_Dir);
+
 $Ack_Timezone=$Default_Timezone;
 
-ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Architecture=".$Ack_Client_Architecture.")","INFO");
-ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Ip=".$Ack_Client_Ip.")","INFO");
-ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Ip_0_Address=".$Ack_Client_Ip_0_Address.")","INFO");
-ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Ip_0_Interface=".$Ack_Client_Ip_0_Interface.")","INFO");
-ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Mac=".$Ack_Client_Mac.")","INFO");
-ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Mac_0_Address=".$Ack_Client_Mac_0_Address.")","INFO");
-ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Mac_0_Interface=".$Ack_Client_Mac_0_Interface.")","INFO");
-ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Serial_Number=".$Ack_Client_Serial_Number.")","INFO");
-ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_System_Release=".$Ack_Client_System_Release.")","INFO");
+if (filter_var($Ack_Client_Ip, FILTER_VALIDATE_IP)) {
+    ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Aaa=".$Ack_Client_Aaa.")","INFO");
+    ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Architecture=".$Ack_Client_Architecture.")","INFO");
+    ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Ip=".$Ack_Client_Ip.")","INFO");
+    ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Ip_0_Address=".$Ack_Client_Ip_0_Address.")","INFO");
+    ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Ip_0_Interface=".$Ack_Client_Ip_0_Interface.")","INFO");
+    ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Mac=".$Ack_Client_Mac.")","INFO");
+    ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Mac_0_Address=".$Ack_Client_Mac_0_Address.")","INFO");
+    ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Mac_0_Interface=".$Ack_Client_Mac_0_Interface.")","INFO");
+    ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Serial_Number=".$Ack_Client_Serial_Number.")","INFO");
+    ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_System_Release=".$Ack_Client_System_Release.")","INFO");
+}
 
 ?>

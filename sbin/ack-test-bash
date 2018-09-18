@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# This script will ... manipulate ack media.
+
+# 20150628, joseph.tingiris@gmail.com
+
+Debug=100
+
+# begin Ack.bash.include
+
+Ack_Bash="Ack.bash"
+Ack_Bash_Dirs=()
+Ack_Bash_Dirs+=($(dirname $(readlink -e $BASH_SOURCE)))
+for Ack_Bash_Dir in ${Ack_Bash_Dirs[@]}; do
+    while [ "$Ack_Bash_Dir" != "" ] && [ "$Ack_Bash_Dir" != "/" ]; do # search backwards
+        Ack_Bash_Source_Dirs=()
+        Ack_Bash_Source_Dirs+=("${Ack_Bash_Dir}")
+        Ack_Bash_Source_Dirs+=("${Ack_Bash_Dir}/include")
+        for Ack_Bash_Source_Dir in ${Ack_Bash_Source_Dirs[@]}; do
+            Ack_Bash_Source=${Ack_Bash_Source_Dir}/${Ack_Bash}
+            if [ -r "${Ack_Bash_Source}" ]; then
+                source "${Ack_Bash_Source}"
+                break
+            else
+                unset Ack_Bash_Source
+            fi
+        done
+        if [ "$Ack_Bash_Source" != "" ]; then break; fi
+        Ack_Bash_Dir=$(dirname "$Ack_Bash_Dir") # search backwards
+    done
+done
+if [ "$Ack_Bash_Source" == "" ]; then echo "$Ack_Bash file not found"; exit 1; fi
+unset Ack_Bash_Dir Ack_Bash
+
+# end Ack.bash.include
+
+ackStart
+
+debugValue PATH 25
+
+ackStop

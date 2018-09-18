@@ -113,8 +113,52 @@ if (filter_var($Ack_Test_Url,FILTER_VALIDATE_URL)) {
 
     $curl_init=curl_init();
 
+    curl_setopt($curl_init,CURLOPT_URL,$Ack_Test_Url); 
+    curl_setopt($curl_init,CURLOPT_FOLLOWLOCATION,true); 
+
     $curl_headers=array();
-    array_push($curl_headers,"X-ACK-PROVISIONING-IP-0: $Ack_Ipv4_Default_Interface $Ack_Ipv4_Default_Interface");
+    array_push($curl_headers,"X-ACK-PROVISIONING-IP-0: $Ack_Default_Ip_Interface $Ack_Default_Ip_Address");
+
+    $uname=null; ackExec("uname -m",$uname); $uname=trim($uname);
+    array_push($curl_headers,"X-ANACONDA-ARCHITECTURE: $uname");
+
+    # /sys/class/dmi/id/product_serial
+    $serial_number=null; $serial_number=basename($Ack_0); $serial_number=trim($serial_number);
+    array_push($curl_headers,"X-SYSTEM-SERIAL-NUMBER: $serial_number");
+
+    // product really comes from dracut via
+    // buildstamp=/run/initramfs/.buildstamp
+    //     product=$(config_get Main Product < $buildstamp)
+    //     parse-anaconda-options.sh
+    // which is typically inside of squashfs.img or product.img; rootfs.img
+    // e.g. [root@dt .../ack/media/build]# cat /mnt/rootfs/.buildstamp
+    // [Main]
+    // Product=CentOS
+    // Version=7
+    // BugURL=http://bugs.centos.org
+    // IsFinal=True
+    // UUID=201503272225.x86_64
+    // [Compose]
+    // Lorax=19.6.51-1
+    //
+
+    // RHEL 6 & older
+    //
+    // zcat initramfs-2.6.32-431.el6.x86_64.img | cpio -id
+    //
+    // RHEL 7 & newer
+    //
+    // /usr/lib/dracut/skipcpio initrd.img | gunzip -c | cpio -i -d
+    // /usr/lib/dracut/skipcpio initrd.img | xz -dc | cpio -i -d # note this extracts to pwd
+    // /usr/lib/dracut/skipcpio initrd.img | xz -dc | cpio -i -d .buildstamp # note this extracts to pwd
+
+    $system_release=null; ; $uname=trim($uname);
+    array_push($curl_headers,"X-ANACONDA-ARCHITECTURE: $uname");
+
+    curl_setopt($curl_init,CURLOPT_HTTPHEADER,$curl_headers);
+
+    $curl_exec = curl_exec($curl_init); 
+    $curl_status = curl_getinfo($curl_init,CURLINFO_HTTP_CODE);
 
 } else {
     printf("'%s' failed validation\n",$Ack_Test_Url);
