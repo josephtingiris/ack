@@ -499,7 +499,6 @@ function ackGlobals($bash=false) {
         if (!empty($_SERVER["PATH"]) && !empty($GLOBALS["Ack_Path"])) {
             $ack_path=$GLOBALS["Ack_Path"];
             $ack_export.= "export PATH=\"$ack_path\"\n";
-            $ack_export.= "set PATH=$ack_path\n";
         }
         echo $ack_export;
         exit(0);

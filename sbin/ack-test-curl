@@ -1,5 +1,5 @@
 #!/bin/env php
-<?php $DEBUG=15;
+<?php $Debug=15;
 /*
 
 aNAcONDA kICKSTART (ack)

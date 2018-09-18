@@ -4,8 +4,6 @@
 
 # 20150628, joseph.tingiris@gmail.com
 
-Debug=25
-
 # begin Ack.bash.include
 
 Ack_Bash="Ack.bash"
@@ -35,8 +33,6 @@ unset Ack_Bash_Dir Ack_Bash
 # end Ack.bash.include
 
 # GLOBAL_VARIABLES
-
-PATH=/bin:/usr/bin:/sbin:/usr/sbin
 
 Default_Date=$(date +%Y%m%d)
 
@@ -322,32 +318,32 @@ function ackMediaBuild() {
         local build_name=${build_distribution}-${build_version}-${build_architecture}-${Install_Server}
         debugValue build_name $debug_level
 
-        local ack_etc
+        local ack_etc_dir
         local build_menu
         local build_menus=()
         local build_menu_efi=1
         local build_menu_isolinux=1
-        for ack_etc in ${Ack_Etcs[@]}; do
+        for ack_etc_dir in ${Ack_Etc_Dirs[@]}; do
 
             if [ $build_uefi -eq 0 ] && [ $build_menu_efi -eq 1 ]; then
-                if [ -s "${ack_etc}/ack-template-menu-grub-${build_name}" ]; then
-                    build_menus+=("${ack_etc}/ack-template-menu-grub-${build_name}++++EFI/BOOT/grub.cfg")
+                if [ -s "${ack_etc_dir}/ack-template-menu-grub-${build_name}" ]; then
+                    build_menus+=("${ack_etc_dir}/ack-template-menu-grub-${build_name}++++EFI/BOOT/grub.cfg")
                     build_menu_efi=0
                 else
-                    if [ -s "${ack_etc}/ack-template-menu-grub" ]; then
-                        build_menus+=("${ack_etc}/ack-template-menu-grub++++EFI/BOOT/grub.cfg")
+                    if [ -s "${ack_etc_dir}/ack-template-menu-grub" ]; then
+                        build_menus+=("${ack_etc_dir}/ack-template-menu-grub++++EFI/BOOT/grub.cfg")
                         build_menu_efi=0
                     fi
                 fi
             fi
 
             if [ $build_isolinux -eq 0 ] && [ $build_menu_isolinux -eq 1 ]; then
-                if [ -s "${ack_etc}/ack-template-menu-isolinux-${build_name}" ]; then
-                    build_menus+=("${ack_etc}/ack-template-menu-isolinux-${build_name}++++isolinux/isolinux.cfg")
+                if [ -s "${ack_etc_dir}/ack-template-menu-isolinux-${build_name}" ]; then
+                    build_menus+=("${ack_etc_dir}/ack-template-menu-isolinux-${build_name}++++isolinux/isolinux.cfg")
                     build_menu_isolinux=0
                 else
-                    if [ -s "${ack_etc}/ack-template-menu-isolinux" ]; then
-                        build_menus+=("${ack_etc}/ack-template-menu-isolinux++++isolinux/isolinux.cfg")
+                    if [ -s "${ack_etc_dir}/ack-template-menu-isolinux" ]; then
+                        build_menus+=("${ack_etc_dir}/ack-template-menu-isolinux++++isolinux/isolinux.cfg")
                         build_menu_isolinux=0
                     fi
                 fi
@@ -380,7 +376,7 @@ function ackMediaBuild() {
             if [ $Force_Flag -ne 1 ]; then
                 if [ $Virt_Flag -eq 1 ]; then
                     ackMediaVirt "${build_iso}"
-                    if [ ${build_uefi} -eq 1 ]; then
+                    if [ ${build_uefi} -eq 0 ] && [ "$Virt" == "uefi" ]; then
                         ackMediaVirt "${build_iso}" uefi
                     fi
                     continue
@@ -540,7 +536,7 @@ function ackMediaBuild() {
 
         if [ $Virt_Flag -eq 1 ]; then
             ackMediaVirt "${build_iso}"
-            if [ ${build_uefi} -eq 1 ]; then
+            if [ ${build_uefi} -eq 0 ] && [ "$Virt" == "uefi" ]; then
                 ackMediaVirt "${build_iso}" uefi
             fi
         fi
@@ -746,8 +742,14 @@ function ackMediaVirt() {
 
     local virt_mode="$2"
     if [ "$virt_mode" != "" ]; then
-        virt_mode=$(echo "$virt_mode" | sed -e '/,/s//g'),
+        virt_boot=$virt_mode
     fi
+    debugValue virt_mode $debug_level
+
+    if [ "$virt_boot" == "" ]; then
+        virt_boot="bios"
+    fi
+    debugValue virt_boot $debug_level
 
     local virsh=$(which virsh 2> /dev/null)
     if [ ! -x "$virsh" ]; then
@@ -784,7 +786,11 @@ function ackMediaVirt() {
         if [ "$virt_state" == "running" ]; then
             $virsh destroy "${virt_name}"
         fi
-        $virsh undefine "${virt_name}"
+        if [ "${virt_mode}" == "uefi" ]; then
+            $virsh undefine --nvram "${virt_name}"
+        else
+            $virsh undefine "${virt_name}"
+        fi
     fi
 
     if [ -r "${virt_disk}" ]; then
@@ -831,13 +837,13 @@ function ackMediaVirt() {
          local virt_ram=1024
          debugValue virt_ram $debug_level
 
-         if [ "$Ack_Gateway_Interface" == "br0" ]; then
-             local virt_network="bridge=${Ack_Gateway_Interface}"
+         if [ "$Ack_Default_Ip_Interface" == "br0" ]; then
+             local virt_network="bridge=${Ack_Default_Ip_Interface}"
          else
-             if [ "$Ack_Gateway_Interface" == "" ]; then
+             if [ "$Ack_Default_Ip_Interface" == "" ]; then
                  local virt_network="eth0"
              else
-                 local virt_network="${Ack_Gateway_Interface}"
+                 local virt_network="${Ack_Default_Ip_Interface}"
              fi
          fi
 
@@ -847,9 +853,20 @@ function ackMediaVirt() {
 
          debugValue virt_network $debug_level
 
+         if [ "${virt_mode}" != "" ]; then
+            local virt_boot_options="${virt_mode},"
+         else
+            local virt_boot_options=""
+         fi
+         virt_boot_options+="hd,"
+         virt_boot_options+="cdrom,"
+         virt_boot_options+="useserial=on,"
+         #virt_boot_options+="menu=on"
+         debugValue virt_boot_options $debug_level
+
          ${virt_install} \
              --name ${virt_name} \
-             --boot ${virt_mode}hd,cdrom,menu=on,useserial=on \
+             --boot ${virt_boot_options} \
              --cdrom ${virt_arg} \
              --console pty,target_type=virtio \
              --cpus ${virt_cpus} \
@@ -1127,7 +1144,7 @@ function usage() {
     echo "  -b | --build <iso>              = build ack install media from (distribution) <iso(s)> [DEFAULT=$Default_Distribution_Dir]"
     # TODO add --flash flag
     echo "  -d | --domain <name>            = set build domain <name> [DEFAULT=$Default_Domain]"
-    echo "  -s | --server <name>            = set build (install) server <name> [DEFAULT=http(s)://$Default_Install_Server/]"
+    echo "  -s | --server <name>            = set build (install) server <name> [DEFAULT=$Default_Install_Server]"
     echo
     echo "  -v | --virt <iso>               = create and boot an iso with virsh utilities [DEFAULT=none]"
     echo
