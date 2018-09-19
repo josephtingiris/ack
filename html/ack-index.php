@@ -1,4 +1,4 @@
-<?php $Debug=25;
+<?php $Debug=20;
 /*
 
 aNAcONDA kICKSTART (ack)
@@ -156,10 +156,10 @@ function ackIndex() {
         if (!empty($GLOBALS["Ack_Client_Template_Kickstart"])) {
             $ack_client_template_kickstart=$GLOBALS["Ack_Client_Template_Kickstart"];
         } else {
-            $ack_client_template_kickstart=ackTemplate("ack-template-kickstart");
+            $ack_client_template_kickstart=ackTemplate("ack-template-kickstart",false,$ack_client_install_uri);
         }
     }
-    if (!is_readable($ack_client_template_kickstart)) {
+    if (empty($ack_client_template_kickstart)) {
         http_response_code(404);
         echo "404 - $ack_client_template_kickstart file not found";
         exit(3);
@@ -204,10 +204,7 @@ function ackIndex() {
 
     echo $ack_index_header;
 
-    $ack_client_template_kickstart_contents=file_get_contents($ack_client_template_kickstart);
-    if ($ack_client_template_kickstart_contents !== false) {
-        $ack_client_template_kickstart_contents=ackGlobalsReplace($ack_client_template_kickstart_contents);
-    }
+    $ack_client_template_kickstart_contents=ackTemplate($ack_client_template_kickstart,true);
 
     $ack_client_ppi=ackPpi();
     if (!empty($ack_client_ppi)) {

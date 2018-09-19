@@ -1,5 +1,5 @@
 #!/bin/env php
-<?php $Debug=15;
+<?php $Debug=0;
 /*
 
 aNAcONDA kICKSTART (ack)
@@ -110,6 +110,8 @@ if (!empty($Test_Parse_Url["query"])) {
 
 if (filter_var($Ack_Test_Url,FILTER_VALIDATE_URL)) {
     $Debug->debugValue("Ack_Test_Url",3);
+
+    $Debug->debugValue("Ack_Client_Install_Uri",5);
 
     $curl_init=curl_init();
 

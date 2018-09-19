@@ -1,0 +1,36 @@
+{
+    "name": "josephtingiris/ack",
+    "description": "aNAcONDA kICKSTART",
+    "version": "0.2.0",
+    "type": "project",
+    "license": "commercial",
+    "authors": [
+    {
+        "name": "Joseph Tingiris",
+        "email": "joseph.tingiris@gmail.com"
+    }
+    ],
+        "autoload": {
+            "psr-4": {
+                "josephtingiris\\": [
+                    "{$vendor-dir}/../include/josephtingiris",
+                    "{$vendor-dir}/../include"
+                ],
+                "josephtingiris\\Ack\\": [
+                    "{$vendor-dir}/../include/josephtingiris/Ack",
+                    "{$vendor-dir}/../include/josephtingiris",
+                    "{$vendor-dir}/../include"
+                ]
+            }
+        },
+        "require": {
+        },
+        "require-dev": {
+        },
+        "config": {
+            "cache-dir": "{$vendor-dir}/../.cache",
+            "data-dir": "{$vendor-dir}/../.local/share/composer",
+            "home": "{$vendor-dir}/../.config/composer"
+        }
+
+}

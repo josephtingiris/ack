@@ -71,6 +71,8 @@ unset($Debug_Php_Dir, $Debug_Php);
 
 # end Debug.php.include
 
+$Debug = new \josephtingiris\Debug();
+
 # Functions
 
 function ackAuthorized($ack_mac=null, $ack_ip=null, $ack_config=null) {
@@ -858,43 +860,93 @@ function ackRevoke() {
 
 }
 
-function ackTemplate($template_name=null) {
+function ackTemplate($template_name=null, $template_content=false, $template_uri=null) {
 
     # begin function logic
+
+    global $Debug;
 
     if ($template_name == null || $template_name == '') {
         return null;
     }
 
+    $preg_matches=array("/^\//");
+    if (preg_match($preg_matches,$template_uri))
+    $Debug->debugValue("template_uri",8,$template_uri);
+
+    $template_found=null;
+
     if (is_readable($template_name)) {
-        return $template_name;
-    }
 
-    $template_file=null;
-    $template_files=array();
+        // an exact match was found
 
-    if (!empty($GLOBALS["Ack_Client_Mac"])) {
-        array_push($template_files, $template_name."-".$GLOBALS["Ack_Client_Mac"]);
-    }
+        $template_found=$template_name;
 
-    array_push($template_files, $template_name); // last on the stack
+    } else {
 
+        // search sepcific directories
 
-    foreach ($template_files as $template_file) {
+        $template_file=null;
+        $template_files=array();
+
+        if (!empty($GLOBALS["Ack_Client_Mac"])) {
+            array_push($template_files, $GLOBALS["Ack_Client_Mac"]."/".$template_name);
+            array_push($template_files, $GLOBALS["Ack_Client_Mac"]."/".$template_name."-".$GLOBALS["Ack_Client_Mac"]);
+            array_push($template_files, $template_name."-".$GLOBALS["Ack_Client_Mac"]);
+        }
+
+        array_push($template_files, $template_name); // last on the stack
+
         if (!empty($GLOBALS["Ack_Etc_Dirs"]) && is_array($GLOBALS["Ack_Etc_Dirs"])) {
-            foreach ($GLOBALS["Ack_Etc_Dirs"] as $ack_etc_dir) {
-                if (is_readable($ack_etc_dir."/".$template_name)) {
-                    $template_file=realpath($ack_etc_dir."/".$template_name);
+            foreach ($template_files as $template_file) {
+                $Debug->debugValue("template_file",8,$template_file);
+                foreach ($GLOBALS["Ack_Etc_Dirs"] as $ack_etc_dir) {
+                    $template_tmp=$ack_etc_dir."/".$template_file;
+                    if (is_readable($template_tmp) && filesize($template_tmp) >= 1) {
+                        $template_found=realpath($template_tmp);
+                        break;
+                    }
+                }
+                if ($template_found != null) {
                     break;
                 }
             }
         }
-        if ($template_file != null) {
-            break;
-        }
     }
 
-    return $template_file;
+    $Debug->debugValue("template_found",8,$template_found);
+
+    if (empty($template_content)) {
+
+        // only return the template found (or null)
+
+        return $template_found;
+
+    } else {
+
+        // return the contents of the template found with globals replaced (or null)
+
+        if ($template_found == null) {
+            return $template_found;
+        } else {
+
+            $template_contents=null;
+
+            $template_contents=file_get_contents($template_found);
+            if ($template_contents !== false) {
+                $template_contents=ackGlobalsReplace($template_contents);
+            }
+
+            $template_contents=trim($template_contents);
+
+            if (empty($template_contents)) {
+                $template_contents=null;
+            }
+
+            return $template_contents;
+        }
+
+    }
 
     # end function logic
 
@@ -943,15 +995,13 @@ function ackUuid() {
 # Main Logic
 #
 
-$Debug = new \josephtingiris\Debug();
-
 # debug the $_SERVER variables
 if (!empty($_SERVER) && is_array($_SERVER)) {
-    $Debug->debug("----------------> _SERVER key/value pairs",10);
+    $Debug->debug("----------------> _SERVER key/value pairs",50);
     foreach ($_SERVER as $_SERVER_KEY => $_SERVER_VALUE) {
-        $Debug->debugValue("$_SERVER_KEY",10,$_SERVER_VALUE);
+        $Debug->debugValue("$_SERVER_KEY",50,$_SERVER_VALUE);
     }
-    $Debug->debug("----------------< _SERVER key/value pairs",10);
+    $Debug->debug("----------------< _SERVER key/value pairs",50);
 }
 
 # Global (defaults)
@@ -1334,7 +1384,7 @@ if (!empty($Ack_Client_Install_Uri)) {
         // strip off the /<IP>-kickstart suffix
         $Ack_Client_Install_Uri=dirname($Ack_Client_Install_Uri);
     }
-    if (is_readable($Ack_Media_Dir."/".$Ack_Client_Install_Uri."/.treeinfo")) {
+    if (is_readable($Ack_Media_Dir."/".$Ack_Client_Install_Uri."/TRANS.TBL")) {
         $Ack_Client_Install_Url=$Ack_Install_Server_Url.str_replace("//","/","/media/".$Ack_Client_Install_Uri);
     }
 }
@@ -1342,7 +1392,8 @@ if (!empty($Ack_Client_Install_Uri)) {
 // the root password (is the lowercase mac address without the colons)
 $Ack_Client_Password=crypt($Ack_Client_Mac, '$6$ackM');
 
-$Ack_Client_Template_Kickstart=ackTemplate("ack-template-kickstart");
+$Debug->debugValue($Ack_Client_Install_Uri,5);
+$Ack_Client_Template_Kickstart=ackTemplate("ack-template-kickstart",false,$Ack_Client_Install_Uri);
 
 // TODO crude, improve (use ip -4 -o r s) ... ipv4 set default interface globals
 if (is_readable("/proc/net/route")) {

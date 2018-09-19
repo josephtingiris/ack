@@ -4,6 +4,10 @@ install
 
 eula --agreed
 
+firstboot --disabled
+
+mediacheck --disabled
+
 services --enabled=NetworkManager,sshd
 
 lang en_US.UTF-8
