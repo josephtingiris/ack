@@ -1,4 +1,4 @@
-#!/bin/env php
+#!/usr/bin/env php
 <?php
 
 /**
@@ -99,3 +99,12 @@ unset($Autoload_Php, $Autoload_Path);
  * main
  *
  */
+
+$Debug=350;
+$jt = new \josephtingiris\Debug();
+
+for ($c=0; $c<=35; $c++) {
+    $jt->debug("debug=$c",$c);
+}
+
+$jt->debug("debug=500",500);
