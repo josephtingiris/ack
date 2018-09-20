@@ -1,4 +1,5 @@
 <?php
+
 /**
  * 
  * aNAcONDA kICKSTART (ack)
@@ -28,13 +29,13 @@
  * @version     0.2.0
  */
 
-namespace josephtingiris;
+namespace josephtingiris\Ack;
 
 /**
  * The \josephtingiris\Ack class contains methods for dynamic anaconda & kickstart.
  */
 
-class Ack extends Debug
+class Ack extends \josephtingiris\Debug
 {
 
     /*

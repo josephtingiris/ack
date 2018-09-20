@@ -39,15 +39,15 @@ export Ack_0
 
 # begin Debug.bash.include
 
-# begin Ack.php.include
+# begin Ack.functions.php.include
 
-Ack_Php="Ack.php"
+Ack_Php="Ack.functions.php"
 Ack_Php_Dir="$(dirname $(readlink -e $BASH_SOURCE))"
 while [ "$Ack_Php_Dir" != "" ] && [ "$Ack_Php_Dir" != "/" ]; do # search backwards
     for Ack_Php_Source_Dir in $Ack_Php_Dir $Ack_Php_Dir/include; do
         Ack_Php_Source=${Ack_Php_Source_Dir}/${Ack_Php}
         if [ -r "${Ack_Php_Source}" ]; then
-            # export Ack.php globals to shell environment
+            # export Ack.functions.php globals to shell environment
             eval "$(/bin/env php <<< "<?php require_once('${Ack_Php_Source}'); ackGlobals(true); ?>")"
             break
         else
@@ -60,7 +60,7 @@ done
 if [ "$Ack_Php_Source" == "" ]; then echo "$Ack_Php file not found"; exit 1; fi
 unset Ack_Php_Dir Ack_Php
 
-# end Ack.php.include
+# end Ack.functions.php.include
 
 # Functions
 

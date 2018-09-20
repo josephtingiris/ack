@@ -101,10 +101,11 @@ unset($Autoload_Php, $Autoload_Path);
  */
 
 $Debug=350;
-$jt = new \josephtingiris\Debug();
+
+$Ack = new Ack();
 
 for ($c=0; $c<=35; $c++) {
-    $jt->debug("debug=$c",$c);
+    $Ack->debug("debug=$c",$c);
 }
 
-$jt->debug("debug=500",500);
+#$jt->debug("debug=500",500);

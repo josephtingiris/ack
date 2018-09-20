@@ -870,7 +870,7 @@ function ackTemplate($template_name=null, $template_content=false, $template_uri
         return null;
     }
 
-    $preg_matches=array("/^\//");
+    $preg_matches="/^\//";
     if (preg_match($preg_matches,$template_uri))
     $Debug->debugValue("template_uri",8,$template_uri);
 
