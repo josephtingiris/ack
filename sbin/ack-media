@@ -767,7 +767,7 @@ function ackMediaVirt() {
     debugValue virt_basename $debug_level
 
     virt_name=${virt_basename}-${virt_boot}
-    debugValue virt_name $debug_value
+    debugValue virt_name $debug_value $debug_level
 
     local virt_dir=${Virt_Dir}/${virt_basename}
     debugValue virt_dir $debug_level
