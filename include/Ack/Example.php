@@ -1,8 +1,7 @@
 <?php
 
 /**
- *
- * aNAcONDA kICKSTART (ack)
+ * aNAcONDA kICKSTART (ack) [Example]
  *
  * Copyright (C) 2015 Joseph Tingiris
  *
@@ -29,30 +28,15 @@
  * @version     0.2.0
  */
 
-namespace josephtingiris;
+namespace josephtingiris\Ack;
 
 /**
- * The \josephtingiris\Ack class contains methods for dynamic anaconda & kickstart.
+ * The \josephtingiris\Ack\Example class contains a basic class structure.
  */
-
-class Ack extends \josephtingiris\Debug
+class Example extends \josephtingiris\Ack
 {
 
-    /*
-     * public properties.
-     */
-
-    public $_GET_lower = array();
-
-    /*
-     * private properties.
-     */
-
-    /*
-     * public functions.
-     */
-
-    public function __construct($debug_level_construct = null)
+    public function __construct($debug_level_construct=null)
     {
 
         $parent_class = get_parent_class();
@@ -63,39 +47,15 @@ class Ack extends \josephtingiris\Debug
 
         $this->debug("Class = " . __CLASS__, 20);
 
-        if (empty($this->Start_Time)) {
-            $this->Start_Time = microtime(true);
-        }
-
-        // date() is used throughout; ensure a timezone is set
-
-        if(!ini_get('date.timezone')) {
-            $TZ=@date_default_timezone_get();
-            if (empty($TZ)) {
-                $TZ= getenv('TZ');
-            }
-            if (empty($TZ)) {
-                date_default_timezone_set('UTC');
-            } else {
-                date_default_timezone_set($TZ);
-            }
-        }
-
     }
 
     public function __destruct()
     {
-
         $parent_class = get_parent_class();
 
         if ($parent_class !== false) {
-            parent::__destruct(); // execute parent __destruct;
+            parent::__destruct(); // execute parent __construct;
         }
-
-        $this->Stop_Time = microtime(true);
-
-        //echo "start time = ".$this->Start_Time.$this->br();
-        //echo "stop time = ".$this->Stop_Time.$this->br();
 
     }
 

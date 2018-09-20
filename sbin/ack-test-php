@@ -100,11 +100,11 @@ unset($Autoload_Php, $Autoload_Path);
  *
  */
 
-$Debug=350;
+$Debug=20;
 
 $Ack = new \josephtingiris\Ack;
 
-for ($c=0; $c<=35; $c++) {
+for ($c=0; $c<=256; $c++) {
     $Ack->debug("debug=$c",$c);
 }
 

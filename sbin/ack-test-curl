@@ -1,21 +1,21 @@
-#!/bin/env php
+#!/usr/bin/env php
 <?php
 
 /**
  * aNAcONDA kICKSTART (ack) [component]
- * 
+ *
  * Copyright (C) 2015 Joseph Tingiris
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
@@ -123,8 +123,8 @@ $Ack_Php="Ack.functions.php";
 $Ack_Php_Dir=dirname(__FILE__);
 if (is_link($Ack_Php_Dir)) $Ack_Php_Dir=readlink($Ack_Php_Dir);
 while (!empty($Ack_Php_Dir) && $Ack_Php_Dir != "/" && is_dir($Ack_Php_Dir)) { # search backwards
-    foreach (array($Ack_Php_Dir, $Ack_Php_Dir."/include/debug-php", $Ack_Php_Dir."/include") as $Ack_Php_Source_Dir) {
-        $Ack_Php_Source=$Ack_Php_Source_Dir."/".$Ack_Php;
+    foreach (array($Ack_Php_Dir, $Ack_Php_Dir . "/include/debug-php", $Ack_Php_Dir . "/include") as $Ack_Php_Source_Dir) {
+        $Ack_Php_Source=$Ack_Php_Source_Dir . "/" . $Ack_Php;
         if (is_readable($Ack_Php_Source)) {
             require_once($Ack_Php_Source);
             break;
@@ -158,7 +158,7 @@ if (!empty($argv[1])) {
 if (empty($Test_Parse_Url["scheme"])) {
     $Ack_Test_Url="http://";
 } else {
-    $Ack_Test_Url=$Test_Parse_Url["scheme"]."://";
+    $Ack_Test_Url=$Test_Parse_Url["scheme"] . "://";
 }
 
 if (empty($Test_Parse_Url["host"])) {
@@ -172,7 +172,7 @@ if (empty($Test_Parse_Url["host"])) {
 }
 
 if (!empty($Test_Parse_Url["port"])) {
-    $Ack_Test_Url.=":".$Test_Parse_Url["port"];
+    $Ack_Test_Url.=":" . $Test_Parse_Url["port"];
 }
 
 if (!empty($Test_Parse_Url["path"])) {
@@ -182,7 +182,7 @@ if (!empty($Test_Parse_Url["path"])) {
 }
 
 if (!empty($Test_Parse_Url["query"])) {
-    $Ack_Test_Url.="?".$Test_Parse_Url["query"];
+    $Ack_Test_Url.="?" . $Test_Parse_Url["query"];
 } else {
     $Ack_Test_Url.="?install=";
 }
@@ -194,9 +194,9 @@ if (filter_var($Ack_Test_Url,FILTER_VALIDATE_URL)) {
 
     $curl_init=curl_init();
 
-    curl_setopt($curl_init,CURLOPT_URL,$Ack_Test_Url); 
-    curl_setopt($curl_init,CURLOPT_FOLLOWLOCATION,true); 
-    curl_setopt($curl_init,CURLOPT_SSL_VERIFYPEER,false); 
+    curl_setopt($curl_init,CURLOPT_URL,$Ack_Test_Url);
+    curl_setopt($curl_init,CURLOPT_FOLLOWLOCATION,true);
+    curl_setopt($curl_init,CURLOPT_SSL_VERIFYPEER,false);
 
     $curl_headers=array();
     array_push($curl_headers,"X-ACK-PROVISIONING-IP-0: $Ack_Default_Ip_Interface $Ack_Default_Ip_Address");
@@ -239,7 +239,7 @@ if (filter_var($Ack_Test_Url,FILTER_VALIDATE_URL)) {
 
     curl_setopt($curl_init,CURLOPT_HTTPHEADER,$curl_headers);
 
-    $curl_exec = curl_exec($curl_init); 
+    $curl_exec = curl_exec($curl_init);
     $curl_status = curl_getinfo($curl_init,CURLINFO_HTTP_CODE);
 
 } else {

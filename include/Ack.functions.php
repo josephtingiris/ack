@@ -2,19 +2,19 @@
 
 /**
  * aNAcONDA kICKSTART (ack) [component]
- * 
+ *
  * Copyright (C) 2015 Joseph Tingiris
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
@@ -133,8 +133,8 @@ $Debug_Php="Debug.php";
 $Debug_Php_Dir=dirname(__FILE__);
 if (is_link($Debug_Php_Dir)) $Debug_Php_Dir=readlink($Debug_Php_Dir);
 while (!empty($Debug_Php_Dir) && $Debug_Php_Dir != "/" && is_dir($Debug_Php_Dir)) { # search backwards
-    foreach (array($Debug_Php_Dir, $Debug_Php_Dir."/include/debug-php", $Debug_Php_Dir."/include") as $Debug_Php_Source_Dir) {
-        $Debug_Php_Source=$Debug_Php_Source_Dir."/".$Debug_Php;
+    foreach (array($Debug_Php_Dir, $Debug_Php_Dir . "/include/debug-php", $Debug_Php_Dir . "/include") as $Debug_Php_Source_Dir) {
+        $Debug_Php_Source=$Debug_Php_Source_Dir . "/" . $Debug_Php;
         if (is_readable($Debug_Php_Source)) {
             require_once($Debug_Php_Source);
             break;
@@ -152,11 +152,15 @@ unset($Debug_Php_Dir, $Debug_Php);
 
 $Debug = new \josephtingiris\Debug();
 
-# Functions
+/*
+ * Functions
+ */
 
 function ackAuthorized($ack_mac=null, $ack_ip=null, $ack_config=null) {
 
-    # begin function logic
+    /*
+     * begin function logic
+     */
 
     global $Debug;
 
@@ -223,7 +227,6 @@ function ackAuthorized($ack_mac=null, $ack_ip=null, $ack_config=null) {
             }
         }
 
-
     }
 
     if ($ack_config_update && !empty($ack_authorized_method) && !empty($ack_config)) {
@@ -248,20 +251,24 @@ function ackAuthorized($ack_mac=null, $ack_ip=null, $ack_config=null) {
     ackLog("unauthorized [$ack_ip][$ack_mac][failsafe]","ERROR");
     return false;
 
-    # end function logic
+    /*
+     * end function logic
+     */
 
 }
 
 function ackCacheSet($ack_cache_stack=array(),$ack_cache=null) {
 
-    # begin function logic
+    /*
+     * begin function logic
+     */
 
     if (empty($ack_cache_stack)) return;
 
     $ack_cache_string=null;
 
     foreach ($ack_cache_stack as $ack_cache_element) {
-        $ack_cache_string.=$ack_cache_element.",";
+        $ack_cache_string.=$ack_cache_element . ",";
     }
     $ack_cache_string=trim($ack_cache_string,",");
 
@@ -282,17 +289,21 @@ function ackCacheSet($ack_cache_stack=array(),$ack_cache=null) {
 
     $fp=fopen($ack_cache,"a+");
     if ($fp) {
-        fwrite($fp,date("Y-m-d H:i:s").",$remote_addr,".$ack_cache_string."\n");
+        fwrite($fp,date("Y-m-d H:i:s") . ",$remote_addr," . $ack_cache_string . "\n");
         fclose($fp);
     }
 
-    # end function logic
+    /*
+     * end function logic
+     */
 
 }
 
 function ackConfigGet($ack_config_attribute,$ack_config=null) {
 
-    # begin function logic
+    /*
+     * begin function logic
+     */
 
     global $Debug;
 
@@ -377,13 +388,17 @@ function ackConfigGet($ack_config_attribute,$ack_config=null) {
     $Debug->debug($debug_string,$debug_level);
     return null;
 
-    # end function logic
+    /*
+     * end function logic
+     */
 
 }
 
 function ackConfigSet($ack_config_attribute,$ack_config=null) {
 
-    # begin function logic
+    /*
+     * begin function logic
+     */
 
     global $Debug;
 
@@ -436,19 +451,19 @@ function ackConfigSet($ack_config_attribute,$ack_config=null) {
     $ack_config_modifier="[$ack_config_date]";
 
     if (isset($_SERVER["REQUEST_SCHEME"])) {
-        $ack_config_modifier.="[".trim($_SERVER["REQUEST_SCHEME"])."]";
+        $ack_config_modifier.="[" . trim($_SERVER["REQUEST_SCHEME"]) . "]";
     }
 
     if (isset($_SERVER["SERVER_NAME"])) {
-        $ack_config_modifier.="[".trim($_SERVER["SERVER_NAME"])."]";
+        $ack_config_modifier.="[" . trim($_SERVER["SERVER_NAME"]) . "]";
     }
 
     if (isset($_SERVER["SCRIPT_FILENAME"])) {
-        $ack_config_modifier.="[".trim($_SERVER["SCRIPT_FILENAME"])."]";
+        $ack_config_modifier.="[" . trim($_SERVER["SCRIPT_FILENAME"]) . "]";
     }
 
     if (isset($_SERVER["REMOTE_ADDR"])) {
-        $ack_config_modifier.="[".trim($_SERVER["REMOTE_ADDR"])."]";
+        $ack_config_modifier.="[" . trim($_SERVER["REMOTE_ADDR"]) . "]";
     }
 
     $ack_config_entry="modifier = $ack_config_modifier\n";
@@ -472,7 +487,9 @@ function ackConfigSet($ack_config_attribute,$ack_config=null) {
         fclose($fp);
     }
 
-    # end function logic
+    /*
+     * end function logic
+     */
 
 }
 
@@ -491,7 +508,9 @@ function ackExec($cmd, &$stdout=null, &$stderr=null) {
 
 function ackFile($ack_file=null, $ack_ini=true) {
 
-    # begin function logic
+    /*
+     * begin function logic
+     */
 
     global $Debug;
 
@@ -535,13 +554,17 @@ function ackFile($ack_file=null, $ack_ini=true) {
 
     return $ack_file;
 
-    # end function logic
+    /*
+     * end function logic
+     */
 
 }
 
 function ackGlobals($bash=false) {
 
-    # begin function logic
+    /*
+     * begin function logic
+     */
 
     global $Debug;
 
@@ -554,13 +577,13 @@ function ackGlobals($bash=false) {
             if (preg_match("/^ack/i",$ack_global_key)) {
                 if ($bash) {
                     if (is_string($ack_global_value)) {
-                        $ack_export.= "export $ack_global_key=\"".trim($ack_global_value)."\"\n";
+                        $ack_export.= "export $ack_global_key=\"" . trim($ack_global_value) . "\"\n";
                     } else {
                         if (is_array($ack_global_value) || is_object($ack_global_value)) {
                             $ack_export.= "export $ack_global_key=(";
                             foreach($ack_global_value as $ack_global_value_value) {
                                 if (is_string($ack_global_value_value)) {
-                                    $ack_export.= "\"".trim($ack_global_value_value)."\" ";
+                                    $ack_export.= "\"" . trim($ack_global_value_value) . "\" ";
                                 }
                             }
                             $ack_export=trim($ack_export);
@@ -574,7 +597,6 @@ function ackGlobals($bash=false) {
         }
     }
     unset($ack_global_key, $ack_global_value);
-
 
     if ($bash) {
         if (!empty($_SERVER["PATH"]) && !empty($GLOBALS["Ack_Path"])) {
@@ -590,13 +612,17 @@ function ackGlobals($bash=false) {
         }
     }
 
-    # end function logic
+    /*
+     * end function logic
+     */
 
 }
 
 function ackGlobalsReplace($ack_content=null) {
 
-    # begin function logic
+    /*
+     * begin function logic
+     */
 
     global $Debug;
 
@@ -610,7 +636,7 @@ function ackGlobalsReplace($ack_content=null) {
         foreach ($ack_globals as $ack_global_key => $ack_global_value) {
             if (is_string($ack_global_value)) {
                 if (preg_match("/^ack/i",$ack_global_key)) {
-                    $ack_replace_key="##".strtoupper($ack_global_key)."##";
+                    $ack_replace_key="##" . strtoupper($ack_global_key) . "##";
                     $ack_content_replace=str_replace($ack_replace_key,$ack_global_value,$ack_content_replace);
                 }
             }
@@ -621,7 +647,9 @@ function ackGlobalsReplace($ack_content=null) {
 
     return $ack_content_replace;
 
-    # end function logic
+    /*
+     * end function logic
+     */
 
 }
 
@@ -733,7 +761,9 @@ function ackIpv4Address($interface=null, $address=false, $cidr=false, $mask=fals
 # if an ip is in a cidr range return true else return false
 function ackIpv4Authorized($ip, $cidr) {
 
-    # begin function logic
+    /*
+     * begin function logic
+     */
 
     if (strpos($cidr,"/") !== false) {
         list ($subnet, $bits) = explode('/', $cidr);
@@ -747,7 +777,9 @@ function ackIpv4Authorized($ip, $cidr) {
 
     return false;
 
-    # end function logic
+    /*
+     * end function logic
+     */
 
 }
 
@@ -771,7 +803,9 @@ function ackIpv4Netmask($ip) {
 
 function ackLog($log_message, $log_level="INFO", $log=null) {
 
-    # begin function logic
+    /*
+     * begin function logic
+     */
 
     global $Debug;
 
@@ -780,7 +814,7 @@ function ackLog($log_message, $log_level="INFO", $log=null) {
     }
     if (empty($log)) $log="/tmp/ack.log";
 
-    $log_message_header="[".$log_level."]";
+    $log_message_header="[" . $log_level . "]";
     $log_message="$log_message_header $log_message";
 
     $error_log=false;
@@ -795,7 +829,7 @@ function ackLog($log_message, $log_level="INFO", $log=null) {
         if (is_writable($log) && !$error_log) {
             $fp=fopen($log,"a+");
             if ($fp) {
-                fwrite($fp,ackTimestamp($log_message)."\n");
+                fwrite($fp,ackTimestamp($log_message) . "\n");
                 fclose($fp);
             } else {
                 aborting("ERROR opening $log",1);
@@ -811,13 +845,18 @@ function ackLog($log_message, $log_level="INFO", $log=null) {
         error_log($log_message);
     }
 
-    # end function logic
+    /*
+     * end function logic
+     */
+
 }
 
 # validate & return a formatted mac address
 function ackMac($ack_mac=null) {
 
-    # begin function logic
+    /*
+     * begin function logic
+     */
 
     if (!empty($ack_mac)) {
         if (preg_match('/([a-fA-F0-9]{2}[:|\-]?){6}/', $ack_mac) == 1) {
@@ -840,13 +879,17 @@ function ackMac($ack_mac=null) {
 
     return $ack_mac;
 
-    # end function logic
+    /*
+     * end function logic
+     */
 
 }
 
 function ackPath($ack_dir=null) {
 
-    # begin function logic
+    /*
+     * begin function logic
+     */
 
     $path=array();
     if (!empty($_SERVER["path"])) {
@@ -860,22 +903,22 @@ function ackPath($ack_dir=null) {
         $ack_files=array_diff(scandir($ack_dir), array('..', '.'));
         foreach($ack_files as $ack_file) {
             if ($ack_file == "bin" || $ack_file == "sbin") {
-                if (is_dir($ack_dir."/".$ack_file)) {
-                    if (!in_array($ack_dir."/".$ack_file,$path)) {
-                        $ack_path.=$ack_dir."/".$ack_file.":";
+                if (is_dir($ack_dir . "/" . $ack_file)) {
+                    if (!in_array($ack_dir . "/" . $ack_file,$path)) {
+                        $ack_path.=$ack_dir . "/" . $ack_file . ":";
                     }
                     continue;
                 }
             } else {
-                if (is_dir($ack_dir."/".$ack_file."/bin")) {
-                    if (!in_array($ack_dir."/".$ack_file."/bin",$path)) {
-                        $ack_path.=$ack_dir."/".$ack_file."/bin:";
+                if (is_dir($ack_dir . "/" . $ack_file . "/bin")) {
+                    if (!in_array($ack_dir . "/" . $ack_file . "/bin",$path)) {
+                        $ack_path.=$ack_dir . "/" . $ack_file . "/bin:";
                     }
                     continue;
                 } else {
-                    if (is_dir($ack_dir."/".$ack_file."/sbin")) {
-                        if (!in_array($ack_dir."/".$ack_file."/sbin",$path)) {
-                            $ack_path.=$ack_dir."/".$ack_file."/sbin:";
+                    if (is_dir($ack_dir . "/" . $ack_file . "/sbin")) {
+                        if (!in_array($ack_dir . "/" . $ack_file . "/sbin",$path)) {
+                            $ack_path.=$ack_dir . "/" . $ack_file . "/sbin:";
                         }
                         continue;
                     }
@@ -892,14 +935,14 @@ function ackPath($ack_dir=null) {
         "./",
     );
     foreach ($ack_required_paths as $ack_required_path) {
-        $ack_path.=$ack_required_path.":";
+        $ack_path.=$ack_required_path . ":";
     }
 
     if (!empty($path)) {
         $ack_path_exploded=explode(":",$ack_path);
         foreach ($path as $pathdir) {
             if (!in_array($pathdir,$ack_path_exploded)) {
-                $ack_path.=$pathdir.":";
+                $ack_path.=$pathdir . ":";
             }
         }
     }
@@ -910,13 +953,17 @@ function ackPath($ack_dir=null) {
 
     return $ack_path;
 
-    # end function logic
+    /*
+     * end function logic
+     */
 
 }
 
 function ackRevoke() {
 
-    # begin function logic
+    /*
+     * begin function logic
+     */
 
     global $sourcedir;
     $revoke_date=strtotime(date("Y-m-d H:i:s"));
@@ -924,24 +971,28 @@ function ackRevoke() {
     $files=scandir($sourcedir);
     foreach($files as $file) {
         if (stristr($file,":")) {
-            $revoke_status=ackConfigGet("revoke",$sourcedir.$file);
+            $revoke_status=ackConfigGet("revoke",$sourcedir . $file);
             if ($revoke_status != "revoked") {
                 $revoke_time=strtotime($revoke_status);
                 if ($revoke_time < $revoke_date) {
                     $ack_config=array("revoke = revoked","authorized = false");
-                    ackConfigSet($ack_config,$sourcedir.$file);
+                    ackConfigSet($ack_config,$sourcedir . $file);
                 }
             }
         }
     }
 
-    # end function logic
+    /*
+     * end function logic
+     */
 
 }
 
 function ackTemplate($template_name=null, $template_content=false, $template_uri=null) {
 
-    # begin function logic
+    /*
+     * begin function logic
+     */
 
     global $Debug;
 
@@ -951,7 +1002,7 @@ function ackTemplate($template_name=null, $template_content=false, $template_uri
 
     $preg_matches="/^\//";
     if (preg_match($preg_matches,$template_uri))
-    $Debug->debugValue("template_uri",8,$template_uri);
+        $Debug->debugValue("template_uri",8,$template_uri);
 
     $template_found=null;
 
@@ -969,9 +1020,9 @@ function ackTemplate($template_name=null, $template_content=false, $template_uri
         $template_files=array();
 
         if (!empty($GLOBALS["Ack_Client_Mac"])) {
-            array_push($template_files, $GLOBALS["Ack_Client_Mac"]."/".$template_name);
-            array_push($template_files, $GLOBALS["Ack_Client_Mac"]."/".$template_name."-".$GLOBALS["Ack_Client_Mac"]);
-            array_push($template_files, $template_name."-".$GLOBALS["Ack_Client_Mac"]);
+            array_push($template_files, $GLOBALS["Ack_Client_Mac"] . "/" . $template_name);
+            array_push($template_files, $GLOBALS["Ack_Client_Mac"] . "/" . $template_name . "-" . $GLOBALS["Ack_Client_Mac"]);
+            array_push($template_files, $template_name . "-" . $GLOBALS["Ack_Client_Mac"]);
         }
 
         array_push($template_files, $template_name); // last on the stack
@@ -980,7 +1031,7 @@ function ackTemplate($template_name=null, $template_content=false, $template_uri
             foreach ($template_files as $template_file) {
                 $Debug->debugValue("template_file",8,$template_file);
                 foreach ($GLOBALS["Ack_Etc_Dirs"] as $ack_etc_dir) {
-                    $template_tmp=$ack_etc_dir."/".$template_file;
+                    $template_tmp=$ack_etc_dir . "/" . $template_file;
                     if (is_readable($template_tmp) && filesize($template_tmp) >= 1) {
                         $template_found=realpath($template_tmp);
                         break;
@@ -1027,30 +1078,38 @@ function ackTemplate($template_name=null, $template_content=false, $template_uri
 
     }
 
-    # end function logic
+    /*
+     * end function logic
+     */
 
 }
 
 function ackTimestamp($timestamp_message=null,$timestamp_force=true) {
 
-    # begin function logic
+    /*
+     * begin function logic
+     */
 
     if ($timestamp_force) {
         if ($timestamp_message != null && $timestamp_message != "") {
-            $timestamp_message=date("Y-m-d H:i:s")." : ".$timestamp_message;
+            $timestamp_message=date("Y-m-d H:i:s") . " : " . $timestamp_message;
         } else {
             $timestamp_message=date("Y-m-d H:i:s");
         }
     }
     return $timestamp_message;
 
-    # end function logic
+    /*
+     * end function logic
+     */
 
 }
 
 function ackUuid() {
 
-    # begin function logic
+    /*
+     * begin function logic
+     */
 
     $random_string=openssl_random_pseudo_bytes(16);
     $time_low=bin2hex(substr($random_string, 0, 4));
@@ -1066,12 +1125,18 @@ function ackUuid() {
     $clock_seq_hi_and_reserved=$clock_seq_hi_and_reserved | 0x8000;
     return sprintf("%08s-%04s-%04x-%04x-%012s", $time_low, $time_mid, $time_hi_and_version, $clock_seq_hi_and_reserved, $node);
 
-    # end function logic
+    /*
+     * end function logic
+     */
 
 }
 
 #
-# Main Logic
+
+/*
+ * Main Logic
+ */
+
 #
 
 # debug the $_SERVER variables
@@ -1116,7 +1181,7 @@ $Ack_Dir=dirname(dirname(realpath(__FILE__)));
 
 $Ack_Dirname=dirname($Ack_0);
 
-$Ack_Aaa_Dir=$Ack_Dir ."/aaa";
+$Ack_Aaa_Dir=$Ack_Dir . "/aaa";
 
 $Ack_Etc_Dir=$Ack_Dir . "/etc";
 
@@ -1126,7 +1191,7 @@ $Ack_Etc_Dirs=array(
     $Ack_Etc_Dir,
 );
 
-$Ack_Aaa_Cache=$Ack_Aaa_Dir."/aaa.cache";
+$Ack_Aaa_Cache=$Ack_Aaa_Dir . "/aaa.cache";
 
 $Ack_Authorized_Ips=array(
     "127.0.0.0/8",
@@ -1135,7 +1200,7 @@ $Ack_Authorized_Ips=array(
     "10.0.0.0/8",
 );
 
-$Ack_Client_Aaa=$Ack_Aaa_Dir."/000000000000";
+$Ack_Client_Aaa=$Ack_Aaa_Dir . "/000000000000";
 
 $Ack_Client_Anaconda=false;
 
@@ -1243,7 +1308,7 @@ if (!is_writable($Ack_Log_Dir)) {
     $Ack_Log_Dir="/tmp";
 }
 
-$Ack_Log=$Ack_Log_Dir."/".$Ack_Label.".log";
+$Ack_Log=$Ack_Log_Dir . "/" . $Ack_Label . ".log";
 
 $Ack_Media_Dir=$Ack_Dir . "/media";
 if (!is_readable($Ack_Media_Dir)) {
@@ -1270,11 +1335,11 @@ if (!is_writable($Ack_Virt_Dir)) {
     $Ack_Virt_Dir="/var/tmp";
 }
 
-$Ack_Privacy=$Ack_Etc_Dir."/privacy";
+$Ack_Privacy=$Ack_Etc_Dir . "/privacy";
 
 $Ack_Ssh_Authorized_Key_Files=array();
-if (is_readable($Ack_Etc_Dir."/ack-authorized_keys")) {
-    array_push($Ack_Ssh_Authorized_Key_Files,$Ack_Etc_Dir."/ack-authorized_keys");
+if (is_readable($Ack_Etc_Dir . "/ack-authorized_keys")) {
+    array_push($Ack_Ssh_Authorized_Key_Files,$Ack_Etc_Dir . "/ack-authorized_keys");
 }
 
 $Ack_Ssh_Authorized_Keys=array();
@@ -1391,7 +1456,6 @@ if (!empty($_SERVER["REMOTE_ADDR"])) {
 // * _REQUEST_lower should always override (what's set via) http headers
 // * _POST_lower should always override _GET_lower
 
-
 if (!empty($_GET_lower["install"])) {
     $Ack_Client_Install_Uri=$_GET_lower["install"];
 }
@@ -1417,7 +1481,7 @@ if (empty($Ack_Client_Mac) && !empty($Ack_Client_Mac_0_Address)) {
 }
 
 if (!empty($Ack_Client_Mac)) {
-    $Ack_Client_Aaa=$Ack_Aaa_Dir."/".$Ack_Client_Mac;
+    $Ack_Client_Aaa=$Ack_Aaa_Dir . "/" . $Ack_Client_Mac;
 }
 
 if (isset($_GET_lower["hostname"])) {
@@ -1437,13 +1501,13 @@ if  (isset($_SERVER["HTTP_HOST"])) {
     if (stristr($Ack_Install_Server,".")) {
         $Ack_Domain=trim(substr($Ack_Install_Server,strpos($Ack_Install_Server,".")+1));
         if (!empty($Ack_Domain)) {
-            $Ack_Install_Servers=$Ack_Domain." ".$Ack_Install_Servers;
+            $Ack_Install_Servers=$Ack_Domain . " " . $Ack_Install_Servers;
         }
     }
 } else {
     if (is_readable($Ack_Dir . "/etc/ack-domain")) {
         $Ack_Domain=trim(file_get_contents($Ack_Dir . "/etc/ack-domain"));
-        $Ack_Install_Server=$Ack_Label.".".$Ack_Domain;
+        $Ack_Install_Server=$Ack_Label . "." . $Ack_Domain;
     } else {
         $Ack_Domain="localdomain";
         $Ack_Install_Server="localhost";
@@ -1451,9 +1515,9 @@ if  (isset($_SERVER["HTTP_HOST"])) {
 }
 
 if (isset($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] == strtolower("on")) {
-    $Ack_Install_Server_Url="https://".$Ack_Install_Server."/";
+    $Ack_Install_Server_Url="https://" . $Ack_Install_Server . "/";
 } else {
-    $Ack_Install_Server_Url="http://".$Ack_Install_Server."/";
+    $Ack_Install_Server_Url="http://" . $Ack_Install_Server . "/";
 }
 
 $Ack_Client_Install_Url=$Ack_Install_Server_Url;
@@ -1463,8 +1527,8 @@ if (!empty($Ack_Client_Install_Uri)) {
         // strip off the /<IP>-kickstart suffix
         $Ack_Client_Install_Uri=dirname($Ack_Client_Install_Uri);
     }
-    if (is_readable($Ack_Media_Dir."/".$Ack_Client_Install_Uri."/TRANS.TBL")) {
-        $Ack_Client_Install_Url=$Ack_Install_Server_Url.str_replace("//","/","/media/".$Ack_Client_Install_Uri);
+    if (is_readable($Ack_Media_Dir . "/" . $Ack_Client_Install_Uri . "/TRANS.TBL")) {
+        $Ack_Client_Install_Url=$Ack_Install_Server_Url . str_replace("//","/","/media/" . $Ack_Client_Install_Uri);
     }
 }
 
@@ -1506,8 +1570,8 @@ if (!empty($Ack_Ipv4_Default_Interface)) {
     $Ack_Ipv4_Default_Address=ackIpv4Address($Ack_Ipv4_Default_Interface,true,false,false);
     $Ack_Ipv4_Default_Cidr=ackIpv4Address($Ack_Ipv4_Default_Interface,false,true,false);
     $Ack_Ipv4_Default_Netmask=ackIpv4Address($Ack_Ipv4_Default_Interface,false,false,true);
-    if (is_readable("/sys/class/net/".$Ack_Ipv4_Default_Interface."/address")) {
-        $Ack_Ipv4_Default_Mac=file_get_contents("/sys/class/net/".$Ack_Ipv4_Default_Interface."/address");
+    if (is_readable("/sys/class/net/" . $Ack_Ipv4_Default_Interface . "/address")) {
+        $Ack_Ipv4_Default_Mac=file_get_contents("/sys/class/net/" . $Ack_Ipv4_Default_Interface . "/address");
     }
 }
 
@@ -1524,7 +1588,6 @@ if (!empty($Ack_Ipv4_Default_Address) && empty($Ack_Default_Address)) {
 }
 
 // TODO add (use ip -6 -o r s) ... set ipv6 default interface globals
-
 
 if (!empty($Ack_Ipv6_Default_Address) && empty($Ack_Default_Address)) {
     $Ack_Default_Ip_Address=$Ack_Ipv6_Default_Address;
@@ -1558,16 +1621,16 @@ $Ack_Path=ackPath($Ack_Dir);
 $Ack_Timezone=$Default_Timezone;
 
 if (filter_var($Ack_Client_Ip, FILTER_VALIDATE_IP)) {
-    ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Aaa=".$Ack_Client_Aaa.")","INFO");
-    ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Architecture=".$Ack_Client_Architecture.")","INFO");
-    ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Ip=".$Ack_Client_Ip.")","INFO");
-    ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Ip_0_Address=".$Ack_Client_Ip_0_Address.")","INFO");
-    ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Ip_0_Interface=".$Ack_Client_Ip_0_Interface.")","INFO");
-    ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Mac=".$Ack_Client_Mac.")","INFO");
-    ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Mac_0_Address=".$Ack_Client_Mac_0_Address.")","INFO");
-    ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Mac_0_Interface=".$Ack_Client_Mac_0_Interface.")","INFO");
-    ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_Serial_Number=".$Ack_Client_Serial_Number.")","INFO");
-    ackLog($Ack_Client_Ip." is an $Ack_Client_Type client (Ack_Client_System_Release=".$Ack_Client_System_Release.")","INFO");
+    ackLog($Ack_Client_Ip . " is an $Ack_Client_Type client (Ack_Client_Aaa=" . $Ack_Client_Aaa . ")","INFO");
+    ackLog($Ack_Client_Ip . " is an $Ack_Client_Type client (Ack_Client_Architecture=" . $Ack_Client_Architecture . ")","INFO");
+    ackLog($Ack_Client_Ip . " is an $Ack_Client_Type client (Ack_Client_Ip=" . $Ack_Client_Ip . ")","INFO");
+    ackLog($Ack_Client_Ip . " is an $Ack_Client_Type client (Ack_Client_Ip_0_Address=" . $Ack_Client_Ip_0_Address . ")","INFO");
+    ackLog($Ack_Client_Ip . " is an $Ack_Client_Type client (Ack_Client_Ip_0_Interface=" . $Ack_Client_Ip_0_Interface . ")","INFO");
+    ackLog($Ack_Client_Ip . " is an $Ack_Client_Type client (Ack_Client_Mac=" . $Ack_Client_Mac . ")","INFO");
+    ackLog($Ack_Client_Ip . " is an $Ack_Client_Type client (Ack_Client_Mac_0_Address=" . $Ack_Client_Mac_0_Address . ")","INFO");
+    ackLog($Ack_Client_Ip . " is an $Ack_Client_Type client (Ack_Client_Mac_0_Interface=" . $Ack_Client_Mac_0_Interface . ")","INFO");
+    ackLog($Ack_Client_Ip . " is an $Ack_Client_Type client (Ack_Client_Serial_Number=" . $Ack_Client_Serial_Number . ")","INFO");
+    ackLog($Ack_Client_Ip . " is an $Ack_Client_Type client (Ack_Client_System_Release=" . $Ack_Client_System_Release . ")","INFO");
 }
 
 ?>
