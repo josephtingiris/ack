@@ -13,14 +13,12 @@
         "autoload": {
             "psr-4": {
                 "josephtingiris\\": [
-                    "{$vendor-dir}/../include/josephtingiris",
+                    "{$vendor-dir}/../include/Ack",
                     "{$vendor-dir}/../include/debug-php",
                     "{$vendor-dir}/../include"
                 ],
                 "josephtingiris\\Ack\\": [
-                    "{$vendor-dir}/../include/josephtingiris/Ack",
-                    "{$vendor-dir}/../include/josephtingiris",
-                    "{$vendor-dir}/../include"
+                    "{$vendor-dir}/../include/Ack"
                 ]
             }
         },

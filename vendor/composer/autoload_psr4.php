@@ -6,6 +6,6 @@ $vendorDir = dirname(dirname(__FILE__));
 $baseDir = dirname($vendorDir);
 
 return array(
-    'josephtingiris\\Ack\\' => array($baseDir . '/include/josephtingiris/Ack', $baseDir . '/include/josephtingiris', $baseDir . '/include'),
-    'josephtingiris\\' => array($baseDir . '/include/josephtingiris', $baseDir . '/include/debug-php', $baseDir . '/include'),
+    'josephtingiris\\Ack\\' => array($baseDir . '/include/Ack'),
+    'josephtingiris\\' => array($baseDir . '/include/Ack', $baseDir . '/include/debug-php', $baseDir . '/include'),
 );
