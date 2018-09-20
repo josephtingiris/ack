@@ -29,7 +29,7 @@
  * @version     0.2.0
  */
 
-namespace josephtingiris\Ack;
+namespace josephtingiris;
 
 /**
  * The \josephtingiris\Ack class contains methods for dynamic anaconda & kickstart.
@@ -57,6 +57,10 @@ class Ack extends \josephtingiris\Debug
 
         $this->debug("Class = " . __CLASS__, 20);
 
+        if (empty($this->Start_Time)) {
+            $this->Start_Time = microtime(true);
+        }
+
         // date() is used throughout; ensure a timezone is set
 
         if(!ini_get('date.timezone')) {
@@ -69,10 +73,6 @@ class Ack extends \josephtingiris\Debug
             } else {
                 date_default_timezone_set($TZ);
             }
-        }
-
-        if (empty($this->Start_Time)) {
-            $this->Start_Time = microtime(true);
         }
 
     }
