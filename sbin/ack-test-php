@@ -108,4 +108,18 @@ for ($c=0; $c<=256; $c++) {
     $Ack->debug("debug=$c",$c);
 }
 
-#$jt->debug("debug=500",500);
+$Ack->debugValue("Config_File",4,$Ack->Config_File);
+$Ack->debugValue("Environment",4,$Ack->Environment);
+
+$Alert_From = $Ack->configValue("alert_from");
+$Ack->debugValue("Alert_From",5);
+
+$Nothing = $Ack->configValue("nothing");
+$Ack->debugValue("Nothing",5);
+
+$Ack_Example = new \josephtingiris\Ack\Example;
+$Ack_Example->debug("debug=10",10);
+
+$Ack_Email = new \josephtingiris\Ack\Email;
+#$Ack_Email->email("jtingiris@gmail.com","ack-test-php","this is a test email from " . __FILE__);
+
