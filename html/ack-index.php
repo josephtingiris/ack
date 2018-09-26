@@ -58,25 +58,27 @@ namespace josephtingiris\Ack;
 
 # begin composer psr-4 autoloader
 
-$Autoload_Php="autoload.php";
-$Autoload_Enabled=false;
-$Autoload_Paths=array(dirname(__FILE__), getcwd());
-foreach ($Autoload_Paths as $Autoload_Path) {
-    if ($Autoload_Enabled) break;
-    while(strlen($Autoload_Path) > 0) {
-        if ($Autoload_Path == ".") $Autoload_Path=getcwd();
-        if ($Autoload_Path == "/") break;
-        if (is_readable($Autoload_Path . "/vendor/" . $Autoload_Php) && !is_dir($Autoload_Path . "/vendor/" . $Autoload_Php)) {
-            $Autoload_Enabled=true;
-            require_once($Autoload_Path . "/vendor/" . $Autoload_Php);
-            break;
-        } else {
-            $Autoload_Path=dirname($Autoload_Path);
+if (empty($Autoload_Enabled)) {
+    $Autoload_Php="autoload.php";
+    $Autoload_Enabled=false;
+    $Autoload_Paths=array(dirname(__FILE__), getcwd());
+    foreach ($Autoload_Paths as $Autoload_Path) {
+        if ($Autoload_Enabled) break;
+        while(strlen($Autoload_Path) > 0) {
+            if ($Autoload_Path == ".") $Autoload_Path=getcwd();
+            if ($Autoload_Path == "/") break;
+            if (is_readable($Autoload_Path . "/vendor/" . $Autoload_Php) && !is_dir($Autoload_Path . "/vendor/" . $Autoload_Php)) {
+                $Autoload_Enabled=true;
+                require_once($Autoload_Path . "/vendor/" . $Autoload_Php);
+                break;
+            } else {
+                $Autoload_Path=dirname($Autoload_Path);
+            }
         }
     }
+    if (!$Autoload_Enabled) { echo "$Autoload_Php file not found\n"; exit(1); }
+    unset($Autoload_Php, $Autoload_Path);
 }
-if (!$Autoload_Enabled) { echo "$Autoload_Php file not found\n"; exit(1); }
-unset($Autoload_Php, $Autoload_Path);
 
 # end composer psr-4 autoloader
 

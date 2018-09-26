@@ -2,7 +2,7 @@
 <?php
 
 /**
- * aNAcONDA kICKSTART (ack) [component]
+ * aNAcONDA kICKSTART (ack) [test]
  * 
  * Copyright (C) 2015 Joseph Tingiris
  * 
@@ -59,25 +59,27 @@ namespace josephtingiris\Ack;
 
 # begin composer psr-4 autoloader
 
-$Autoload_Php="autoload.php";
-$Autoload_Enabled=false;
-$Autoload_Paths=array(dirname(__FILE__), getcwd());
-foreach ($Autoload_Paths as $Autoload_Path) {
-    if ($Autoload_Enabled) break;
-    while(strlen($Autoload_Path) > 0) {
-        if ($Autoload_Path == ".") $Autoload_Path=getcwd();
-        if ($Autoload_Path == "/") break;
-        if (is_readable($Autoload_Path . "/vendor/" . $Autoload_Php) && !is_dir($Autoload_Path . "/vendor/" . $Autoload_Php)) {
-            $Autoload_Enabled=true;
-            require_once($Autoload_Path . "/vendor/" . $Autoload_Php);
-            break;
-        } else {
-            $Autoload_Path=dirname($Autoload_Path);
+if (empty($Autoload_Enabled)) {
+    $Autoload_Php="autoload.php";
+    $Autoload_Enabled=false;
+    $Autoload_Paths=array(dirname(__FILE__), getcwd());
+    foreach ($Autoload_Paths as $Autoload_Path) {
+        if ($Autoload_Enabled) break;
+        while(strlen($Autoload_Path) > 0) {
+            if ($Autoload_Path == ".") $Autoload_Path=getcwd();
+            if ($Autoload_Path == "/") break;
+            if (is_readable($Autoload_Path . "/vendor/" . $Autoload_Php) && !is_dir($Autoload_Path . "/vendor/" . $Autoload_Php)) {
+                $Autoload_Enabled=true;
+                require_once($Autoload_Path . "/vendor/" . $Autoload_Php);
+                break;
+            } else {
+                $Autoload_Path=dirname($Autoload_Path);
+            }
         }
     }
+    if (!$Autoload_Enabled) { echo "$Autoload_Php file not found\n"; exit(1); }
+    unset($Autoload_Php, $Autoload_Path);
 }
-if (!$Autoload_Enabled) { echo "$Autoload_Php file not found\n"; exit(1); }
-unset($Autoload_Php, $Autoload_Path);
 
 # end composer psr-4 autoloader
 
@@ -117,9 +119,13 @@ $Ack->debugValue("Alert_From",5);
 $Nothing = $Ack->configValue("nothing");
 $Ack->debugValue("Nothing",5);
 
-$Ack_Example = new \josephtingiris\Ack\Example;
-$Ack_Example->debug("debug=10",10);
+$Ack->properties();
+#$Ack->properties(true);
 
-$Ack_Email = new \josephtingiris\Ack\Email;
+#$Ack_Example = new \josephtingiris\Ack\Example;
+#$Ack_Example->debug("debug=10",10);
+
+#$Ack_Email = new \josephtingiris\Ack\Email;
 #$Ack_Email->email("jtingiris@gmail.com","ack-test-php","this is a test email from " . __FILE__);
+
 

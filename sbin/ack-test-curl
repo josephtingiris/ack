@@ -145,7 +145,7 @@ ackGlobals();
 $Ack_Test_Url=null;
 
 if (!empty($argv[1])) {
-    $Debug->debugValue("argv[1]",2,$argv[1]);
+    $Ack->debugValue("argv[1]",2,$argv[1]);
     if (filter_var($argv[1],FILTER_VALIDATE_URL)) {
         $Test_Parse_Url=parse_url($argv[1]);
     } else {
@@ -188,9 +188,9 @@ if (!empty($Test_Parse_Url["query"])) {
 }
 
 if (filter_var($Ack_Test_Url,FILTER_VALIDATE_URL)) {
-    $Debug->debugValue("Ack_Test_Url",3);
+    $Ack->debugValue("Ack_Test_Url",3);
 
-    $Debug->debugValue("Ack_Client_Install_Uri",5);
+    $Ack->debugValue("Ack_Client_Install_Uri",5);
 
     $curl_init=curl_init();
 

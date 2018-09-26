@@ -58,25 +58,27 @@ namespace josephtingiris\Ack;
 
 # begin composer psr-4 autoloader
 
-$Autoload_Php="autoload.php";
-$Autoload_Enabled=false;
-$Autoload_Paths=array(dirname(__FILE__), getcwd());
-foreach ($Autoload_Paths as $Autoload_Path) {
-    if ($Autoload_Enabled) break;
-    while(strlen($Autoload_Path) > 0) {
-        if ($Autoload_Path == ".") $Autoload_Path=getcwd();
-        if ($Autoload_Path == "/") break;
-        if (is_readable($Autoload_Path . "/vendor/" . $Autoload_Php) && !is_dir($Autoload_Path . "/vendor/" . $Autoload_Php)) {
-            $Autoload_Enabled=true;
-            require_once($Autoload_Path . "/vendor/" . $Autoload_Php);
-            break;
-        } else {
-            $Autoload_Path=dirname($Autoload_Path);
+if (empty($Autoload_Enabled)) {
+    $Autoload_Php="autoload.php";
+    $Autoload_Enabled=false;
+    $Autoload_Paths=array(dirname(__FILE__), getcwd());
+    foreach ($Autoload_Paths as $Autoload_Path) {
+        if ($Autoload_Enabled) break;
+        while(strlen($Autoload_Path) > 0) {
+            if ($Autoload_Path == ".") $Autoload_Path=getcwd();
+            if ($Autoload_Path == "/") break;
+            if (is_readable($Autoload_Path . "/vendor/" . $Autoload_Php) && !is_dir($Autoload_Path . "/vendor/" . $Autoload_Php)) {
+                $Autoload_Enabled=true;
+                require_once($Autoload_Path . "/vendor/" . $Autoload_Php);
+                break;
+            } else {
+                $Autoload_Path=dirname($Autoload_Path);
+            }
         }
     }
+    if (!$Autoload_Enabled) { echo "$Autoload_Php file not found\n"; exit(1); }
+    unset($Autoload_Php, $Autoload_Path);
 }
-if (!$Autoload_Enabled) { echo "$Autoload_Php file not found\n"; exit(1); }
-unset($Autoload_Php, $Autoload_Path);
 
 # end composer psr-4 autoloader
 
@@ -98,6 +100,8 @@ unset($Autoload_Php, $Autoload_Path);
  * main
  *
  */
+
+$Ack = new \josephtingiris\Ack;
 
 # Global (debug)
 
@@ -127,31 +131,6 @@ if (empty($Default_Timezone)) {
 }
 date_default_timezone_set($Default_Timezone);
 
-# begin Debug.php.include
-
-$Debug_Php="Debug.php";
-$Debug_Php_Dir=dirname(__FILE__);
-if (is_link($Debug_Php_Dir)) $Debug_Php_Dir=readlink($Debug_Php_Dir);
-while (!empty($Debug_Php_Dir) && $Debug_Php_Dir != "/" && is_dir($Debug_Php_Dir)) { # search backwards
-    foreach (array($Debug_Php_Dir, $Debug_Php_Dir . "/include/debug-php", $Debug_Php_Dir . "/include") as $Debug_Php_Source_Dir) {
-        $Debug_Php_Source=$Debug_Php_Source_Dir . "/" . $Debug_Php;
-        if (is_readable($Debug_Php_Source)) {
-            require_once($Debug_Php_Source);
-            break;
-        } else {
-            unset($Debug_Php_Source);
-        }
-    }
-    if (!empty($Debug_Php_Source)) break;
-    $Debug_Php_Dir=dirname("$Debug_Php_Dir");
-}
-if (empty($Debug_Php_Source)) { echo "$Debug_Php file not found\n"; exit(1); }
-unset($Debug_Php_Dir, $Debug_Php);
-
-# end Debug.php.include
-
-$Debug = new \josephtingiris\Debug();
-
 /*
  * Functions
  */
@@ -162,7 +141,7 @@ function ackAuthorized($ack_mac=null, $ack_ip=null, $ack_config=null) {
      * begin function logic
      */
 
-    global $Debug;
+    global $Ack;
 
     $ack_ip=ackIpv4($ack_ip);
     $ack_mac=ackMac($ack_mac);
@@ -179,14 +158,14 @@ function ackAuthorized($ack_mac=null, $ack_ip=null, $ack_config=null) {
     $ack_config=ackFile($ack_config);
     $ack_config_update=false;
 
-    $Debug->debug("ackAuthorized($ack_mac,$ack_ip,$ack_config)",20);
+    $Ack->debug("ackAuthorized($ack_mac,$ack_ip,$ack_config)",20);
 
     // config files are the primary authorization method, check those first
 
     if (!$ack_authorized && !empty($ack_config)) {
 
         $ack_authorized_config=ackConfigGet("authorized",$ack_config);
-        $Debug->debug("ack_authorized_config = $ack_authorized_config",20);
+        $Ack->debug("ack_authorized_config = $ack_authorized_config",20);
         if (filter_var($ack_authorized_config, FILTER_VALIDATE_BOOLEAN)) {
             $ack_authorized=$ack_authorized_config;
         } else {
@@ -305,7 +284,7 @@ function ackConfigGet($ack_config_attribute,$ack_config=null) {
      * begin function logic
      */
 
-    global $Debug;
+    global $Ack;
 
     if (is_string($ack_config_attribute)) $ack_config_attribute=trim($ack_config_attribute);
     if (empty($ack_config_attribute)) {
@@ -325,7 +304,7 @@ function ackConfigGet($ack_config_attribute,$ack_config=null) {
     $ini_stack=parse_ini_file($ack_config,true);
     if (empty($ini_stack)) {
         $debug_string.=" (empty ini)";
-        $Debug->debug($debug_string,$debug_level);
+        $Ack->debug($debug_string,$debug_level);
         return null;
     }
 
@@ -348,7 +327,7 @@ function ackConfigGet($ack_config_attribute,$ack_config=null) {
 
     if (!$attribute_found) {
         $debug_string.=" (attribute not found)";
-        $Debug->debug($debug_string,$debug_level);
+        $Ack->debug($debug_string,$debug_level);
         return null;
     }
 
@@ -360,7 +339,7 @@ function ackConfigGet($ack_config_attribute,$ack_config=null) {
             $return_string=end($ini_stack[$ack_config_attribute]);
         }
         $debug_string.=" ($return_string)";
-        $Debug->debug($debug_string,$debug_level);
+        $Ack->debug($debug_string,$debug_level);
         return $return_string;
     }
 
@@ -381,11 +360,11 @@ function ackConfigGet($ack_config_attribute,$ack_config=null) {
         }
         unset($get_attribute);
 
-        $Debug->debug($debug_string,$debug_level);
+        $Ack->debug($debug_string,$debug_level);
         return $return_stack;
     }
 
-    $Debug->debug($debug_string,$debug_level);
+    $Ack->debug($debug_string,$debug_level);
     return null;
 
     /*
@@ -400,7 +379,7 @@ function ackConfigSet($ack_config_attribute,$ack_config=null) {
      * begin function logic
      */
 
-    global $Debug;
+    global $Ack;
 
     if (is_string($ack_config_attribute)) $ack_config_attribute=trim($ack_config_attribute);
     if (empty($ack_config_attribute)) return null;
@@ -416,7 +395,7 @@ function ackConfigSet($ack_config_attribute,$ack_config=null) {
     $ack_config_stack=array();
 
     if (is_string($ack_config_attribute)) {
-        $Debug->debug("set ack_config_attribute=$ack_config_attribute, ack_config=$ack_config",2);
+        $Ack->debug("set ack_config_attribute=$ack_config_attribute, ack_config=$ack_config",2);
         if (strpos($ack_config_attribute,"=") !== false) {
             $ini_attribute=trim(substr($ack_config_attribute,0,strpos($ack_config_attribute,"=")));
             $ini_value=trim(substr($ack_config_attribute,strpos($ack_config_attribute,"=")+1));
@@ -427,7 +406,7 @@ function ackConfigSet($ack_config_attribute,$ack_config=null) {
     } else if (is_array($ack_config_attribute) || is_object($ack_config_attribute)) {
         foreach($ack_config_attribute as $attribute_value) {
             if (!is_string($attribute_value)) continue;
-            $Debug->debug("set ack_config_attribute=$attribute_value, ack_config=$ack_config",2);
+            $Ack->debug("set ack_config_attribute=$attribute_value, ack_config=$ack_config",2);
             if (strpos($attribute_value,"=") !== false) {
                 $ini_attribute=trim(substr($attribute_value,0,strpos($attribute_value,"=")));
                 $ini_value=trim(substr($attribute_value,strpos($attribute_value,"=")+1));
@@ -512,9 +491,9 @@ function ackFile($ack_file=null, $ack_ini=true) {
      * begin function logic
      */
 
-    global $Debug;
+    global $Ack;
 
-    $Debug->debug("ack_file=$ack_file",50);
+    $Ack->debug("ack_file=$ack_file",50);
     if (!empty($ack_file) && is_string($ack_file)) {
         $ack_file=str_replace("-", '',$ack_file);
         $ack_file=str_replace(":", '',$ack_file);
@@ -522,7 +501,7 @@ function ackFile($ack_file=null, $ack_ini=true) {
     } else {
         $ack_file=null;
     }
-    $Debug->debug("ack_file=$ack_file",50);
+    $Ack->debug("ack_file=$ack_file",50);
 
     if (empty($ack_file)) {
         ackLog("ack_file '$ack_file' is invalid, set to null","ERROR");
@@ -560,13 +539,13 @@ function ackFile($ack_file=null, $ack_ini=true) {
 
 }
 
-function ackGlobals($bash=false) {
+function ackGlobals($bash=false) { // properties()
 
     /*
      * begin function logic
      */
 
-    global $Debug;
+    global $Ack;
 
     $ack_globals=array();
 
@@ -608,7 +587,7 @@ function ackGlobals($bash=false) {
     } else {
         ksort($ack_globals);
         foreach ($ack_globals as $ack_global_key => $ack_global_value) {
-            $Debug->debugValue($ack_global_key,9);
+            $Ack->debugValue($ack_global_key,9);
         }
     }
 
@@ -624,7 +603,7 @@ function ackGlobalsReplace($ack_content=null) {
      * begin function logic
      */
 
-    global $Debug;
+    global $Ack;
 
     $ack_content_replace=$ack_content;
     $ack_replace_key=null;
@@ -691,7 +670,7 @@ function ackIpv4Address($interface=null, $address=false, $cidr=false, $mask=fals
         return null;
     }
 
-    global $Debug;
+    global $Ack;
 
     $return_address=null;
     $return_addresses=array();
@@ -719,30 +698,30 @@ function ackIpv4Address($interface=null, $address=false, $cidr=false, $mask=fals
 
                         $ip_address=ackIpv4($ip_address);
                         if (!empty($ip_address)) {
-                            $Debug->debugValue("ip_address",15,$ip_address);
+                            $Ack->debugValue("ip_address",15,$ip_address);
                             if ($address && !$cidr && !$mask) {
                                 return $ip_address;
                             } else {
-                                $Debug->debugValue($ip_explode_line,15);
+                                $Ack->debugValue($ip_explode_line,15);
                             }
                         }
 
                         $ip_cidr=trim($ip_cidr);
                         $ip_cidr=(int)$ip_cidr;
                         if (isset($ip_cidr) && is_int($ip_cidr)) {
-                            $Debug->debugValue("ip_cidr",15,$ip_cidr);
+                            $Ack->debugValue("ip_cidr",15,$ip_cidr);
                             if (!$address && $cidr && !$mask) {
                                 return $ip_cidr;
                             } else {
-                                $Debug->debugValue($ip_explode_line,15);
+                                $Ack->debugValue($ip_explode_line,15);
                             }
                         }
                         if (isset($ip_cidr) && is_int($ip_cidr)) {
-                            $Debug->debugValue("ip_cidr",15,$ip_cidr);
+                            $Ack->debugValue("ip_cidr",15,$ip_cidr);
                             if (!$address && !$cidr && $mask) {
                                 return ackIpv4Netmask($ip_cidr);
                             } else {
-                                $Debug->debugValue($ip_explode_line,15);
+                                $Ack->debugValue($ip_explode_line,15);
                             }
                         }
 
@@ -807,7 +786,7 @@ function ackLog($log_message, $log_level="INFO", $log=null) {
      * begin function logic
      */
 
-    global $Debug;
+    global $Ack;
 
     if (empty($log)) {
         if (!empty($GLOBALS["Ack_Log"])) $log=$GLOBALS["Ack_Log"];
@@ -994,7 +973,7 @@ function ackTemplate($template_name=null, $template_content=false, $template_uri
      * begin function logic
      */
 
-    global $Debug;
+    global $Ack;
 
     if ($template_name == null || $template_name == '') {
         return null;
@@ -1002,7 +981,7 @@ function ackTemplate($template_name=null, $template_content=false, $template_uri
 
     $preg_matches="/^\//";
     if (preg_match($preg_matches,$template_uri))
-        $Debug->debugValue("template_uri",8,$template_uri);
+        $Ack->debugValue("template_uri",8,$template_uri);
 
     $template_found=null;
 
@@ -1029,7 +1008,7 @@ function ackTemplate($template_name=null, $template_content=false, $template_uri
 
         if (!empty($GLOBALS["Ack_Etc_Dirs"]) && is_array($GLOBALS["Ack_Etc_Dirs"])) {
             foreach ($template_files as $template_file) {
-                $Debug->debugValue("template_file",8,$template_file);
+                $Ack->debugValue("template_file",8,$template_file);
                 foreach ($GLOBALS["Ack_Etc_Dirs"] as $ack_etc_dir) {
                     $template_tmp=$ack_etc_dir . "/" . $template_file;
                     if (is_readable($template_tmp) && filesize($template_tmp) >= 1) {
@@ -1044,7 +1023,7 @@ function ackTemplate($template_name=null, $template_content=false, $template_uri
         }
     }
 
-    $Debug->debugValue("template_found",8,$template_found);
+    $Ack->debugValue("template_found",8,$template_found);
 
     if (empty($template_content)) {
 
@@ -1141,11 +1120,11 @@ function ackUuid() {
 
 # debug the $_SERVER variables
 if (!empty($_SERVER) && is_array($_SERVER)) {
-    $Debug->debug("----------------> _SERVER key/value pairs",50);
+    $Ack->debug("----------------> _SERVER key/value pairs",50);
     foreach ($_SERVER as $_SERVER_KEY => $_SERVER_VALUE) {
-        $Debug->debugValue("$_SERVER_KEY",50,$_SERVER_VALUE);
+        $Ack->debugValue("$_SERVER_KEY",50,$_SERVER_VALUE);
     }
-    $Debug->debug("----------------< _SERVER key/value pairs",50);
+    $Ack->debug("----------------< _SERVER key/value pairs",50);
 }
 
 # Global (defaults)
@@ -1218,17 +1197,17 @@ $Ack_Client_Install_Url=null;
 
 $Ack_Client_Ip=null;
 
-$Ack_Client_Ip_0_Interface=null;
-
 $Ack_Client_Ip_0_Address=null;
+
+$Ack_Client_Ip_0_Interface=null;
 
 $Ack_Client_Log_Level="INFO";
 
 $Ack_Client_Mac=null;
 
-$Ack_Client_Mac_0_Interface=null;
-
 $Ack_Client_Mac_0_Address=null;
+
+$Ack_Client_Mac_0_Interface=null;
 
 $Ack_Client_Password=null;
 
@@ -1535,7 +1514,7 @@ if (!empty($Ack_Client_Install_Uri)) {
 // the root password (is the lowercase mac address without the colons)
 $Ack_Client_Password=crypt($Ack_Client_Mac, '$6$ackM');
 
-$Debug->debugValue($Ack_Client_Install_Uri,5);
+$Ack->debugValue($Ack_Client_Install_Uri,5);
 $Ack_Client_Template_Kickstart=ackTemplate("ack-template-kickstart",false,$Ack_Client_Install_Uri);
 
 // TODO crude, improve (use ip -4 -o r s) ... ipv4 set default interface globals
@@ -1543,8 +1522,8 @@ if (is_readable("/proc/net/route")) {
     foreach(file("/proc/net/route") as $route) {
         $route_explode=explode("\t",$route);
         if (isset($route_explode[1]) && $route_explode[1] == "00000000") {
-            $Debug->debugValue("route",15);
-            $Debug->debugValue("route_explode",15);
+            $Ack->debugValue("route",15);
+            $Ack->debugValue("route_explode",15);
             if (isset($route_explode[0])) { // Iface
                 $Ack_Ipv4_Default_Interface=trim($route_explode[0]);
             }

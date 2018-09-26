@@ -30,25 +30,25 @@ unset Debug_Bash_Dir Debug_Bash
 
 # GLOBAL_VARIABLES
 
-Ack_0=$0
-if [ "$Ack_0" == "-bash" ]; then Ack_0=$BASH_SOURCE; fi
-if [ -f "$Ack_0" ]; then
-    Ack_0=$(readlink -e "$Ack_0")
+Zero=$0
+if [ "$Zero" == "-bash" ]; then Zero=$BASH_SOURCE; fi
+if [ -f "$Zero" ]; then
+    Zero=$(readlink -e "$Zero")
 fi
-export Ack_0
+export Zero
 
 # begin Debug.bash.include
 
 # begin Ack.functions.php.include
 
-Ack_Php="Ack.functions.php"
+Ack_Php="Ack.php"
 Ack_Php_Dir="$(dirname $(readlink -e $BASH_SOURCE))"
 while [ "$Ack_Php_Dir" != "" ] && [ "$Ack_Php_Dir" != "/" ]; do # search backwards
-    for Ack_Php_Source_Dir in $Ack_Php_Dir $Ack_Php_Dir/include; do
+    for Ack_Php_Source_Dir in $Ack_Php_Dir/include/Ack $Ack_Php_Dir/include $Ack_Php_Dir; do
         Ack_Php_Source=${Ack_Php_Source_Dir}/${Ack_Php}
         if [ -r "${Ack_Php_Source}" ]; then
             # export Ack.functions.php globals to shell environment
-            eval "$(/bin/env php <<< "<?php require_once('${Ack_Php_Source}'); \josephtingiris\Ack\ackGlobals(true); ?>")"
+            eval "$(/bin/env php <<< "<?php require_once('${Ack_Php_Source}'); \$Ack = new \josephtingiris\Ack; \$Ack->properties(true);?>")"
             break
         else
             unset Ack_Php_Source
