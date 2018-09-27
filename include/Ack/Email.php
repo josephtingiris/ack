@@ -30,14 +30,34 @@
 
 namespace josephtingiris\Ack;
 
+require(dirname(__FILE__)) . "/Autoload.php";
+
 /**
- * The \josephtingiris\Ack\Email class contains a basic class structure.
+ * The \josephtingiris\Ack\Email class
  */
-class Email extends \josephtingiris\Ack
+class Email extends \josephtingiris\Debug
 {
+    /*
+     * public properties.
+     */
+
+    /*
+     * private properties.
+     */
+
+    /*
+     * public functions.
+     */
+
+    /*
+     * private functions.
+     */
 
     public function __construct($debug_level_construct=null)
     {
+        /*
+         * begin function logic
+         */
 
         $parent_class = get_parent_class();
 
@@ -47,16 +67,30 @@ class Email extends \josephtingiris\Ack
 
         $this->debug("Class = " . __CLASS__, 20);
 
+        $this->Ack_Alert = new \josephtingiris\Ack\Alert;
+        $this->Ack_Server = new \josephtingiris\Ack\Server;
+        $this->Ack_Variant = new \josephtingiris\Ack\Variant;
+
+        /*
+         * end function logic
+         */
     }
 
     public function __destruct()
     {
+        /*
+         * begin function logic
+         */
+
         $parent_class = get_parent_class();
 
         if ($parent_class !== false) {
-            parent::__destruct(); // execute parent __construct;
+            parent::__destruct(); // execute parent __destruct;
         }
 
+        /*
+         * end function logic
+         */
     }
 
     /**
@@ -73,6 +107,9 @@ class Email extends \josephtingiris\Ack
      */
     public function email($to=null, $subject=null, $message=null, $additional_headers=null, $additional_parameters=null, $alert=false, $abort=false)
     {
+        /*
+         * begin function logic
+         */
 
         $debug_level = 16;
 
@@ -91,7 +128,7 @@ class Email extends \josephtingiris\Ack
         $rfc2822_mailer=preg_replace("/\\\/","-",get_class($this)) . " " . __FUNCTION__ . " [version $rfc2822_mailer_version]";
 
         // set the rfc2822_domain & rfc2822_user; these will be reused
-        if ($this->cli()) {
+        if ($this->Ack_Server->cli()) {
             // not apache, from is empty so set from to process user
             $rfc2822_domain = gethostname();
 
@@ -131,7 +168,7 @@ class Email extends \josephtingiris\Ack
         // check recipients array
         if (empty($recipients)) {
             $failure_reason = "failure, recipients are empty";
-            return $this->failure($failure_reason, false, $abort);
+            return $this->Ack_Alert->failure($failure_reason, false, $abort);
         } else {
             // $to is used again, as an array, later ...
             $to = $recipients;
@@ -292,7 +329,7 @@ class Email extends \josephtingiris\Ack
                             }
                         }
 
-                        $this->failure($failure_reason, false, $abort);
+                        $this->Ack_Alert->failure($failure_reason, false, $abort);
 
                         // Comments: to rfc2822_headers
                         $rfc2822_headers[] = "Comments: $failure_reason";
@@ -433,14 +470,14 @@ class Email extends \josephtingiris\Ack
             ")",
             "+",
             ":",
-";",
-",",
-".",
-"?",
-"'",
-"\"",
-"/",
-"\\",
+            ";",
+            ",",
+            ".",
+            "?",
+            "'",
+            "\"",
+            "/",
+            "\\",
         );
 
         // this loop validates the rfc2822_headers array
@@ -471,7 +508,7 @@ class Email extends \josephtingiris\Ack
                     unset($rfc2822_headers[$rfc2822_headers_key]);
 
                     $failure_reason = "error, removed invalid rfc2822 header [$rfc2822_headers_key] key '$rfc2822_headers_value' (rejected '$rfc2822_header_key_reject')";
-                    $this->failure($failure_reason, false, $abort);
+                    $this->Ack_Alert->failure($failure_reason, false, $abort);
 
                     unset($rfc2822_header_key_reject_strpos);
                     continue;
@@ -511,7 +548,7 @@ class Email extends \josephtingiris\Ack
                                 // do not add the rfc5351 invalid address
 
                                 $failure_reason = "error, removed invalid $rfc2822_address_list address '$rfc2822_address'";
-                                $this->failure($failure_reason, false, $abort);
+                                $this->Ack_Alert->failure($failure_reason, false, $abort);
 
                                 // Comments: to rfc2822_headers
                                 $rfc2822_headers[] = "Comments: $failure_reason";
@@ -558,7 +595,7 @@ class Email extends \josephtingiris\Ack
                             // note; What if I want to send an email with sendmail/postfix via a web page to someone@hostname?
                             // note; Or, to someone@hostname.localdomain ??  rfc2822 (and sendmail/postfix) allow this!
 
-                            if ($this->cli()) {
+                            if ($this->Ack_Server->cli()) {
 
                                 // this happens if it's NOT called via apache mod_php (adhere to rfc2822)
 
@@ -585,7 +622,7 @@ class Email extends \josephtingiris\Ack
                                     // do not add the second component, it's not a valid email address (it should be)
 
                                     $failure_reason = "error, removed invalid $rfc2822_address_list address '$rfc2822_address' (reversed)";
-                                    $this->failure($failure_reason, false, $abort);
+                                    $this->Ack_Alert->failure($failure_reason, false, $abort);
 
                                     // Comments: to rfc2822_headers
                                     $rfc2822_headers[] = "Comments: $failure_reason";
@@ -635,7 +672,7 @@ class Email extends \josephtingiris\Ack
                 unset($rfc2822_headers[$rfc2822_headers_key]);
 
                 $failure_reason = "error, removed invalid rfc2822 header [$rfc2822_headers_key] value for '$rfc2822_header_key' (no value)";
-                $this->failure($failure_reason, false, $abort);
+                $this->Ack_Alert->failure($failure_reason, false, $abort);
 
                 unset($rfc2822_headers_strpos);
             }
@@ -677,7 +714,7 @@ class Email extends \josephtingiris\Ack
         } else {
             // no from, can't set sender ... return false
             $failure_reason = "failure, can't determine from address (no sender)";
-            return $this->failure($failure_reason, false, $abort);
+            return $this->Ack_Alert->failure($failure_reason, false, $abort);
         }
 
         $this->debugValue("rfc2822_from",$debug_level,$rfc2822_from);
@@ -687,7 +724,7 @@ class Email extends \josephtingiris\Ack
         if (!$rfc2822_headers_sender) {
             // no sender, something went wrong ... return false
             $failure_reason = "failure, can't determine sender address (no header)";
-            return $this->failure($failure_reason, false, $abort);
+            return $this->Ack_Alert->failure($failure_reason, false, $abort);
         }
 
         $this->debugValue("rfc2822_sender",$debug_level,$rfc2822_sender);
@@ -699,7 +736,7 @@ class Email extends \josephtingiris\Ack
         }
 
         if (!preg_grep("/^Message-id:/i",$rfc2822_headers)) {
-            $rfc2822_headers[] = 'Message-id: <' . $this->uuid() . '@' . $rfc2822_domain . '>';
+            $rfc2822_headers[] = 'Message-id: <' . $this->Ack_Variant->uuid() . '@' . $rfc2822_domain . '>';
         }
 
         if (!preg_grep("/^Return-path:/i",$rfc2822_headers)) {
@@ -711,7 +748,7 @@ class Email extends \josephtingiris\Ack
         }
 
         if (!preg_grep("/^Thread-index:/i",$rfc2822_headers)) {
-            $rfc2822_headers[] = "Thread-index: " . $this->uuid();
+            $rfc2822_headers[] = "Thread-index: " . $this->Ack_Variant->uuid();
         }
 
         if (!preg_grep("/^X-priority:/i",$rfc2822_headers)) {
@@ -815,7 +852,7 @@ class Email extends \josephtingiris\Ack
         if (!preg_grep("/^Content-type:/i",$rfc2822_headers)) {
             if (count($body_parts) > 1 || !empty($attachments)) {
                 // create a unique rfc2822 boundary string
-                $rfc2822_boundary = preg_replace("/\\\/","-",get_class($this)) . "-" . $this->uuid();
+                $rfc2822_boundary = preg_replace("/\\\/","-",get_class($this)) . "-" . $this->Ack_Variant->uuid();
 
                 $rfc2822_headers[] = "Content-type: multipart/alternative; boundary=$rfc2822_boundary";
             } else {
@@ -954,11 +991,14 @@ class Email extends \josephtingiris\Ack
             $this->debug("success, email to '$to', subject '$subject' sent!",1);
         } else {
             $failure_reason = "error, email to '$to', subject '$subject' not sent";
-            return $this->failure($failure_reason, false, $abort);
+            return $this->Ack_Alert->failure($failure_reason, false, $abort);
         }
 
         return $email_sent;
 
+        /*
+         * end function logic
+         */
     }
-}
 
+}

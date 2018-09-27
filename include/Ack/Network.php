@@ -1,7 +1,7 @@
 <?php
 
 /**
- * aNAcONDA kICKSTART (ack) [Example]
+ * aNAcONDA kICKSTART (ack) [Network]
  *
  * Copyright (C) 2015 Joseph Tingiris
  *
@@ -33,9 +33,9 @@ namespace josephtingiris\Ack;
 require(dirname(__FILE__)) . "/Autoload.php";
 
 /**
- * The \josephtingiris\Ack\Example class
+ * The \josephtingiris\Ack\Network class
  */
-class Example extends \josephtingiris\Debug
+class Network extends \josephtingiris\Debug
 {
     /*
      * public properties.
@@ -83,6 +83,34 @@ class Example extends \josephtingiris\Debug
         if ($parent_class !== false) {
             parent::__destruct(); // execute parent __destruct;
         }
+
+        /*
+         * end function logic
+         */
+    }
+
+    /**
+     * return valid interface(s), or null
+     */
+    function interfaces($interface=null)
+    {
+        /*
+         * begin function logic
+         */
+
+        $interfaces_return=array();
+
+        if (is_readable("/sys/class/net") && is_dir("/sys/class/net")) {
+            $interfaces=array_diff(scandir("/sys/class/net"), array('..', '.'));
+        }
+
+        if (empty($interface)) {
+            $interfaces_return=$interfaces;
+        } else {
+            // TODO; handle single or multiple *given* interfaces
+        }
+
+        return $interfaces_return;
 
         /*
          * end function logic

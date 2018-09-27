@@ -31,71 +31,13 @@
 
 namespace josephtingiris;
 
-/*
- *
- * nothing should preceed namespace, except declarations;
- * see http://php.net/manual/en/language.namespaces.definition.php
- *
- * PSR-0: Autoloading Standard (Deprecated, DO NOT USE)
- * see http://www.php-fig.org/psr/psr-0/
- * see http://www.php-fig.org/psr/psr-4/
- *
- * PSR-1: Basic Coding Standard
- * see http://www.php-fig.org/psr/psr-1/
- *
- * PSR-2: Coding Style Guide
- * see http://www.php-fig.org/psr/psr-2/
- *
- * PSR-3: Logger Interface
- * see http://www.php-fig.org/psr/psr-3/
- * use \Monolog\Logger as Logger; # psr-3
- * use \Monolog\Handler\StreamHandler as StreamHandler; # psr-3
- *
- * PSR-4: Autoloader
- * see http://www.php-fig.org/psr/psr-4/
- * require composer autoload.php; ClassLoader implements a PSR-0, PSR-4 and classmap class loader.
- *
- */
-
-# begin composer psr-4 autoloader
-
-if (empty($Autoload_Enabled)) {
-    $Autoload_Php="autoload.php";
-    $Autoload_Enabled=false;
-    $Autoload_Paths=array(dirname(__FILE__), getcwd());
-    foreach ($Autoload_Paths as $Autoload_Path) {
-        if ($Autoload_Enabled) break;
-        while(strlen($Autoload_Path) > 0) {
-            if ($Autoload_Path == ".") $Autoload_Path=getcwd();
-            if ($Autoload_Path == "/") break;
-            if (is_readable($Autoload_Path . "/vendor/" . $Autoload_Php) && !is_dir($Autoload_Path . "/vendor/" . $Autoload_Php)) {
-                $Autoload_Enabled=true;
-                require_once($Autoload_Path . "/vendor/" . $Autoload_Php);
-                break;
-            } else {
-                $Autoload_Path=dirname($Autoload_Path);
-            }
-        }
-    }
-    if (!$Autoload_Enabled) { echo "$Autoload_Php file not found\n"; exit(1); }
-    unset($Autoload_Php, $Autoload_Path);
-}
-
-# end composer psr-4 autoloader
-
-/*
- *
- * vendor class depdendent psr-0 & psr-4 root/unnamed namespace aliases MAY be used
- * however, missing namespace aliases SHOULD NOT cause PHP Fatal (class not found) errors
- *
- */
+require(dirname(__FILE__)) . "/Autoload.php";
 
 /**
- * The \josephtingiris\Ack class contains methods for dynamic anaconda & kickstart.
+ * The \josephtingiris\Ack class
  */
 class Ack extends \josephtingiris\Debug
 {
-
     /*
      * public properties.
      */
@@ -184,14 +126,15 @@ class Ack extends \josephtingiris\Debug
      * private properties.
      */
 
-    private $Config_Values = array();
-
     /*
      * public functions.
      */
 
     public function __construct($debug_level_construct = null)
     {
+        /*
+         * begin function logic
+         */
 
         $parent_class = get_parent_class();
 
@@ -205,6 +148,12 @@ class Ack extends \josephtingiris\Debug
         if (empty($this->Start_Time)) {
             $this->Start_Time = microtime(true);
         }
+
+        $this->Ack_Config = new \josephtingiris\Ack\Config;
+        $this->Ack_Client = new \josephtingiris\Ack\Client;
+        $this->Ack_Network = new \josephtingiris\Ack\Network;
+        $this->Ack_Server = new \josephtingiris\Ack\Server;
+        $this->Ack_Variant = new \josephtingiris\Ack\Variant;
 
         // Zero
         if (empty($this->Zero)) {
@@ -235,6 +184,9 @@ class Ack extends \josephtingiris\Debug
         if (!isset($this->Component)) {
             $this->Component=$this->Basename;
         }
+
+        // Config_File
+        $this->Config_File=$this->Ack_Config->filename($this->Config_File);
 
         // Dir
         if (empty($this->Dir) || !is_readable($this->Dir)) {
@@ -284,20 +236,22 @@ class Ack extends \josephtingiris\Debug
 
         // Environment
         if (empty($this->Environment)) {
-            $this->Environment = $this->configValue("environment");
+            $this->Environment = $this->Ack_Config->value("environment");
             if (empty($this->Environment)) {
-                $this->Environment = "code";
+                $this->Environment = $this->Ack_Server->environment();
             }
         }
+        $this->Ack_Config->Environment = $this->Environment;
 
         // Ini_Section
         if (empty($this->Ini_Section)) {
             $this->Ini_Section = $this->Environment;
         }
+        $this->Ack_Config->Ini_Section = $this->Ini_Section;
 
         // Aaa_Dir
         if (empty($this->Aaa_Dir)) {
-            $this->Aaa_Dir=$this->configValue("aaa_dir");
+            $this->Aaa_Dir=$this->Ack_Config->value("aaa_dir");
             if (empty($this->Aaa_Dir)) {
                 $this->Aaa_Dir=$this->Dir . "/aaa";
             }
@@ -305,7 +259,7 @@ class Ack extends \josephtingiris\Debug
 
         // Aaa_Cache
         if (empty($this->Aaa_Cache)) {
-            $this->Aaa_Cache=$this->configValue("aaa_cache");
+            $this->Aaa_Cache=$this->Ack_Config->value("aaa_cache");
             if (empty($this->Aaa_Cache)) {
                 $this->Aaa_Cache=$this->Aaa_Dir . "/aaa.cache";
             }
@@ -313,7 +267,7 @@ class Ack extends \josephtingiris\Debug
 
         // Authorized_Ips
         if (empty($this->Authorized_Ips)) {
-            $this->Authorized_Ips = $this->configValue("authorized_ips");
+            $this->Authorized_Ips = $this->Ack_Config->value("authorized_ips");
             if (empty($this->Authorized_Ips)) {
                 $this->Authorized_Ips = array(
                     "127.0.0.0/8",
@@ -323,7 +277,7 @@ class Ack extends \josephtingiris\Debug
 
         // Entity
         if (empty($this->Entity)) {
-            $this->Entity = $this->configValue("entity");
+            $this->Entity = $this->Ack_Config->value("entity");
             if (empty($this->Entity)) {
                 $this->Entity = "anonymous";
             }
@@ -331,7 +285,7 @@ class Ack extends \josephtingiris\Debug
 
         // Etc_Dirs
         if (empty($this->Etc_Dirs)) {
-            $this->Etc_Dirs = $this->configValue("etc_dirs");
+            $this->Etc_Dirs = $this->Ack_Config->value("etc_dirs");
             if (empty($this->Etc_Dirs)) {
                 $this->Etc_Dirs[] = "/etc/ack";
                 $this->Etc_Dirs[] = "/etc";
@@ -342,7 +296,7 @@ class Ack extends \josephtingiris\Debug
 
         // Group
         if (empty($this->Group)) {
-            $this->Group = $this->configValue("group");
+            $this->Group = $this->Ack_Config->value("group");
             if (empty($this->Group)) {
                 $this->Group = "root";
             }
@@ -350,7 +304,7 @@ class Ack extends \josephtingiris\Debug
 
         // Id
         if (empty($this->Id)) {
-            $this->Id=$this->configValue("id");
+            $this->Id=$this->Ack_Config->value("id");
             if (empty($this->Id)) {
                 $this->Id= "base";
             }
@@ -358,7 +312,7 @@ class Ack extends \josephtingiris\Debug
 
         // Install_Server
         if (empty($this->Install_Server)) {
-            $this->Install_Server=$this->configValue("install_server");
+            $this->Install_Server=$this->Ack_Config->value("install_server");
             if (empty($this->Install_Server)) {
                 $this->Install_Server= "localhost";
             }
@@ -366,7 +320,7 @@ class Ack extends \josephtingiris\Debug
 
         // Install_Servers
         if (empty($this->Install_Servers)) {
-            $this->Install_Servers = $this->configValue("install_servers");
+            $this->Install_Servers = $this->Ack_Config->value("install_servers");
             if (empty($this->Install_Servers)) {
                 $this->Install_Servers[] = $this->Install_Server;
             }
@@ -375,7 +329,7 @@ class Ack extends \josephtingiris\Debug
 
         // Log_Dir
         if (empty($this->Log_Dir)) {
-            $this->Log_Dir=$this->configValue("log_dir");
+            $this->Log_Dir=$this->Ack_Config->value("log_dir");
             if (empty($this->Log_Dir)) {
                 $this->Log_Dir=$this->Dir . "/log";
             }
@@ -383,7 +337,7 @@ class Ack extends \josephtingiris\Debug
 
         // Media_Dir
         if (empty($this->Media_Dir)) {
-            $this->Media_Dir=$this->configValue("media_dir");
+            $this->Media_Dir=$this->Ack_Config->value("media_dir");
             if (empty($this->Media_Dir)) {
                 $this->Media_Dir=$this->Dir . "/media";
             }
@@ -394,7 +348,7 @@ class Ack extends \josephtingiris\Debug
 
         // Build_Dir
         if (empty($this->Build_Dir)) {
-            $this->Build_Dir=$this->configValue("build_dir");
+            $this->Build_Dir=$this->Ack_Config->value("build_dir");
             if (empty($this->Build_Dir)) {
                 $this->Build_Dir=$this->Media_Dir . "/build";
             }
@@ -405,7 +359,7 @@ class Ack extends \josephtingiris\Debug
 
         // Distribution_Dir
         if (empty($this->Distribution_Dir)) {
-            $this->Distribution_Dir=$this->configValue("dirstribution_dir");
+            $this->Distribution_Dir=$this->Ack_Config->value("dirstribution_dir");
             if (empty($this->Distribution_Dir)) {
                 $this->Distribution_Dir=$this->Media_Dir . "/distribution";
             }
@@ -416,7 +370,7 @@ class Ack extends \josephtingiris\Debug
 
         // Release_Dir
         if (empty($this->Release_Dir)) {
-            $this->Release_Dir=$this->configValue("release_dir");
+            $this->Release_Dir=$this->Ack_Config->value("release_dir");
             if (empty($this->Release_Dir)) {
                 $this->Release_Dir=$this->Media_Dir . "/release";
             }
@@ -427,7 +381,7 @@ class Ack extends \josephtingiris\Debug
 
         // Vm_Dir
         if (empty($this->Vm_Dir)) {
-            $this->Vm_Dir=$this->configValue("vm_dir");
+            $this->Vm_Dir=$this->Ack_Config->value("vm_dir");
             if (empty($this->Vm_Dir)) {
                 $this->Vm_Dir=$this->Media_Dir . "/vm";
             }
@@ -438,15 +392,15 @@ class Ack extends \josephtingiris\Debug
 
         // Network_Interfaces
         if (empty($this->Network_Interfaces)) {
-            $this->Network_Interfaces = $this->configValue("network_interfaces"); // TODO; document the use of this
+            $this->Network_Interfaces = $this->Ack_Config->value("network_interfaces"); // TODO; document the use of this
             if (empty($this->Network_Interfaces)) {
-                $this->Network_Interfaces = $this->networkInterfaces();
+                $this->Network_Interfaces = $this->Ack_Network->interfaces();
             }
         }
 
         // Privacy
         if (empty($this->Privacy)) {
-            $this->Privacy=$this->configValue("privacy");
+            $this->Privacy=$this->Ack_Config->value("privacy");
             if (empty($this->Privacy)) {
                 $this->Privacy="Private Property";
             }
@@ -454,7 +408,7 @@ class Ack extends \josephtingiris\Debug
 
         // Ssh_Authorized_Key_Files
         if (empty($this->Ssh_Authorized_Key_Files)) {
-            $this->Ssh_Authorized_Key_Files = $this->configValue("ssh_authorized_key_files");
+            $this->Ssh_Authorized_Key_Files = $this->Ack_Config->value("ssh_authorized_key_files");
             if (empty($this->Ssh_Authorized_Key_Files)) {
                 $this->Ssh_Authorized_Key_Files[] = $this->Etc_Dir . "/ack-authorized_keys";
             }
@@ -464,7 +418,7 @@ class Ack extends \josephtingiris\Debug
 
         // Ssh_Authorized_Keys
         if (empty($this->Ssh_Authorized_Keys)) {
-            $this->Ssh_Authorized_Keys = $this->configValue("ssh_authorized_keys");
+            $this->Ssh_Authorized_Keys = $this->Ack_Config->value("ssh_authorized_keys");
             if (empty($this->Ssh_Authorized_Keys)) {
                 $this->Ssh_Authorized_Keys = $this->Ssh_Authorized_Keys;
             }
@@ -486,7 +440,7 @@ class Ack extends \josephtingiris\Debug
         // Timezone; date() is used throughout; ensure a valid timezone is set
         if(!ini_get('date.timezone')) {
 
-            $this->Timezone = $this->configValue("timezone");
+            $this->Timezone = $this->Ack_Config->value("timezone");
             if (empty($this->Timezone)) {
                 $this->Timezone=@date_default_timezone_get();
             }
@@ -503,7 +457,7 @@ class Ack extends \josephtingiris\Debug
 
         // User
         if (empty($this->User)) {
-            $this->User = $this->configValue("user");
+            $this->User = $this->Ack_Config->value("user");
             if (empty($this->User)) {
                 $this->User = "root";
             }
@@ -511,9 +465,9 @@ class Ack extends \josephtingiris\Debug
 
         // Uuid
         if (empty($this->Uuid)) {
-            $this->Uuid = $this->configValue("uuid");
+            $this->Uuid = $this->Ack_Config->value("uuid");
             if (empty($this->Uuid)) {
-                $this->Uuid = $this->uuid();
+                $this->Uuid = $this->Ack_Variant->uuid();
             }
         }
 
@@ -523,14 +477,17 @@ class Ack extends \josephtingiris\Debug
          *
          */
 
+        // Client_Anaconda
         if (empty($this->Client_Anaconda)) {
             $this->Client_Anaconda = false;
         }
 
+        // Client_Architecture
         if (empty($this->Client_Architecture)) {
             $this->Client_Architecture = null;
         }
 
+        // Client_Authorized
         if (empty($this->Client_Authorized)) {
             $this->Client_Authorized = false;
         }
@@ -538,7 +495,6 @@ class Ack extends \josephtingiris\Debug
         if (empty($this->Client_Bootproto)) {
             $this->Client_Bootproto = "dhcp";
         }
-
 
         if (empty($this->Client_Install_Uri)) {
             $this->Client_Install_Uri = null;
@@ -607,10 +563,16 @@ class Ack extends \josephtingiris\Debug
             $this->Client_Type = null;
         }
 
+        /*
+         * end function logic
+         */
     }
 
     public function __destruct()
     {
+        /*
+         * begin function logic
+         */
 
         $parent_class = get_parent_class();
 
@@ -620,751 +582,9 @@ class Ack extends \josephtingiris\Debug
 
         $this->Stop_Time = microtime(true);
 
-    }
-
-    /**
-     * mysqli
-     */
-    public function _mysqli($config_file=null, $config_section=null, $abort=true, $alert=true)
-    {
-
-        $debug_level = 3;
-
-        $failure_reason = __FUNCTION__ . " ERROR, ";
-
-        if ($config_file == null | ! is_readable($config_file)) {
-            $config_section=$this->Ini_Section;
-        }
-
-        $mysqli_config=$this->_mysqliConfig($config_file, $config_section, $abort, $alert);
-
-        $mysqli = @new \mysqli($mysqli_config["mysql_host"],$mysqli_config["mysql_user"],$mysqli_config["mysql_pass"],$mysqli_config["mysql_db"], $mysqli_config["mysql_port"]);
-
-        if (mysqli_connect_errno()) {
-            $failure_reason="ERROR: connection to host='" . $mysqli_config["mysql_host"] . "', db = '" . $mysqli_config["mysql_db"] . "' failed";
-            return $this->failure($failure_reason, $abort, $alert);
-        }
-
-        return $mysqli;
-    }
-
-    /**
-     * returns _myslqi constructor values as an array
-     */
-    public function _mysqliConfig($config_file=null, $config_section=null, $abort=true, $alert=true)
-    {
-        $debug_level = 33;
-
-        $failure_reason = __FUNCTION__ . " ERROR, ";
-
-        if ($config_file == null | ! is_readable($config_file)) {
-            $config_section=$this->Ini_Section;
-        }
-
-        $config_file=$this->configFile();
-
-        $this->debugValue(__FUNCTION__ . "() config_file",$debug_level,$config_file);
-        $this->debugValue(__FUNCTION__ . "() config_section",$debug_level,$config_section);
-
-        $config_section_values = $this->configValue("",$config_section);
-        if (empty($config_section_values)) {
-            $failure_reason="ERROR: $config_file section $config_section is empty";
-            return $this->failure($failure_reason, $abort, $alert);
-        }
-
-        $return_values=array();
-        $required_config_values=array("mysql_host","mysql_port","mysql_db","mysql_user","mysql_pass");
-        foreach ($required_config_values as $required_config_value) {
-            $return_values[$required_config_value]=$this->configValue("$required_config_value",$config_section);
-            $this->debugValue("$required_config_value",$debug_level,$return_values[$required_config_value]);
-        }
-
-        return $return_values;
-    }
-
-    /**
-     * aborts (exits, dies) with a given message & return code
-     */
-    public function aborting($aborting_message=null, $return_code=1, $alert=false)
-    {
-
-        $aborting = "aborting";
-        if ($alert) {
-            $aborting .= " & alerting";
-        }
-        $aborting .= ", $aborting_message ... ($return_code)";
-        $aborting=$this->timeStamp($aborting);
-
-        echo $this->br();
-        echo "$aborting" . $this->br();;
-        echo $this->br();
-
-        if ($alert) {
-            $this->alertMail($subject="!! ABORT !!", $body=$aborting . "\r\n\r\n");
-        }
-
-        exit($return_code);
-
-    }
-
-    /**
-     * fail (aborts) with a non-zero return code & sends an alert email with a given message
-     */
-    public function alertFail($subject=null, $body=null, $to=null, $from=null, $cc=null)
-    {
-
-        $this->debug("alertFail subject=$subject, to=$to, from=$from, cc=$cc", 0);
-
-        $this->alertMail($subject,$body,$to,$from,$cc);
-
-        if (empty($body)) {
-            if (empty($subject)) {
-                $body = __FUNCTION__;
-            } else {
-                $body = $subject;
-            }
-        }
-
-        $this->aborting($body, 255);
-
-    }
-
-    /**
-     * sends an alert email with a given message
-     */
-    public function alertMail($subject=null, $body=null, $to=null, $from=null, $cc=null)
-    {
-
-        $debug_level = 0;
-
-        if (empty($to) && !empty($GLOBALS["Alert_To"])) {
-            $to=$GLOBALS["Alert_To"];
-        }
-
-        if (empty($to) && !empty($GLOBALS["alert_to"])) {
-            $to=$GLOBALS["alert_to"];
-        }
-
-        if (empty($from) && !empty($GLOBALS["Alert_From"])) {
-            $from=$GLOBALS["Alert_From"];
-        }
-
-        if (empty($from) && !empty($GLOBALS["alert_from"])) {
-            $from=$GLOBALS["alert_from"];
-        }
-
-        if (empty($cc) && !empty($GLOBALS["Alert_Cc"])) {
-            $cc=$GLOBALS["Alert_Cc"];
-        }
-
-        if (empty($cc) && !empty($GLOBALS["Alert_CC"])) {
-            $cc=$GLOBALS["Alert_CC"];
-        }
-
-        if (empty($cc) && !empty($GLOBALS["alert_cc"])) {
-            $cc=$GLOBALS["alert_cc"];
-        }
-
-        $this->debug("alertMail subject=$subject, to=$to, from=$from, cc=$cc", 0);
-
-        if (empty($to) || empty($from)) {
-            $process_user = posix_getpwuid(posix_geteuid());
-
-            if (empty($to))
-                $to=$process_user['name'];
-
-            if (empty($from)) {
-                $from=$process_user['name'];
-            }
-        }
-
-        if (empty($to) || empty($from)) {
-            $failure_reason = "error, either to or from address are empty";
-            return $this->failure($failure_reason, false, false);
-        }
-
-        $hostname=gethostname();
-
-        if (!empty($body)) {
-            $body = trim($body);
-            $body .= "\r\n\r\n";
-        }
-
-        $body .= "hostname         = " . $hostname . "\r\n";
-        $body .= "from             = " . $from . "\r\n";
-        $body .= "to               = " . $to . "\r\n";
-
-        if (!empty($cc)) {
-            $carbon_copies = preg_split( "/(,| )/", $cc, -1, PREG_SPLIT_NO_EMPTY );
-            $carbon_copies = array_unique($carbon_copies);
-        }
-
-        if (!empty($carbon_copies)) {
-            foreach ($carbon_copies as $carbon_copy) {
-                $carbon_copy=trim($carbon_copy);
-                if (!empty($carbon_copy)) {
-                    $body .= "cc               = " . $carbon_copy . "\r\n";
-                }
-            }
-        }
-
-        $backtrace=debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT);
-        $backtrace_count=count($backtrace);
-        $body .= "\r\n";
-        $body .= "backtrace count  = " . $backtrace_count . "\r\n";
-
-        # get the root caller
-        if (!empty($backtrace[$backtrace_count]["file"])) {
-            $backtrace_caller=$backtrace[$backtrace_count]["file"];
-        } else {
-            if (!empty($backtrace[$backtrace_count-1]["file"])) {
-                $backtrace_caller=$backtrace[$backtrace_count-1]["file"];
-            } else {
-                if (!empty($backtrace[0]["file"])) {
-                    $backtrace_caller=$backtrace[0]["file"];
-                } else {
-                    $backtrace_caller="?? unknown ??";
-                }
-            }
-        }
-        $body .= "backtrace caller = " . $backtrace_caller . "\r\n";
-
-        $alert_subject="!! ALERT !! from $hostname:$backtrace_caller";
-        if (!empty($subject)) {
-            $subject=$alert_subject . " [$subject]";
-        }
-
-        $this->debug("MAIL subject=$subject, to=$to, from=$from, cc=$cc", 25);
-
-        $additional_headers=array();
-        if (!empty($carbon_copies)) {
-            foreach ($carbon_copies as $carbon_copy) {
-                $additional_headers[] = "Cc: $carbon_copy";
-            }
-        }
-
-        $ack_email = new \josephtingiris\Ack\Email;
-        $alert_mail_sent=$ack_email->email($to, $subject, $body, $additional_headers);
-        if (!$alert_mail_sent) {
-            // todo; slack?
-            error_log("alertMail FAIL (not sent) subject=$subject, to=$to, from=$from, cc=$cc");
-        }
-
-    }
-
-    /**
-     * outputs a string with an appropriate line break
-     */
-    public function br($input=null)
-    {
-
-        if ($this->cli()) {
-            //echo "this is being run via cli";
-            $br = "$input\n";
-        } else {
-            //echo "this is being run via apache";
-            $br = "$input<br />\n";
-        }
-
-        return $br;
-    }
-
-    /**
-     * outputs a boolean if it's *not* running under a web server
-     */
-    public function cli()
-    {
-
-        if (!empty($_SERVER['SERVER_NAME'])) {
-            return false;
-        }
-
-        return true;
-
-    }
-
-    /**
-     * validates the presence of and returns the config file in use as a string
-     */
-    public function configFile($config_file=null, $abort=true)
-    {
-
-        $debug_level=35;
-
-        if (defined('CONFIG_FILE')) {
-            $default_config_file=CONFIG_FILE;
-        } else {
-            $default_config_file="ack.ini";
-        }
-
-        if (empty($config_file)) {
-            $config_file=$default_config_file;
-        }
-
-        if (is_readable($config_file)) {
-            $this->Config_File=realpath("$config_file");
-        } else {
-            // search for config_file, backwards from the location of this __FILE__ (in /etc/)
-            $config_found=0;
-            $config_paths=array(dirname(__FILE__), getcwd());
-            foreach ($config_paths as $config_path) {
-                while(strlen($config_path) > 0) {
-                    $this->debugValue("search config_path",$debug_level,$config_path);
-                    if ($config_path == ".") $config_path=getcwd();
-                    if ($config_path == "/") break;
-                    if (is_readable($config_path . "/etc/" . $config_file) && !is_dir($config_path . "/etc/" . $config_file)) {
-                        $config_found=1;
-                        $this->Config_File=$config_path . "/etc/" . $config_file;
-                        $this->debugValue("found etc config file",$debug_level,$this->Config_File);
-                        break;
-                    } else {
-                        $config_path=dirname($config_path);
-                    }
-                }
-                if ($config_found == 1) break;
-            }
-            unset($config_path);
-        }
-
-        if (!is_readable($this->Config_File) || !is_file($this->Config_File)) {
-            if ($abort) {
-                $this->aborting("ERROR: $config_file file not readable",1);
-            } else {
-                $this->debug("ERROR: $config_file file not readable");
-            }
-        }
-
-        $this->debugValue(__FUNCTION__,$debug_level,$this->Config_File);
-        return $this->Config_File;
-
-    }
-
-    /**
-     * returns the config file value(s), or null
-     */
-    public function configValue($config_key=null, $config_section=null, $config_file=null, $abort=false, $alert=false)
-    {
-
-        $debug_level=35;
-
-        $config_file=$this->configFile($config_file,$abort);
-
-        $this->debugValue("config file",$debug_level,$config_file);
-        $this->debugValue("config key",$debug_level,$config_key);
-
-        $config_message = "searching $config_file";
-
-        if (is_readable($config_file) && is_file($config_file)) {
-            $this->Config_Values = parse_ini_file($config_file,true);
-        }
-
-        // if there are no config values then abort or return nothing
-        if (empty($this->Config_Values)) {
-            if ($abort) {
-                $this->aborting("ERROR: $config_file is empty",1);
-            } else {
-                $this->debug("ERROR: $config_file is empty",0);
-                return null;
-            }
-        }
-
-        $config_section = trim($config_section);
-
-        $this->debugValue("config section",$debug_level,$config_section);
-
-        // if there is no specific config key given then return all [section] values; let the caller figure out what to do
-        if (empty($config_key)) {
-            if (empty($this->Config_Values[$config_section])) {
-                $this->debugValue(__FUNCTION__,$debug_level,$this->Config_Values);
-                return $this->Config_Values;
-            } else {
-                if (empty($config_section)) {
-                    $this->debugValue(__FUNCTION__,$debug_level,$this->Config_Values);
-                    return $this->Config_Values;
-                } else {
-                    $this->debugValue(__FUNCTION__,$debug_level,$this->Config_Values[$config_section]);
-                    return $this->Config_Values[$config_section];
-                }
-            }
-        } else {
-            $config_message .= " for '$config_key'";
-        }
-
-        #print_r($this->Config_Values);
-
-        // create an array of sections to be searched algorithmically
-
-        $config_sections = array();
-        if ($config_section != null) {
-            array_push($config_sections,$config_section); // always search the given scope first
-            $sections=explode("-",$config_section);
-            foreach ($sections as $section) {
-                array_pop($sections); // remove the last element from the given scope & search that next
-                if ($sections == null) {
-                    break;
-                }
-                array_push($config_sections,implode($sections,"-"));
-            }
-            unset($sections, $section);
-        }
-        array_push($config_sections, null); // always search the global scope (last)
-
-        #print_r($config_sections);
-
-        $config_environment = $this->Environment;
-
-        $config_value=null;
-
-        // search the config sections in order; return first key found
-        foreach ($config_sections as $config_section) {
-            if ($config_value == null) {
-                if ($config_section == null) {
-                    // search Global section
-                    if (isset($this->Config_Values[$config_environment][$config_key])) {
-                        $config_value = $this->Config_Values[$config_environment][$config_key];
-                        $config_message .= " found in global section as '$config_environment" . "[$config_key]' with value '" . print_r($config_value,true) . "'";
-                        break; // Global environment key match
-                    }
-                    if (isset($this->Config_Values[$config_key])) {
-                        $config_value = $this->Config_Values[$config_key];
-                        $config_message .= " found in global section as '$config_key' with value '" . print_r($config_value,true) . "'";
-                        break; // Global key match
-                    }
-                } else {
-                    // $config_section != null; search config_section
-                    if (isset($this->Config_Values[$config_section][$config_environment][$config_key])) {
-                        $config_value = $this->Config_Values[$config_section][$config_environment][$config_key];
-                        $config_message .= " found in " . "[$config_section]" . " section as '$config_environment" . "[$config_key]' with value '" . print_r($config_value,true) . "'";
-                        break; // config_section environment key match
-                    }
-                    if (isset($this->Config_Values[$config_section][$config_key])) {
-                        $config_value = $this->Config_Values[$config_section][$config_key];
-                        $config_message .= " found in " . "[$config_section]" . " section as '$config_key' with value '" . print_r($config_value,true) . "'";
-                        break;
-                    }
-                }
-            } else {
-                // $config_value != null
-                break;
-            }
-        }
-
-        #$this->debug("section = $config_section, environment = $config_environment, key = $config_key, value = $config_value",$debug_level);
-        #print_r($this->Config_Values);
-
-        if ($config_value == null && $abort) {
-            $aborting_message="ERROR: $config_file has no value";
-            if ($config_section != null) {
-                $aborting_message .= " in section [$config_section]";
-            }
-            $aborting_message .= " for '$config_key'";
-            $this->aborting("$aborting_message",3);
-        } else {
-            $this->debug($config_message,$debug_level);
-        }
-
-        return $config_value;
-
-    }
-
-    /**
-     * returns curl output as an array
-     */
-    public function curl($url=null, $curl_options=null, $abort=false, $alert=false)
-    {
-
-        $debug_level = 25;
-
-        $failure_reason = __FUNCTION__ . " ERROR, ";
-
-        if (is_null($url)) {
-            $failure_reason .= "url is null";
-            return $this->failure($failure_reason, $abort, $alert);
-        }
-
-        $this->debugValue("curl_init", $debug_level, $url);
-
-        ob_start();
-
-        $curl_init = curl_init($url);
-
-        // embedded options; $curl_options can override
-
-        // follow redirects
-        curl_setopt($curl_init, CURLOPT_FOLLOWLOCATION, true);
-
-        // respect RFC 7231 for POST redirects
-        curl_setopt($curl_init, CURLOPT_POSTREDIR, 3); // correct bitmask for 4, other (too) ?
-
-        // allow invalid certs
-        curl_setopt($curl_init, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($curl_init, CURLOPT_SSL_VERIFYPEER, false);
-
-        // return transfer output
-        curl_setopt($curl_init, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl_init, CURLOPT_SSL_VERIFYPEER, false);
-
-        // set timeout
-        curl_setopt($curl_init, CURLOPT_CONNECTTIMEOUT, 30);
-
-        // set user agent
-        curl_setopt($curl_init, CURLOPT_USERAGENT, "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)");
-
-        // set passed curl_options
-        if (!is_null($curl_options) && is_array($curl_options)) {
-            foreach ($curl_options as $curl_option => $curl_option_value) {
-
-                $this->debug("setting passed curl option $curl_option to " . var_export($curl_option_value, true), $debug_level);
-
-                if (@curl_setopt($curl_init, $curl_option, $curl_option_value) !== true) {
-                    // problem setting option
-                    $failure_reason .= "curl_setop failed setting curl option '$curl_option'";
-                    $this->failure($failure_reason, $abort, $alert);
-                }
-            }
-        }
-
-        $curl_output = curl_exec($curl_init);
-
-        $curl_output = trim($curl_output);
-
-        $this->debugValue("curl_output", $debug_level, $curl_output);
-
-        $curl_error = curl_error($curl_init);
-
-        $curl_response_code = curl_getinfo($curl_init, CURLINFO_HTTP_CODE);
-
-        curl_close($curl_init);
-
-        ob_end_flush();
-
-        return array('output' => $curl_output, 'error' => $curl_error, 'response_code' => $curl_response_code);
-    }
-
-    /**
-     * output a debug message & return false or abort
-     */
-    public function failure($failure_reason=null, $abort=false, $alert=false)
-    {
-        $debug_level = 3;
-
-        if ($failure_reason == null) {
-            $failure_reason = "failure";
-        }
-
-        $failure_reason = trim($failure_reason);
-        $failure_reason = trim($failure_reason,",");
-
-        if ($abort) {
-            $this->aborting($failure_reason,1,$alert);
-        } else {
-            if ($alert) {
-                $this->alertMail($failure_reason);
-            } else {
-                $this->debug($failure_reason, $debug_level);
-            }
-            return false;
-        }
-    }
-
-    /**
-     * returns an array of files found in $search_directory matching patters
-     * TODO; make better
-     */
-    public function fileFind($search_directory=null, $search_pattern=null, $search_pattern_append=null, $search_recursion=true) {
-
-        $debug_level = 10;
-
-        if (!is_dir($search_directory)) {
-            $this->debug("invalid directory $search_directory",$debug_level);
-            return array();
-        }
-
-        $return_result=array();
-
-        if ($search_pattern == "*") $search_pattern=null;
-
-        $search_separators=array("/","@",":","+","!");
-        $valid_separator=false;
-        foreach ($search_separators as $search_separator) {
-            if (strpos($search_pattern,$search_separator) === false) {
-                $valid_separator=true;
-            } else continue;
-            if ($valid_separator) break;
-        }
-        if ($search_separator == null) {
-            Warning("couldn't determine a valid search separator for $search_pattern");
-            return;
-        }
-        $search_pattern=$search_separator . $search_pattern . $search_separator;
-        if ($search_pattern_append != null) $search_pattern.=$search_pattern_append;
-
-        $this->debugValue("search_directory",$debug_level,$search_directory);
-        $this->debugValue("search_pattern",$debug_level,$search_pattern);
-
-        $search=array($search_directory);
-        while (null !== ($dir = array_pop($search))) {
-            if ($dh = opendir($dir)) {
-                while (false !== ($file = readdir($dh))) {
-                    if($file == '.' || $file == '..') continue; # skip these, altogether
-                    $path = $dir . '/' . $file;
-                    $this->debugValue("path",$debug_level+10,$path);
-
-                    if (is_dir($path)) {
-                        # recursion; add the new directory to the array
-                        if ($search_recursion) $search[]=$path;
-                    }
-
-                    if (preg_match($search_pattern,$path)) {
-                        $return_result[]=$path;
-                        $this->debug("search_pattern matched '$path'",$debug_level);
-                    }
-                }
-            } else {
-                # failed to open directory
-                $this->debug("WARNING could not open directory $dir (permissions?)");
-            }
-
-            closedir($dh);
-        }
-
-        return $return_result;
-
-    }
-
-    /**
-     * return valid interface(s), or null
-     */
-    function networkInterfaces($interface=null) {
-        $interfaces_return=array();
-
-        if (is_readable("/sys/class/net") && is_dir("/sys/class/net")) {
-            $interfaces=array_diff(scandir("/sys/class/net"), array('..', '.'));
-        }
-
-        if (empty($interface)) {
-            $interfaces_return=$interfaces;
-        } else {
-            // TODO; handle single or multiple *given* interfaces
-        }
-
-        return $interfaces_return;
-    }
-
-    /**
-     * print public properties
-     */
-    function properties($bash=false) {
-
-        /*
-         * begin function logic
-         */
-
-        $debug_level = 7;
-
-        $ack_properties=array();
-
-        $ack_export="";
-
-        $reflect = new \ReflectionClass($this);
-        $reflections = $reflect->getProperties(\ReflectionProperty::IS_PUBLIC);
-
-        foreach($reflections as $reflection) {
-            if (isset($reflection->name) && isset($reflection->class) && $reflection->class == __CLASS__) {
-                $property = $reflection->name;
-                if ($bash) {
-                    if (is_string($this->$property)) {
-                        $ack_export.= "export Ack_$property=\"" . trim($this->$property) . "\"\n";
-                    } else {
-                        if (is_array($this->$property) || is_object($this->$property)) {
-                            $ack_export.= "export Ack_$property=(";
-                            foreach ($this->$property as $ack_properties_key => $ack_properties_value) {
-                                if (is_string($ack_properties_value)) {
-                                    $ack_export.= "\"" . trim($ack_properties_value) . "\" ";
-                                }
-                            }
-                            unset($ack_properties_key, $ack_properties_value);
-                            $ack_export=trim($ack_export);
-                            $ack_export.= ")\n";
-                        }
-                    }
-                } else {
-                    $ack_properties[$property]=$this->$property;
-                }
-                unset($property);
-            }
-        }
-
-        if ($bash) {
-            if (!empty($_SERVER["PATH"])) {
-                if (!empty($this->Path)) {
-                    $ack_path=$this->Path.":".$_SERVER["PATH"];
-                } else {
-                    $ack_path=$_SERVER["PATH"];
-                }
-                $ack_export.= "export PATH=\"$ack_path\"\n";
-            }
-            printf("%s\n", $ack_export);;
-            exit(0);
-        } else {
-            if (!empty($_SERVER) && is_array($_SERVER)) {
-                $this->debug("----------------> _SERVER key/value pairs",50);
-                foreach ($_SERVER as $_SERVER_KEY => $_SERVER_VALUE) {
-                    $this->debugValue("$_SERVER_KEY",50,$_SERVER_VALUE);
-                }
-                $this->debug("----------------< _SERVER key/value pairs",50);
-            }
-            ksort($ack_properties);
-            foreach ($ack_properties as $ack_properties_key => $ack_properties_value) {
-                $this->debugValue($ack_properties_key,9,$ack_properties_value);
-            }
-            unset($ack_properties_key, $ack_properties_value);
-        }
-
         /*
          * end function logic
          */
-
-    }
-
-    /**
-     * Display a usage message and stop
-     */
-    public function usage($note=null)
-    {
-
-        if (!empty($note)) {
-            echo "NOTE:" . $this->br();
-            echo $this->br();
-            echo "$note" . $this->br();
-            echo $this->br();
-        }
-
-        exit(255);
-
-    }
-
-    /**
-     * return a RFC 4122 compliant universally unique identifier
-     */
-    public function uuid()
-    {
-
-        $random_string=openssl_random_pseudo_bytes(16);
-        $time_low=bin2hex(substr($random_string, 0, 4));
-        $time_mid=bin2hex(substr($random_string, 4, 2));
-        $time_hi_and_version=bin2hex(substr($random_string, 6, 2));
-        $clock_seq_hi_and_reserved=bin2hex(substr($random_string, 8, 2));
-        $node=bin2hex(substr($random_string, 10, 6));
-        $time_hi_and_version=hexdec($time_hi_and_version);
-        $time_hi_and_version=$time_hi_and_version >> 4;
-        $time_hi_and_version=$time_hi_and_version | 0x4000;
-        $clock_seq_hi_and_reserved=hexdec($clock_seq_hi_and_reserved);
-        $clock_seq_hi_and_reserved=$clock_seq_hi_and_reserved >> 2;
-        $clock_seq_hi_and_reserved=$clock_seq_hi_and_reserved | 0x8000;
-
-        return sprintf("%08s-%04s-%04x-%04x-%012s", $time_low, $time_mid, $time_hi_and_version, $clock_seq_hi_and_reserved, $node);
-
     }
 
     /*

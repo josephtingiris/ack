@@ -1,7 +1,7 @@
 <?php
 
 /**
- * aNAcONDA kICKSTART (ack) [Example]
+ * aNAcONDA kICKSTART (ack) [Client]
  *
  * Copyright (C) 2015 Joseph Tingiris
  *
@@ -33,9 +33,9 @@ namespace josephtingiris\Ack;
 require(dirname(__FILE__)) . "/Autoload.php";
 
 /**
- * The \josephtingiris\Ack\Example class
+ * The \josephtingiris\Ack\Client class
  */
-class Example extends \josephtingiris\Debug
+class Client extends \josephtingiris\Debug
 {
     /*
      * public properties.

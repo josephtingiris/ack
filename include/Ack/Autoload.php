@@ -1,21 +1,20 @@
-#!/usr/bin/env php
 <?php
 
 /**
- * aNAcONDA kICKSTART (ack) [test]
- * 
+ * aNAcONDA kICKSTART (ack) [component]
+ *
  * Copyright (C) 2015 Joseph Tingiris
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
@@ -101,39 +100,3 @@ if (empty($Autoload_Enabled)) {
  * main
  *
  */
-
-$Debug=20;
-
-$Ack_Alert = new \josephtingiris\Ack\Alert;
-#$Ack_Alert->failure("test",true,true);
-
-$Ack_Config = new \josephtingiris\Ack\Config;
-
-$Ack = new \josephtingiris\Ack;
-
-for ($c=0; $c<=256; $c++) {
-    $Ack->debug("debug=$c",$c);
-}
-
-$Ack->debugValue("Config_File",4,$Ack->Config_File);
-$Ack->debugValue("Environment",4,$Ack->Environment);
-
-$Alert_From = $Ack_Config->value("alert_from");
-$Ack->debugValue("Alert_From",5);
-
-$Nothing = $Ack_Config->value("nothing");
-$Ack->debugValue("Nothing",5);
-
-$Ack->properties();
-#$Ack->properties(true,'Ack');
-
-$Ack_Client = new \josephtingiris\Ack\Client;
-$Ack_Client->debug("debug=10",10);
-
-$Ack_Server = new \josephtingiris\Ack\Server;
-$Ack_Server->debug("debug=10",10);
-
-$Ack_Email = new \josephtingiris\Ack\Email;
-#$Ack_Email->email("jtingiris@gmail.com","ack-test-php","this is a test email from " . __FILE__);
-
-

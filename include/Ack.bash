@@ -48,7 +48,7 @@ while [ "$Ack_Php_Dir" != "" ] && [ "$Ack_Php_Dir" != "/" ]; do # search backwar
         Ack_Php_Source=${Ack_Php_Source_Dir}/${Ack_Php}
         if [ -r "${Ack_Php_Source}" ]; then
             # export Ack.functions.php globals to shell environment
-            eval "$(/bin/env php <<< "<?php require_once('${Ack_Php_Source}'); \$Ack = new \josephtingiris\Ack; \$Ack->properties(true);?>")"
+            eval "$(/bin/env php <<< "<?php require_once('${Ack_Php_Source}'); \$Ack = new \josephtingiris\Ack; \$Ack->properties(true,'Ack');?>")"
             break
         else
             unset Ack_Php_Source

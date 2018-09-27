@@ -1,7 +1,7 @@
 <?php
 
 /**
- * aNAcONDA kICKSTART (ack) [Example]
+ * aNAcONDA kICKSTART (ack) [Server]
  *
  * Copyright (C) 2015 Joseph Tingiris
  *
@@ -33,9 +33,9 @@ namespace josephtingiris\Ack;
 require(dirname(__FILE__)) . "/Autoload.php";
 
 /**
- * The \josephtingiris\Ack\Example class
+ * The \josephtingiris\Ack\Server class
  */
-class Example extends \josephtingiris\Debug
+class Server extends \josephtingiris\Debug
 {
     /*
      * public properties.
@@ -83,6 +83,93 @@ class Example extends \josephtingiris\Debug
         if ($parent_class !== false) {
             parent::__destruct(); // execute parent __destruct;
         }
+
+        /*
+         * end function logic
+         */
+    }
+
+    /**
+     * outputs a string with an appropriate line break
+     */
+    public function br($input=null)
+    {
+        /*
+         * begin function logic
+         */
+
+        if ($this->cli()) {
+            //echo "this is being run via cli";
+            $br = "$input\n";
+        } else {
+            //echo "this is being run via apache";
+            $br = "$input<br />\n";
+        }
+
+        return $br;
+
+        /*
+         * end function logic
+         */
+    }
+
+    /**
+     * outputs a boolean if it's *not* running under a web server
+     */
+    public function cli()
+    {
+        /*
+         * begin function logic
+         */
+
+        if (!empty($_SERVER['SERVER_NAME'])) {
+            return false;
+        }
+
+        return true;
+
+        /*
+         * end function logic
+         */
+    }
+
+    /**
+     * outputs a string with a machine's environment
+     */
+    public function environment()
+    {
+        /*
+         * begin function logic
+         */
+
+        $return_environment = "code";
+
+        // TODO; add environment logic
+
+        return $return_environment;;
+
+        /*
+         * end function logic
+         */
+    }
+
+    /**
+     * Display a usage message and stop
+     */
+    public function usage($note=null)
+    {
+        /*
+         * begin function logic
+         */
+
+        if (!empty($note)) {
+            echo "NOTE:" . $this->br();
+            echo $this->br();
+            echo "$note" . $this->br();
+            echo $this->br();
+        }
+
+        exit(255);
 
         /*
          * end function logic
