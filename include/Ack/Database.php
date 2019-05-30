@@ -71,7 +71,7 @@ class Database extends \josephtingiris\Debug
         $this->Ack_Config = new \josephtingiris\Ack\Config;
 
         // Config_File
-        $this->Config_File=$this->Ack_Config->filename($this->Config_File);
+        $this->Config_File=$this->Ack_Config->configFilename($this->Config_File);
 
         $this->debug("Class = " . __CLASS__, 20);
 
@@ -100,7 +100,7 @@ class Database extends \josephtingiris\Debug
     /**
      * mysqli
      */
-    public function _mysqli($config_file=null, $config_section=null, $abort=true, $alert=true)
+    public function databaseMySQLi($config_file=null, $config_section=null, $abort=true, $alert=true)
     {
         /*
          * begin function logic
@@ -114,7 +114,7 @@ class Database extends \josephtingiris\Debug
             $config_section=$this->Ini_Section;
         }
 
-        $mysqli_config=$this->_mysqliConfig($config_file, $config_section, $abort, $alert);
+        $mysqli_config=$this->databaseMySQLiConfig($config_file, $config_section, $abort, $alert);
 
         $mysqli = @new \mysqli($mysqli_config["mysql_host"],$mysqli_config["mysql_user"],$mysqli_config["mysql_pass"],$mysqli_config["mysql_db"], $mysqli_config["mysql_port"]);
 
@@ -129,7 +129,7 @@ class Database extends \josephtingiris\Debug
     /**
      * returns _myslqi constructor values as an array
      */
-    public function _mysqliConfig($config_file=null, $config_section=null, $abort=true, $alert=true)
+    public function databaseMySQLiConfig($config_file=null, $config_section=null, $abort=true, $alert=true)
     {
         /*
          * begin function logic
@@ -143,12 +143,12 @@ class Database extends \josephtingiris\Debug
             $config_section=$this->Ini_Section;
         }
 
-        $config_file=$this->Ack_Config->filename($this->Config_File);
+        $config_file=$this->Ack_Config->configFilename($this->Config_File);
 
         $this->debugValue(__FUNCTION__ . "() config_file",$debug_level,$config_file);
         $this->debugValue(__FUNCTION__ . "() config_section",$debug_level,$config_section);
 
-        $config_section_values = $this->Ack_Config->value("",$config_section);
+        $config_section_values = $this->Ack_Config->configValue("",$config_section);
         if (empty($config_section_values)) {
             $failure_reason="ERROR: $config_file section $config_section is empty";
             return $this->alertFail($failure_reason, $abort, $alert);
@@ -157,7 +157,7 @@ class Database extends \josephtingiris\Debug
         $return_values=array();
         $required_config_values=array("mysql_host","mysql_port","mysql_db","mysql_user","mysql_pass");
         foreach ($required_config_values as $required_config_value) {
-            $return_values[$required_config_value]=$this->Ack_Config->value("$required_config_value",$config_section);
+            $return_values[$required_config_value]=$this->Ack_Config->configValue("$required_config_value",$config_section);
             $this->debugValue("$required_config_value",$debug_level,$return_values[$required_config_value]);
         }
 

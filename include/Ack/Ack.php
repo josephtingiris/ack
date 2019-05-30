@@ -190,7 +190,7 @@ class Ack extends \josephtingiris\Debug
         }
 
         // Config_File
-        $this->Config_File=$this->Ack_Config->filename($this->Config_File);
+        $this->Config_File=$this->Ack_Config->configFilename($this->Config_File);
 
         // Dir
         if (empty($this->Dir) || !is_readable($this->Dir)) {
@@ -259,7 +259,7 @@ class Ack extends \josephtingiris\Debug
 
         // Environment
         if (empty($this->Environment)) {
-            $this->Environment = $this->Ack_Config->value("environment");
+            $this->Environment = $this->Ack_Config->configValue("environment");
             if (empty($this->Environment)) {
                 $this->Environment = $this->Ack_Server->serverEnvironment();
             }
@@ -274,7 +274,7 @@ class Ack extends \josephtingiris\Debug
 
         // Aaa_Dir
         if (empty($this->Aaa_Dir)) {
-            $this->Aaa_Dir=$this->Ack_Config->value("aaa_dir");
+            $this->Aaa_Dir=$this->Ack_Config->configValue("aaa_dir");
             if (empty($this->Aaa_Dir)) {
                 $this->Aaa_Dir=$this->Dir . "/aaa";
             }
@@ -282,7 +282,7 @@ class Ack extends \josephtingiris\Debug
 
         // Aaa_Cache
         if (empty($this->Aaa_Cache)) {
-            $this->Aaa_Cache=$this->Ack_Config->value("aaa_cache");
+            $this->Aaa_Cache=$this->Ack_Config->configValue("aaa_cache");
             if (empty($this->Aaa_Cache)) {
                 $this->Aaa_Cache=$this->Aaa_Dir . "/aaa.cache";
             }
@@ -290,7 +290,7 @@ class Ack extends \josephtingiris\Debug
 
         // Authorized_IPs
         if (empty($this->Authorized_IPs)) {
-            $this->Authorized_IPs = $this->Ack_Config->value("authorized_ips");
+            $this->Authorized_IPs = $this->Ack_Config->configValue("authorized_ips");
             if (empty($this->Authorized_IPs)) {
                 $this->Authorized_IPs = array(
                     "127.0.0.0/8",
@@ -300,7 +300,7 @@ class Ack extends \josephtingiris\Debug
 
         // Entity
         if (empty($this->Entity)) {
-            $this->Entity = $this->Ack_Config->value("entity");
+            $this->Entity = $this->Ack_Config->configValue("entity");
             if (empty($this->Entity)) {
                 $this->Entity = "anonymous";
             }
@@ -308,7 +308,7 @@ class Ack extends \josephtingiris\Debug
 
         // Etc_Dirs
         if (empty($this->Etc_Dirs)) {
-            $this->Etc_Dirs = $this->Ack_Config->value("etc_dirs");
+            $this->Etc_Dirs = $this->Ack_Config->configValue("etc_dirs");
             if (empty($this->Etc_Dirs)) {
                 $this->Etc_Dirs[] = "/etc/ack";
                 $this->Etc_Dirs[] = "/etc";
@@ -319,7 +319,7 @@ class Ack extends \josephtingiris\Debug
 
         // Group
         if (empty($this->Group)) {
-            $this->Group = $this->Ack_Config->value("group");
+            $this->Group = $this->Ack_Config->configValue("group");
             if (empty($this->Group)) {
                 $this->Group = "root";
             }
@@ -327,7 +327,7 @@ class Ack extends \josephtingiris\Debug
 
         // Id
         if (empty($this->Id)) {
-            $this->Id=$this->Ack_Config->value("id");
+            $this->Id=$this->Ack_Config->configValue("id");
             if (empty($this->Id)) {
                 $this->Id= "base";
             }
@@ -335,7 +335,7 @@ class Ack extends \josephtingiris\Debug
 
         // Install_Server
         if (empty($this->Install_Server)) {
-            $this->Install_Server=$this->Ack_Config->value("install_server");
+            $this->Install_Server=$this->Ack_Config->configValue("install_server");
             if (empty($this->Install_Server)) {
                 $this->Install_Server= "localhost";
             }
@@ -343,7 +343,7 @@ class Ack extends \josephtingiris\Debug
 
         // Install_Servers
         if (empty($this->Install_Servers)) {
-            $this->Install_Servers = $this->Ack_Config->value("install_servers");
+            $this->Install_Servers = $this->Ack_Config->configValue("install_servers");
             if (empty($this->Install_Servers)) {
                 $this->Install_Servers[] = $this->Install_Server;
             }
@@ -352,7 +352,7 @@ class Ack extends \josephtingiris\Debug
 
         // Log_Dir
         if (empty($this->Log_Dir)) {
-            $this->Log_Dir=$this->Ack_Config->value("log_dir");
+            $this->Log_Dir=$this->Ack_Config->configValue("log_dir");
             if (empty($this->Log_Dir)) {
                 $this->Log_Dir=$this->Dir . "/log";
             }
@@ -360,7 +360,7 @@ class Ack extends \josephtingiris\Debug
 
         // Log_File
         if (empty($this->Log_File)) {
-            $this->Log_File=$this->Ack_Config->value("log_file");
+            $this->Log_File=$this->Ack_Config->configValue("log_file");
             if (empty($this->Log_File)) {
                 $this->Log_File=$this->Log_Dir . "/" . $this->Label . ".log";
             }
@@ -369,7 +369,7 @@ class Ack extends \josephtingiris\Debug
 
         // Media_Dir
         if (empty($this->Media_Dir)) {
-            $this->Media_Dir=$this->Ack_Config->value("media_dir");
+            $this->Media_Dir=$this->Ack_Config->configValue("media_dir");
             if (empty($this->Media_Dir)) {
                 $this->Media_Dir=$this->Dir . "/media";
             }
@@ -380,7 +380,7 @@ class Ack extends \josephtingiris\Debug
 
         // Build_Dir
         if (empty($this->Build_Dir)) {
-            $this->Build_Dir=$this->Ack_Config->value("build_dir");
+            $this->Build_Dir=$this->Ack_Config->configValue("build_dir");
             if (empty($this->Build_Dir)) {
                 $this->Build_Dir=$this->Media_Dir . "/build";
             }
@@ -391,7 +391,7 @@ class Ack extends \josephtingiris\Debug
 
         // Distribution_Dir
         if (empty($this->Distribution_Dir)) {
-            $this->Distribution_Dir=$this->Ack_Config->value("dirstribution_dir");
+            $this->Distribution_Dir=$this->Ack_Config->configValue("dirstribution_dir");
             if (empty($this->Distribution_Dir)) {
                 $this->Distribution_Dir=$this->Media_Dir . "/distribution";
             }
@@ -402,7 +402,7 @@ class Ack extends \josephtingiris\Debug
 
         // Release_Dir
         if (empty($this->Release_Dir)) {
-            $this->Release_Dir=$this->Ack_Config->value("release_dir");
+            $this->Release_Dir=$this->Ack_Config->configValue("release_dir");
             if (empty($this->Release_Dir)) {
                 $this->Release_Dir=$this->Media_Dir . "/release";
             }
@@ -413,7 +413,7 @@ class Ack extends \josephtingiris\Debug
 
         // Vm_Dir
         if (empty($this->Vm_Dir)) {
-            $this->Vm_Dir=$this->Ack_Config->value("vm_dir");
+            $this->Vm_Dir=$this->Ack_Config->configValue("vm_dir");
             if (empty($this->Vm_Dir)) {
                 $this->Vm_Dir=$this->Media_Dir . "/vm";
             }
@@ -424,7 +424,7 @@ class Ack extends \josephtingiris\Debug
 
         // Network_Interfaces
         if (empty($this->Network_Interfaces)) {
-            $this->Network_Interfaces = $this->Ack_Config->value("network_interfaces"); // TODO; document the use of this
+            $this->Network_Interfaces = $this->Ack_Config->configValue("network_interfaces"); // TODO; document the use of this
             if (empty($this->Network_Interfaces)) {
                 $this->Network_Interfaces = $this->Ack_Network->networkInterfaces();
             }
@@ -432,7 +432,7 @@ class Ack extends \josephtingiris\Debug
 
         // Privacy
         if (empty($this->Privacy)) {
-            $this->Privacy=$this->Ack_Config->value("privacy");
+            $this->Privacy=$this->Ack_Config->configValue("privacy");
             if (empty($this->Privacy)) {
                 $this->Privacy="Private Property";
             }
@@ -440,7 +440,7 @@ class Ack extends \josephtingiris\Debug
 
         // Ssh_Authorized_Key_Files
         if (empty($this->Ssh_Authorized_Key_Files)) {
-            $this->Ssh_Authorized_Key_Files = $this->Ack_Config->value("ssh_authorized_key_files");
+            $this->Ssh_Authorized_Key_Files = $this->Ack_Config->configValue("ssh_authorized_key_files");
             if (empty($this->Ssh_Authorized_Key_Files)) {
                 $this->Ssh_Authorized_Key_Files[] = $this->Etc_Dir . "/ack-authorized_keys";
             }
@@ -450,7 +450,7 @@ class Ack extends \josephtingiris\Debug
 
         // Ssh_Authorized_Keys
         if (empty($this->Ssh_Authorized_Keys)) {
-            $this->Ssh_Authorized_Keys = $this->Ack_Config->value("ssh_authorized_keys");
+            $this->Ssh_Authorized_Keys = $this->Ack_Config->configValue("ssh_authorized_keys");
             if (empty($this->Ssh_Authorized_Keys)) {
                 $this->Ssh_Authorized_Keys = $this->Ssh_Authorized_Keys;
             }
@@ -472,7 +472,7 @@ class Ack extends \josephtingiris\Debug
         // Timezone; date() is used throughout; ensure a valid timezone is set
         if(!ini_get('date.timezone')) {
 
-            $this->Timezone = $this->Ack_Config->value("timezone");
+            $this->Timezone = $this->Ack_Config->configValue("timezone");
             if (empty($this->Timezone)) {
                 $this->Timezone=@date_default_timezone_get();
             }
@@ -489,7 +489,7 @@ class Ack extends \josephtingiris\Debug
 
         // User
         if (empty($this->User)) {
-            $this->User = $this->Ack_Config->value("user");
+            $this->User = $this->Ack_Config->configValue("user");
             if (empty($this->User)) {
                 $this->User = "root";
             }
@@ -497,7 +497,7 @@ class Ack extends \josephtingiris\Debug
 
         // UUID
         if (empty($this->UUID)) {
-            $this->UUID = $this->Ack_Config->value("uuid");
+            $this->UUID = $this->Ack_Config->configValue("uuid");
             if (empty($this->UUID)) {
                 $this->UUID = $this->Ack_Variant->variantUUID();
             }
@@ -511,12 +511,12 @@ class Ack extends \josephtingiris\Debug
 
         // Client_Anaconda
         if (empty($this->Client_Anaconda)) {
-            $this->Client_Anaconda = $this->Ack_Client->anaconda();
+            $this->Client_Anaconda = $this->Ack_Client->clientAnaconda();
         }
 
         // Client_Architecture
         if (empty($this->Client_Architecture)) {
-            $this->Client_Architecture = $this->Ack_Client->anacondaArchitecture();
+            $this->Client_Architecture = $this->Ack_Client->clientAnacondaArchitecture();
         }
 
         // Client_Authorized
@@ -540,12 +540,12 @@ class Ack extends \josephtingiris\Debug
             $this->Client_Hostname = "localhost";
         }
 
-        $ack_provisioning_ips=$this->Ack_Client->ackProvisioningIPs();
+        $ack_provisioning_ips=$this->Ack_Client->clientProvisioningIPs();
         $this->Zzz = $ack_provisioning_ips;
 
         if (empty($this->Client_IP)) {
             if (!empty($ack_provisioning_ips[0][1])) {
-                $this->Client_IP = $this->Ack_Network->mac($rhn_provisioning_macs[0][1],$this->Client_IP);
+                $this->Client_IP = $this->Ack_Network->networkMAC($rhn_provisioning_macs[0][1],$this->Client_IP);
             } else {
                 $this->Client_IP = $this->Ack_Network->networkIPv4("127.0.0.1");
             }
@@ -563,16 +563,16 @@ class Ack extends \josephtingiris\Debug
             $this->Client_Log_Level = "INFO";
         }
 
-        $rhn_provisioning_macs=$this->Ack_Client->rhnProvisioningMacs();
+        $rhn_provisioning_macs=$this->Ack_Client->clientRHNProvisioningMACs();
 
         if (empty($this->Client_Mac)) {
             if (!empty($rhn_provisioning_macs[0][1])) {
-                $this->Client_Mac = $this->Ack_Network->mac($rhn_provisioning_macs[0][1],$this->Client_IP);
+                $this->Client_Mac = $this->Ack_Network->networkMAC($rhn_provisioning_macs[0][1],$this->Client_IP);
             } else {
                 if (empty($this->Client_IP)) {
                     $this->Client_Mac = "000000000000";
                 } else {
-                    $this->Client_Mac = $this->Ack_Network->mac(null,$this->Client_IP);
+                    $this->Client_Mac = $this->Ack_Network->networkMAC(null,$this->Client_IP);
                 }
             }
         }
@@ -583,7 +583,7 @@ class Ack extends \josephtingiris\Debug
 
         if (empty($this->Client_Mac_0_Address)) {
             if (!empty($rhn_provisioning_macs[0][1])) {
-                $this->Client_Mac = $this->Ack_Network->mac($rhn_provisioning_macs[0][1],$this->Client_IP);
+                $this->Client_Mac = $this->Ack_Network->networkMAC($rhn_provisioning_macs[0][1],$this->Client_IP);
             } else {
                 $this->Client_Mac_0_Address = $this->Client_Mac;
             }
@@ -591,7 +591,7 @@ class Ack extends \josephtingiris\Debug
 
         if (empty($this->Client_Mac_0_Interface)) {
             if (!empty($rhn_provisioning_macs[0][0])) {
-                $this->Client_Mac_0_Address = $this->Ack_Network->mac($rhn_provisioning_macs[0][0],$this->Client_IP);
+                $this->Client_Mac_0_Address = $this->Ack_Network->networkMAC($rhn_provisioning_macs[0][0],$this->Client_IP);
             } else {
                 $this->Client_Mac_0_Interface = $this->Client_IP_0_Interface;
             }
@@ -602,15 +602,15 @@ class Ack extends \josephtingiris\Debug
         }
 
         if (empty($this->Client_Ppi)) {
-            $this->Client_Ppi = $this->Ack_Client->ppi();
+            $this->Client_Ppi = $this->Ack_Client->clientPrePostInstall();
         }
 
         if (empty($this->Client_Serial_Number)) {
-            $this->Client_Serial_Number = $this->Ack_Client->anacondaSystemSerialNumber();
+            $this->Client_Serial_Number = $this->Ack_Client->clientAnacondaSystemSerialNumber();
         }
 
         if (empty($this->Client_System_Release)) {
-            $this->Client_System_Release = $this->Ack_Client->anacondaSystemRelease();
+            $this->Client_System_Release = $this->Ack_Client->clientAnacondaSystemRelease();
         }
 
         if (empty($this->Client_Template_Kickstart)) {

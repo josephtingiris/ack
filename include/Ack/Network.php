@@ -141,9 +141,9 @@ class Network extends \josephtingiris\Debug
             $return_ip=long2ip($return_ip);
         }
             $Ack_Log = new \josephtingiris\Ack\Log;
-            $Ack_Log->message("invalid ack_ip '$ip'","WARNING");
+            $Ack_Log->logMessage("invalid ack_ip '$ip'","WARNING");
         if (!filter_var($return_ip, FILTER_VALIDATE_IP)) {
-            $this->Ack_Log->message("invalid ack_ip '$ip'","WARNING");
+            $this->Ack_Log->logMessage("invalid ack_ip '$ip'","WARNING");
             $return_ip=null;
         }
 
@@ -151,7 +151,7 @@ class Network extends \josephtingiris\Debug
     }
 
     # return an array with an inteface's address(es), cidr, & mask, or optionally a string of the (first) address, cidr, or mask
-    function ipv4Address($interface=null, $address=false, $cidr=false, $mask=false) {
+    function networkIPv4Address($interface=null, $address=false, $cidr=false, $mask=false) {
 
         $interface=trim($interface);
         if (empty($interface)) {
@@ -207,7 +207,7 @@ class Network extends \josephtingiris\Debug
                             if (isset($ip_cidr) && is_int($ip_cidr)) {
                                 $Ack->debugValue("ip_cidr",15,$ip_cidr);
                                 if (!$address && !$cidr && $mask) {
-                                    return ipv4Netmask($ip_cidr);
+                                    return networkIPv4Netmask($ip_cidr);
                                 } else {
                                     $Ack->debugValue($ip_explode_line,15);
                                 }
@@ -221,12 +221,12 @@ class Network extends \josephtingiris\Debug
             exit(0);
         } else {
             // failure
-            $this->Ack_Log->message("'$ip_cmd' failed","ERROR");
+            $this->Ack_Log->logMessage("'$ip_cmd' failed","ERROR");
         }
     }
 
     # if an ip is in a cidr range return true else return false
-    function ipv4Authorized($ip, $cidr) {
+    function networkIPv4Authorized($ip, $cidr) {
 
         /*
          * begin function logic
@@ -250,7 +250,7 @@ class Network extends \josephtingiris\Debug
 
     }
 
-    function ipv4Netmask($ip) {
+    function networkIPv4Netmask($ip) {
 
         if (strpos($ip, '/') !== false) {
             $cidr = substr ($ip, strpos ($ip, '/') + 1) * 1;
@@ -271,7 +271,7 @@ class Network extends \josephtingiris\Debug
     /**
      * validate & return a formatted mac address
      */
-    function mac($mac=null,$mac_ip=null) {
+    function networkMAC($mac=null,$mac_ip=null) {
 
         /*
          * begin function logic

@@ -89,7 +89,7 @@ class Client extends \josephtingiris\Debug
          */
     }
 
-    public function ackProvisioningIPs()
+    public function clientProvisioningIPs()
     {
         /*
          * begin function logic
@@ -97,12 +97,12 @@ class Client extends \josephtingiris\Debug
 
         $provisioning_ips = array();
 
-        # HTTP_X_ACK_PROVISIONING_IP_0=eth0 1.2.3.4
-        #$_SERVER["HTTP_X_ACK_PROVISIONING_IP_0"]="br1 1.2.3.4";
+        # HTTP_X_PROVISIONING_IP_0=eth0 1.2.3.4
+        #$_SERVER["HTTP_X_PROVISIONING_IP_0"]="br1 1.2.3.4";
         for ($interface=0; $interface<=10; $interface++) {
-            if (isset($_SERVER["HTTP_X_ACK_PROVISIONING_IP_".$interface])) {
-                if (strpos($_SERVER["HTTP_X_ACK_PROVISIONING_IP_".$interface]," ") !== false) {
-                    $provisioning_ips[$interface]=explode(" ",$_SERVER["HTTP_X_ACK_PROVISIONING_IP_".$interface]);
+            if (isset($_SERVER["HTTP_X_PROVISIONING_IP_".$interface])) {
+                if (strpos($_SERVER["HTTP_X_PROVISIONING_IP_".$interface]," ") !== false) {
+                    $provisioning_ips[$interface]=explode(" ",$_SERVER["HTTP_X_PROVISIONING_IP_".$interface]);
                 }
             } else {
                 break;
@@ -116,7 +116,7 @@ class Client extends \josephtingiris\Debug
          */
     }
 
-    public function anaconda()
+    public function clientAnaconda()
     {
         /*
          * begin function logic
@@ -124,15 +124,15 @@ class Client extends \josephtingiris\Debug
 
         $anaconda = false;
 
-        if (!empty($this->anacondaArchitecture())) {
+        if (!empty($this->clientAnacondaArchitecture())) {
             $anaconda = true;
         }
 
-        if (!empty($this->anacondaSystemRelease())) {
+        if (!empty($this->clientAnacondaSystemRelease())) {
             $anaconda = true;
         }
 
-        if (!empty($this->rhnProvisioningMacs())) {
+        if (!empty($this->clientRHNProvisioningMACs())) {
             $anaconda = true;
         }
 
@@ -143,7 +143,7 @@ class Client extends \josephtingiris\Debug
          */
     }
 
-    public function anacondaArchitecture()
+    public function clientAnacondaArchitecture()
     {
         /*
          * begin function logic
@@ -163,7 +163,7 @@ class Client extends \josephtingiris\Debug
          */
     }
 
-    public function anacondaSystemRelease()
+    public function clientAnacondaSystemRelease()
     {
         /*
          * begin function logic
@@ -183,7 +183,7 @@ class Client extends \josephtingiris\Debug
          */
     }
 
-    public function anacondaSystemSerialNumber()
+    public function clientAnacondaSystemSerialNumber()
     {
         /*
          * begin function logic
@@ -203,7 +203,7 @@ class Client extends \josephtingiris\Debug
          */
     }
 
-    public function ppi()
+    public function clientPrePostInstall()
     {
         /*
          * begin function logic
@@ -211,7 +211,7 @@ class Client extends \josephtingiris\Debug
 
         $ppi = false;
 
-        if (!empty($this->ackProvisioningIPs())) {
+        if (!empty($this->clientProvisioningIPs())) {
             $ppi = true;
         }
 
@@ -222,7 +222,7 @@ class Client extends \josephtingiris\Debug
          */
     }
 
-    public function rhnProvisioningMacs()
+    public function clientRHNProvisioningMACs()
     {
         /*
          * begin function logic

@@ -103,11 +103,11 @@ class Alert extends \josephtingiris\Debug
             $aborting .= " & alerting";
         }
         $aborting .= ", $aborting_message ... ($return_code)";
-        $aborting=$this->timeStamp($aborting);
+        $aborting=$this->logTimestamp($aborting);
 
-        echo $this->serverBr();
-        echo "$aborting" . $this->serverBr();;
-        echo $this->serverBr();
+        echo $this->serverCR();
+        echo "$aborting" . $this->serverCR();;
+        echo $this->serverCR();
 
         if ($alert) {
             $this->alertMail($subject="!! ABORT !!", $body=$aborting . "\r\n\r\n");

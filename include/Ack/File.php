@@ -93,7 +93,7 @@ class File extends \josephtingiris\Debug
      * returns an array of files found in $search_directory matching patters
      * TODO; make better
      */
-    public function find($search_directory=null, $search_pattern=null, $search_pattern_append=null, $search_recursion=true)
+    public function fileFind($search_directory=null, $search_pattern=null, $search_pattern_append=null, $search_recursion=true)
     {
         /*
          * begin function logic

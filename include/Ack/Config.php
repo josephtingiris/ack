@@ -101,7 +101,7 @@ class Config extends \josephtingiris\Debug
     /**
      * validates the presence of and returns the config file in use as a string
      */
-    public function filename($config_file=null, $abort=true)
+    public function configFilename($config_file=null, $abort=true)
     {
         /*
          * begin function logic
@@ -161,9 +161,9 @@ class Config extends \josephtingiris\Debug
     }
 
     /**
-     * returns the config file value(s), or null
+     * returns the config file configValue(s), or null
      */
-    public function value($config_key=null, $config_section=null, $config_file=null, $abort=false, $alert=false)
+    public function configValue($config_key=null, $config_section=null, $config_file=null, $abort=false, $alert=false)
     {
         /*
          * begin function logic
@@ -171,7 +171,7 @@ class Config extends \josephtingiris\Debug
 
         $debug_level=35;
 
-        $config_file=$this->filename($config_file,$abort);
+        $config_file=$this->configFilename($config_file,$abort);
 
         $this->debugValue("config file",$debug_level,$config_file);
         $this->debugValue("config key",$debug_level,$config_key);

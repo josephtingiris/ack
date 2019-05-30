@@ -94,7 +94,7 @@ class Log extends \josephtingiris\Debug
          */
     }
 
-    public function message($log_message, $log_level=null, $log_file=null)
+    public function logMessage($log_message, $log_level=null, $log_file=null)
     {
         /*
          * begin function logic
@@ -136,7 +136,7 @@ class Log extends \josephtingiris\Debug
             if (is_writable($log_file) && !$error_log) {
                 $fp=fopen($log_file,"a+");
                 if ($fp) {
-                    fwrite($fp,$this->timeStamp($log_message) . "\n");
+                    fwrite($fp,$this->logTimestamp($log_message) . "\n");
                     fclose($fp);
                 } else {
                     $this->Ack_Alert->alertAbort("ERROR opening $log_file",1);
@@ -158,7 +158,7 @@ class Log extends \josephtingiris\Debug
 
     }
 
-    public function timeStamp($timestamp_message=null,$timestamp_force=true) {
+    public function logTimestamp($timestamp_message=null,$timestamp_force=true) {
 
         /*
          * begin function logic

@@ -92,7 +92,7 @@ class Server extends \josephtingiris\Debug
     /**
      * outputs a string with an appropriate line break
      */
-    public function serverBr($input=null)
+    public function serverCR($input=null)
     {
         /*
          * begin function logic
@@ -163,10 +163,10 @@ class Server extends \josephtingiris\Debug
          */
 
         if (!empty($note)) {
-            echo "NOTE:" . $this->serverBr();
-            echo $this->serverBr();
-            echo "$note" . $this->serverBr();
-            echo $this->serverBr();
+            echo "NOTE:" . $this->serverCR();
+            echo $this->serverCR();
+            echo "$note" . $this->serverCR();
+            echo $this->serverCR();
         }
 
         exit(255);
