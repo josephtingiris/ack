@@ -89,4 +89,163 @@ class Client extends \josephtingiris\Debug
          */
     }
 
+    public function ackProvisioningIPs()
+    {
+        /*
+         * begin function logic
+         */
+
+        $provisioning_ips = array();
+
+        # HTTP_X_ACK_PROVISIONING_IP_0=eth0 1.2.3.4
+        #$_SERVER["HTTP_X_ACK_PROVISIONING_IP_0"]="br1 1.2.3.4";
+        for ($interface=0; $interface<=10; $interface++) {
+            if (isset($_SERVER["HTTP_X_ACK_PROVISIONING_IP_".$interface])) {
+                if (strpos($_SERVER["HTTP_X_ACK_PROVISIONING_IP_".$interface]," ") !== false) {
+                    $provisioning_ips[$interface]=explode(" ",$_SERVER["HTTP_X_ACK_PROVISIONING_IP_".$interface]);
+                }
+            } else {
+                break;
+            }
+        }
+
+        return $provisioning_ips;
+
+        /*
+         * end function logic
+         */
+    }
+
+    public function anaconda()
+    {
+        /*
+         * begin function logic
+         */
+
+        $anaconda = false;
+
+        if (!empty($this->anacondaArchitecture())) {
+            $anaconda = true;
+        }
+
+        if (!empty($this->anacondaSystemRelease())) {
+            $anaconda = true;
+        }
+
+        if (!empty($this->rhnProvisioningMacs())) {
+            $anaconda = true;
+        }
+
+        return $anaconda;
+
+        /*
+         * end function logic
+         */
+    }
+
+    public function anacondaArchitecture()
+    {
+        /*
+         * begin function logic
+         */
+
+        $architecture = null;
+
+        # HTTP_X_ANACONDA_ARCHITECTURE=x86_64
+        if (isset($_SERVER["HTTP_X_ANACONDA_ARCHITECTURE"])) {
+            $architecture=trim($_SERVER["HTTP_X_ANACONDA_ARCHITECTURE"]);
+        }
+
+        return $architecture;
+
+        /*
+         * end function logic
+         */
+    }
+
+    public function anacondaSystemRelease()
+    {
+        /*
+         * begin function logic
+         */
+
+        $system_release = null;
+
+        # HTTP_X_ANACONDA_SYSTEM_RELEASE=CentOS
+        if (isset($_SERVER["HTTP_X_ANACONDA_SYSTEM_RELEASE"])) {
+            $system_release=trim($_SERVER["HTTP_X_ANACONDA_SYSTEM_RELEASE"]);
+        }
+
+        return $system_release;
+
+        /*
+         * end function logic
+         */
+    }
+
+    public function anacondaSystemSerialNumber()
+    {
+        /*
+         * begin function logic
+         */
+
+        $serial_number = null;
+
+        # HTTP_X_SYSTEM_SERIAL_NUMBER=VMware-56 4d c1 86 1e 45 27 53-0b 17 58 e1 06 2f 64 ad
+        if (isset($_SERVER["HTTP_X_SYSTEM_SERIAL_NUMBER"])) {
+            $serial_number=trim($_SERVER["HTTP_X_SYSTEM_SERIAL_NUMBER"]);
+        }
+
+        return $serial_number;
+
+        /*
+         * end function logic
+         */
+    }
+
+    public function ppi()
+    {
+        /*
+         * begin function logic
+         */
+
+        $ppi = false;
+
+        if (!empty($this->ackProvisioningIPs())) {
+            $ppi = true;
+        }
+
+        return $ppi;
+
+        /*
+         * end function logic
+         */
+    }
+
+    public function rhnProvisioningMacs()
+    {
+        /*
+         * begin function logic
+         */
+
+        $provisinging_macs = array();
+
+        # HTTP_X_RHN_PROVISIONING_MAC_0=eth0 00:0c:29:2f:64:ad
+        #$_SERVER["HTTP_X_RHN_PROVISIONING_MAC_0"]="br1 00:0c:29:2f:64:ad";
+        for ($interface=0; $interface<=10; $interface++) {
+            if (isset($_SERVER["HTTP_X_RHN_PROVISIONING_MAC_".$interface])) {
+                if (strpos($_SERVER["HTTP_X_RHN_PROVISIONING_MAC_".$interface]," ") !== false) {
+                    $provisinging_macs[$interface]=explode(" ",$_SERVER["HTTP_X_RHN_PROVISIONING_MAC_".$interface]);
+                }
+            } else {
+                break;
+            }
+        }
+
+        return $provisinging_macs;
+
+        /*
+         * end function logic
+         */
+    }
 }

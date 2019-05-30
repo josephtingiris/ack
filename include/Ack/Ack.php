@@ -44,7 +44,7 @@ class Ack extends \josephtingiris\Debug
 
     public $Aaa_Cache = null;
     public $Aaa_Dir = null;
-    public $Authorized_Ips = array();
+    public $Authorized_IPs = array();
     public $Basename = null;
     public $Build_Dir = null;
     public $Component = null;
@@ -57,9 +57,9 @@ class Ack extends \josephtingiris\Debug
     public $Client_Hostname = null;
     public $Client_Install_Uri = null;
     public $Client_Install_Url = null;
-    public $Client_Ip = null;
-    public $Client_Ip_0_Address = null;
-    public $Client_Ip_0_Interface = null;
+    public $Client_IP = null;
+    public $Client_IP_0_Address = null;
+    public $Client_IP_0_Interface = null;
     public $Client_Log_Level = null;
     public $Client_Mac = null;
     public $Client_Mac_0_Address = null;
@@ -86,41 +86,45 @@ class Ack extends \josephtingiris\Debug
     public $Install_Servers = array();
     public $Label = null;
     public $Log_Dir = null;
+    public $Log_File = null;
     public $Media_Dir = null;
     public $Network_Interfaces=array();
+    public $POST_lower = array();
     public $Privacy = null;
     public $Release_Dir = null;
+    public $REQUEST_lower = array();
     public $Ssh_Authorized_Key_Files = array();
     public $Ssh_Authorized_Keys = array();
     public $Start_Time = null;
     public $Timezone = null;
     public $User = null;
-    public $Uuid = null;
+    public $UUID = null;
     public $Vm_Dir = null;
     public $Zero = null;
+    public $Zzz = null;
 
     // these should probably be static or private
-    public $Default_Ip_Address=null; // lowest metric? ipv4 or ipv6 ??
-    public $Default_Ip_Cidr=null;
-    public $Default_Ip_Interface=null;
-    public $Default_Ip_Destination=null;
-    public $Default_Ip_Gateway=null;
-    public $Default_Ip_Mac=null;
-    public $Default_Ip_Netmask=null;
-    public $Ipv4_Default_Address=null;
-    public $Ipv4_Default_Cidr=null;
-    public $Ipv4_Default_Interface=null;
-    public $Ipv4_Default_Destination=null;
-    public $Ipv4_Default_Gateway=null;
-    public $Ipv4_Default_Mac=null;
-    public $Ipv4_Default_Netmask=null;
-    public $Ipv6_Default_Address=null;
-    public $Ipv6_Default_Cidr=null;
-    public $Ipv6_Default_Interface=null;
-    public $Ipv6_Default_Destination=null;
-    public $Ipv6_Default_Gateway=null;
-    public $Ipv6_Default_Mac=null;
-    public $Ipv6_Default_Netmask=null;
+    public $Default_IP_Address=null; // lowest metric? ipv4 or ipv6 ??
+    public $Default_IP_Cidr=null;
+    public $Default_IP_Interface=null;
+    public $Default_IP_Destination=null;
+    public $Default_IP_Gateway=null;
+    public $Default_IP_Mac=null;
+    public $Default_IP_Netmask=null;
+    public $IPv4_Default_Address=null;
+    public $IPv4_Default_Cidr=null;
+    public $IPv4_Default_Interface=null;
+    public $IPv4_Default_Destination=null;
+    public $IPv4_Default_Gateway=null;
+    public $IPv4_Default_Mac=null;
+    public $IPv4_Default_Netmask=null;
+    public $IPv6_Default_Address=null;
+    public $IPv6_Default_Cidr=null;
+    public $IPv6_Default_Interface=null;
+    public $IPv6_Default_Destination=null;
+    public $IPv6_Default_Gateway=null;
+    public $IPv6_Default_Mac=null;
+    public $IPv6_Default_Netmask=null;
 
     /*
      * private properties.
@@ -213,7 +217,7 @@ class Ack extends \josephtingiris\Debug
 
         // Label
         if (empty($this->Label)) {
-            $this->Label= "ack";
+            $this->Label="ack";
         }
 
         // Etc_Dir
@@ -228,6 +232,25 @@ class Ack extends \josephtingiris\Debug
             }
         }
 
+        // GET_lower
+        if (!empty($_GET) && is_array($_GET)) {
+            $this->GET_lower = array_change_key_case($_GET, CASE_LOWER);
+        }
+
+        // POST_lower
+        if (!empty($_POST) && is_array($_POST)) {
+            $this->POST_lower = array_change_key_case($_POST, CASE_LOWER);
+        }
+
+        // REQUEST_lower
+        if (!empty($_REQUEST) && is_array($_REQUEST)) {
+            $this->REQUEST_lower = array_change_key_case($_REQUEST, CASE_LOWER);
+        }
+
+        if (isset($REQUEST_lower['debug'])) {
+            $GLOBALS["DEBUG"]=(int)$REQUEST_lower['debug'];
+        }
+
         /*
          *
          * initial (server) properties that can be set via (server) config file (i.e. ack.ini)
@@ -238,7 +261,7 @@ class Ack extends \josephtingiris\Debug
         if (empty($this->Environment)) {
             $this->Environment = $this->Ack_Config->value("environment");
             if (empty($this->Environment)) {
-                $this->Environment = $this->Ack_Server->environment();
+                $this->Environment = $this->Ack_Server->serverEnvironment();
             }
         }
         $this->Ack_Config->Environment = $this->Environment;
@@ -265,11 +288,11 @@ class Ack extends \josephtingiris\Debug
             }
         }
 
-        // Authorized_Ips
-        if (empty($this->Authorized_Ips)) {
-            $this->Authorized_Ips = $this->Ack_Config->value("authorized_ips");
-            if (empty($this->Authorized_Ips)) {
-                $this->Authorized_Ips = array(
+        // Authorized_IPs
+        if (empty($this->Authorized_IPs)) {
+            $this->Authorized_IPs = $this->Ack_Config->value("authorized_ips");
+            if (empty($this->Authorized_IPs)) {
+                $this->Authorized_IPs = array(
                     "127.0.0.0/8",
                 );
             }
@@ -335,6 +358,15 @@ class Ack extends \josephtingiris\Debug
             }
         }
 
+        // Log_File
+        if (empty($this->Log_File)) {
+            $this->Log_File=$this->Ack_Config->value("log_file");
+            if (empty($this->Log_File)) {
+                $this->Log_File=$this->Log_Dir . "/" . $this->Label . ".log";
+            }
+        }
+        $GLOBALS["Log_File"]=$this->Log_File;
+
         // Media_Dir
         if (empty($this->Media_Dir)) {
             $this->Media_Dir=$this->Ack_Config->value("media_dir");
@@ -394,7 +426,7 @@ class Ack extends \josephtingiris\Debug
         if (empty($this->Network_Interfaces)) {
             $this->Network_Interfaces = $this->Ack_Config->value("network_interfaces"); // TODO; document the use of this
             if (empty($this->Network_Interfaces)) {
-                $this->Network_Interfaces = $this->Ack_Network->interfaces();
+                $this->Network_Interfaces = $this->Ack_Network->networkInterfaces();
             }
         }
 
@@ -463,11 +495,11 @@ class Ack extends \josephtingiris\Debug
             }
         }
 
-        // Uuid
-        if (empty($this->Uuid)) {
-            $this->Uuid = $this->Ack_Config->value("uuid");
-            if (empty($this->Uuid)) {
-                $this->Uuid = $this->Ack_Variant->uuid();
+        // UUID
+        if (empty($this->UUID)) {
+            $this->UUID = $this->Ack_Config->value("uuid");
+            if (empty($this->UUID)) {
+                $this->UUID = $this->Ack_Variant->variantUUID();
             }
         }
 
@@ -479,12 +511,12 @@ class Ack extends \josephtingiris\Debug
 
         // Client_Anaconda
         if (empty($this->Client_Anaconda)) {
-            $this->Client_Anaconda = false;
+            $this->Client_Anaconda = $this->Ack_Client->anaconda();
         }
 
         // Client_Architecture
         if (empty($this->Client_Architecture)) {
-            $this->Client_Architecture = null;
+            $this->Client_Architecture = $this->Ack_Client->anacondaArchitecture();
         }
 
         // Client_Authorized
@@ -507,24 +539,42 @@ class Ack extends \josephtingiris\Debug
         if (empty($this->Client_Hostname)) {
             $this->Client_Hostname = "localhost";
         }
-        if (empty($this->Client_Ip)) {
-            $this->Client_Ip = "127.0.0.1";
+
+        $ack_provisioning_ips=$this->Ack_Client->ackProvisioningIPs();
+        $this->Zzz = $ack_provisioning_ips;
+
+        if (empty($this->Client_IP)) {
+            if (!empty($ack_provisioning_ips[0][1])) {
+                $this->Client_IP = $this->Ack_Network->mac($rhn_provisioning_macs[0][1],$this->Client_IP);
+            } else {
+                $this->Client_IP = $this->Ack_Network->networkIPv4("127.0.0.1");
+            }
         }
 
-        if (empty($this->Client_Ip_0_Address)) {
-            $this->Client_Ip_0_Address = $this->Client_Ip;
+        if (empty($this->Client_IP_0_Address)) {
+            $this->Client_IP_0_Address = $this->Client_IP;
         }
 
-        if (empty($this->Client_Ip_0_Interface)) {
-            $this->Client_Ip_0_Interface = "eth0";
+        if (empty($this->Client_IP_0_Interface)) {
+            $this->Client_IP_0_Interface = "eth0";
         }
 
         if (empty($this->Client_Log_Level)) {
             $this->Client_Log_Level = "INFO";
         }
 
+        $rhn_provisioning_macs=$this->Ack_Client->rhnProvisioningMacs();
+
         if (empty($this->Client_Mac)) {
-            $this->Client_Mac = "000000000000";
+            if (!empty($rhn_provisioning_macs[0][1])) {
+                $this->Client_Mac = $this->Ack_Network->mac($rhn_provisioning_macs[0][1],$this->Client_IP);
+            } else {
+                if (empty($this->Client_IP)) {
+                    $this->Client_Mac = "000000000000";
+                } else {
+                    $this->Client_Mac = $this->Ack_Network->mac(null,$this->Client_IP);
+                }
+            }
         }
 
         if (empty($this->Client_Aaa)) {
@@ -532,11 +582,19 @@ class Ack extends \josephtingiris\Debug
         }
 
         if (empty($this->Client_Mac_0_Address)) {
-            $this->Client_Mac_0_Address = $this->Client_Mac;
+            if (!empty($rhn_provisioning_macs[0][1])) {
+                $this->Client_Mac = $this->Ack_Network->mac($rhn_provisioning_macs[0][1],$this->Client_IP);
+            } else {
+                $this->Client_Mac_0_Address = $this->Client_Mac;
+            }
         }
 
         if (empty($this->Client_Mac_0_Interface)) {
-            $this->Client_Mac_0_Interface = $this->Client_Ip_0_Interface;
+            if (!empty($rhn_provisioning_macs[0][0])) {
+                $this->Client_Mac_0_Address = $this->Ack_Network->mac($rhn_provisioning_macs[0][0],$this->Client_IP);
+            } else {
+                $this->Client_Mac_0_Interface = $this->Client_IP_0_Interface;
+            }
         }
 
         if (empty($this->Client_Password)) {
@@ -544,15 +602,15 @@ class Ack extends \josephtingiris\Debug
         }
 
         if (empty($this->Client_Ppi)) {
-            $this->Client_Ppi = null;
+            $this->Client_Ppi = $this->Ack_Client->ppi();
         }
 
         if (empty($this->Client_Serial_Number)) {
-            $this->Client_Serial_Number = null;
+            $this->Client_Serial_Number = $this->Ack_Client->anacondaSystemSerialNumber();
         }
 
         if (empty($this->Client_System_Release)) {
-            $this->Client_System_Release = null;
+            $this->Client_System_Release = $this->Ack_Client->anacondaSystemRelease();
         }
 
         if (empty($this->Client_Template_Kickstart)) {

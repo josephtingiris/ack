@@ -120,7 +120,7 @@ class Database extends \josephtingiris\Debug
 
         if (mysqli_connect_errno()) {
             $failure_reason="ERROR: connection to host='" . $mysqli_config["mysql_host"] . "', db = '" . $mysqli_config["mysql_db"] . "' failed";
-            return $this->failure($failure_reason, $abort, $alert);
+            return $this->alertFail($failure_reason, $abort, $alert);
         }
 
         return $mysqli;
@@ -151,7 +151,7 @@ class Database extends \josephtingiris\Debug
         $config_section_values = $this->Ack_Config->value("",$config_section);
         if (empty($config_section_values)) {
             $failure_reason="ERROR: $config_file section $config_section is empty";
-            return $this->failure($failure_reason, $abort, $alert);
+            return $this->alertFail($failure_reason, $abort, $alert);
         }
 
         $return_values=array();

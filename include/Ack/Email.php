@@ -128,7 +128,7 @@ class Email extends \josephtingiris\Debug
         $rfc2822_mailer=preg_replace("/\\\/","-",get_class($this)) . " " . __FUNCTION__ . " [version $rfc2822_mailer_version]";
 
         // set the rfc2822_domain & rfc2822_user; these will be reused
-        if ($this->Ack_Server->cli()) {
+        if ($this->Ack_Server->serverCLI()) {
             // not apache, from is empty so set from to process user
             $rfc2822_domain = gethostname();
 
@@ -168,7 +168,7 @@ class Email extends \josephtingiris\Debug
         // check recipients array
         if (empty($recipients)) {
             $failure_reason = "failure, recipients are empty";
-            return $this->Ack_Alert->failure($failure_reason, false, $abort);
+            return $this->Ack_Alert->alertFail($failure_reason, false, $abort);
         } else {
             // $to is used again, as an array, later ...
             $to = $recipients;
@@ -329,7 +329,7 @@ class Email extends \josephtingiris\Debug
                             }
                         }
 
-                        $this->Ack_Alert->failure($failure_reason, false, $abort);
+                        $this->Ack_Alert->alertFail($failure_reason, false, $abort);
 
                         // Comments: to rfc2822_headers
                         $rfc2822_headers[] = "Comments: $failure_reason";
@@ -490,7 +490,7 @@ class Email extends \josephtingiris\Debug
                 unset($rfc2822_headers[$rfc2822_headers_key]);
 
                 $failure_reason = "error, removed invalid rfc2822 header [$rfc2822_headers_key] key '$rfc2822_headers_value' (no colon)";
-                $this->failure($failure_reason, false, $abort);
+                $this->alertFail($failure_reason, false, $abort);
 
                 unset($rfc2822_headers_strpos);
                 continue;
@@ -508,7 +508,7 @@ class Email extends \josephtingiris\Debug
                     unset($rfc2822_headers[$rfc2822_headers_key]);
 
                     $failure_reason = "error, removed invalid rfc2822 header [$rfc2822_headers_key] key '$rfc2822_headers_value' (rejected '$rfc2822_header_key_reject')";
-                    $this->Ack_Alert->failure($failure_reason, false, $abort);
+                    $this->Ack_Alert->alertFail($failure_reason, false, $abort);
 
                     unset($rfc2822_header_key_reject_strpos);
                     continue;
@@ -548,7 +548,7 @@ class Email extends \josephtingiris\Debug
                                 // do not add the rfc5351 invalid address
 
                                 $failure_reason = "error, removed invalid $rfc2822_address_list address '$rfc2822_address'";
-                                $this->Ack_Alert->failure($failure_reason, false, $abort);
+                                $this->Ack_Alert->alertFail($failure_reason, false, $abort);
 
                                 // Comments: to rfc2822_headers
                                 $rfc2822_headers[] = "Comments: $failure_reason";
@@ -595,7 +595,7 @@ class Email extends \josephtingiris\Debug
                             // note; What if I want to send an email with sendmail/postfix via a web page to someone@hostname?
                             // note; Or, to someone@hostname.localdomain ??  rfc2822 (and sendmail/postfix) allow this!
 
-                            if ($this->Ack_Server->cli()) {
+                            if ($this->Ack_Server->serverCLI()) {
 
                                 // this happens if it's NOT called via apache mod_php (adhere to rfc2822)
 
@@ -622,7 +622,7 @@ class Email extends \josephtingiris\Debug
                                     // do not add the second component, it's not a valid email address (it should be)
 
                                     $failure_reason = "error, removed invalid $rfc2822_address_list address '$rfc2822_address' (reversed)";
-                                    $this->Ack_Alert->failure($failure_reason, false, $abort);
+                                    $this->Ack_Alert->alertFail($failure_reason, false, $abort);
 
                                     // Comments: to rfc2822_headers
                                     $rfc2822_headers[] = "Comments: $failure_reason";
@@ -672,7 +672,7 @@ class Email extends \josephtingiris\Debug
                 unset($rfc2822_headers[$rfc2822_headers_key]);
 
                 $failure_reason = "error, removed invalid rfc2822 header [$rfc2822_headers_key] value for '$rfc2822_header_key' (no value)";
-                $this->Ack_Alert->failure($failure_reason, false, $abort);
+                $this->Ack_Alert->alertFail($failure_reason, false, $abort);
 
                 unset($rfc2822_headers_strpos);
             }
@@ -714,7 +714,7 @@ class Email extends \josephtingiris\Debug
         } else {
             // no from, can't set sender ... return false
             $failure_reason = "failure, can't determine from address (no sender)";
-            return $this->Ack_Alert->failure($failure_reason, false, $abort);
+            return $this->Ack_Alert->alertFail($failure_reason, false, $abort);
         }
 
         $this->debugValue("rfc2822_from",$debug_level,$rfc2822_from);
@@ -724,7 +724,7 @@ class Email extends \josephtingiris\Debug
         if (!$rfc2822_headers_sender) {
             // no sender, something went wrong ... return false
             $failure_reason = "failure, can't determine sender address (no header)";
-            return $this->Ack_Alert->failure($failure_reason, false, $abort);
+            return $this->Ack_Alert->alertFail($failure_reason, false, $abort);
         }
 
         $this->debugValue("rfc2822_sender",$debug_level,$rfc2822_sender);
@@ -736,7 +736,7 @@ class Email extends \josephtingiris\Debug
         }
 
         if (!preg_grep("/^Message-id:/i",$rfc2822_headers)) {
-            $rfc2822_headers[] = 'Message-id: <' . $this->Ack_Variant->uuid() . '@' . $rfc2822_domain . '>';
+            $rfc2822_headers[] = 'Message-id: <' . $this->Ack_Variant->variantUUID() . '@' . $rfc2822_domain . '>';
         }
 
         if (!preg_grep("/^Return-path:/i",$rfc2822_headers)) {
@@ -748,7 +748,7 @@ class Email extends \josephtingiris\Debug
         }
 
         if (!preg_grep("/^Thread-index:/i",$rfc2822_headers)) {
-            $rfc2822_headers[] = "Thread-index: " . $this->Ack_Variant->uuid();
+            $rfc2822_headers[] = "Thread-index: " . $this->Ack_Variant->variantUUID();
         }
 
         if (!preg_grep("/^X-priority:/i",$rfc2822_headers)) {
@@ -852,7 +852,7 @@ class Email extends \josephtingiris\Debug
         if (!preg_grep("/^Content-type:/i",$rfc2822_headers)) {
             if (count($body_parts) > 1 || !empty($attachments)) {
                 // create a unique rfc2822 boundary string
-                $rfc2822_boundary = preg_replace("/\\\/","-",get_class($this)) . "-" . $this->Ack_Variant->uuid();
+                $rfc2822_boundary = preg_replace("/\\\/","-",get_class($this)) . "-" . $this->Ack_Variant->variantUUID();
 
                 $rfc2822_headers[] = "Content-type: multipart/alternative; boundary=$rfc2822_boundary";
             } else {
@@ -991,7 +991,7 @@ class Email extends \josephtingiris\Debug
             $this->debug("success, email to '$to', subject '$subject' sent!",1);
         } else {
             $failure_reason = "error, email to '$to', subject '$subject' not sent";
-            return $this->Ack_Alert->failure($failure_reason, false, $abort);
+            return $this->Ack_Alert->alertFail($failure_reason, false, $abort);
         }
 
         return $email_sent;

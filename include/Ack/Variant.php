@@ -94,7 +94,7 @@ class Variant extends \josephtingiris\Debug
     /**
      * returns curl output as an array
      */
-    public function curl($url=null, $curl_options=null, $abort=false, $alert=false)
+    public function variantCurl($url=null, $curl_options=null, $abort=false, $alert=false)
     {
         /*
          * begin function logic
@@ -175,7 +175,7 @@ class Variant extends \josephtingiris\Debug
     /**
      * return a RFC 4122 compliant universally unique identifier
      */
-    public function uuid()
+    public function variantUUID()
     {
         /*
          * begin function logic

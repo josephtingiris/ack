@@ -92,7 +92,7 @@ class Alert extends \josephtingiris\Debug
     /**
      * aborts (exits, dies) with a given message & return code
      */
-    public function aborting($aborting_message=null, $return_code=1, $alert=false)
+    public function alertAbort($aborting_message=null, $return_code=1, $alert=false)
     {
         /*
          * begin function logic
@@ -105,9 +105,9 @@ class Alert extends \josephtingiris\Debug
         $aborting .= ", $aborting_message ... ($return_code)";
         $aborting=$this->timeStamp($aborting);
 
-        echo $this->br();
-        echo "$aborting" . $this->br();;
-        echo $this->br();
+        echo $this->serverBr();
+        echo "$aborting" . $this->serverBr();;
+        echo $this->serverBr();
 
         if ($alert) {
             $this->alertMail($subject="!! ABORT !!", $body=$aborting . "\r\n\r\n");
@@ -121,27 +121,33 @@ class Alert extends \josephtingiris\Debug
     }
 
     /**
-     * fail (aborts) with a non-zero return code & sends an alert email with a given message
+     * output a debug message & return false or abort
      */
-    public function alertFail($subject=null, $body=null, $to=null, $from=null, $cc=null)
+    public function alertFail($failure_reason=null, $abort=false, $alert=false)
     {
         /*
          * begin function logic
          */
 
-        $this->debug("alertFail subject=$subject, to=$to, from=$from, cc=$cc", 0);
+        $debug_level = 3;
 
-        $this->alertMail($subject,$body,$to,$from,$cc);
-
-        if (empty($body)) {
-            if (empty($subject)) {
-                $body = __FUNCTION__;
-            } else {
-                $body = $subject;
-            }
+        if ($failure_reason == null) {
+            $failure_reason = "failure";
         }
 
-        $this->aborting($body, 255);
+        $failure_reason = trim($failure_reason);
+        $failure_reason = trim($failure_reason,",");
+
+        if ($abort) {
+            $this->alertAbort($failure_reason,1,$alert);
+        } else {
+            if ($alert) {
+                $this->alertMail($failure_reason);
+            } else {
+                $this->debug($failure_reason, $debug_level);
+            }
+            return false;
+        }
 
         /*
          * end function logic
@@ -202,7 +208,7 @@ class Alert extends \josephtingiris\Debug
 
         if (empty($to) || empty($from)) {
             $failure_reason = "error, either to or from address are empty";
-            return $this->failure($failure_reason, false, false);
+            return $this->alertFail($failure_reason, false, false);
         }
 
         $hostname=gethostname();
@@ -278,33 +284,27 @@ class Alert extends \josephtingiris\Debug
     }
 
     /**
-     * output a debug message & return false or abort
+     * fail (aborts) with a non-zero return code & sends an alert email with a given message
      */
-    public function failure($failure_reason=null, $abort=false, $alert=false)
+    public function alertMailAbort($subject=null, $body=null, $to=null, $from=null, $cc=null)
     {
         /*
          * begin function logic
          */
 
-        $debug_level = 3;
+        $this->debug("alertMailAbort subject=$subject, to=$to, from=$from, cc=$cc", 0);
 
-        if ($failure_reason == null) {
-            $failure_reason = "failure";
-        }
+        $this->alertMail($subject,$body,$to,$from,$cc);
 
-        $failure_reason = trim($failure_reason);
-        $failure_reason = trim($failure_reason,",");
-
-        if ($abort) {
-            $this->aborting($failure_reason,1,$alert);
-        } else {
-            if ($alert) {
-                $this->alertMail($failure_reason);
+        if (empty($body)) {
+            if (empty($subject)) {
+                $body = __FUNCTION__;
             } else {
-                $this->debug($failure_reason, $debug_level);
+                $body = $subject;
             }
-            return false;
         }
+
+        $this->alertAbort($body, 255);
 
         /*
          * end function logic

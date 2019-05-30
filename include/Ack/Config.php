@@ -146,7 +146,7 @@ class Config extends \josephtingiris\Debug
 
         if (!is_readable($this->Config_File) || !is_file($this->Config_File)) {
             if ($abort) {
-                $this->Ack_Alert->aborting("ERROR: $config_file file not readable",1);
+                $this->Ack_Alert->alertAbort("ERROR: $config_file file not readable",1);
             } else {
                 $this->debug("ERROR: $config_file file not readable");
             }
@@ -185,7 +185,7 @@ class Config extends \josephtingiris\Debug
         // if there are no config values then abort or return nothing
         if (empty($this->Config_Values)) {
             if ($abort) {
-                $this->Ack_Alert->aborting("ERROR: $config_file is empty",1);
+                $this->Ack_Alert->alertAbort("ERROR: $config_file is empty",1);
             } else {
                 $this->debug("ERROR: $config_file is empty",0);
                 return null;
@@ -240,7 +240,7 @@ class Config extends \josephtingiris\Debug
 
         $config_environment = $this->Environment;
         if (empty($config_environment)) {
-            $config_environment = $this->Ack_Server->environment();
+            $config_environment = $this->Ack_Server->serverEnvironment();
         }
 
         $config_value=null;
@@ -289,7 +289,7 @@ class Config extends \josephtingiris\Debug
                 $aborting_message .= " in section [$config_section]";
             }
             $aborting_message .= " for '$config_key'";
-            $this->aborting("$aborting_message",3);
+            $this->alertAbort("$aborting_message",3);
         } else {
             $this->debug($config_message,$debug_level);
         }

@@ -92,13 +92,13 @@ class Server extends \josephtingiris\Debug
     /**
      * outputs a string with an appropriate line break
      */
-    public function br($input=null)
+    public function serverBr($input=null)
     {
         /*
          * begin function logic
          */
 
-        if ($this->cli()) {
+        if ($this->serverCLI()) {
             //echo "this is being run via cli";
             $br = "$input\n";
         } else {
@@ -116,7 +116,7 @@ class Server extends \josephtingiris\Debug
     /**
      * outputs a boolean if it's *not* running under a web server
      */
-    public function cli()
+    public function serverCLI()
     {
         /*
          * begin function logic
@@ -136,7 +136,7 @@ class Server extends \josephtingiris\Debug
     /**
      * outputs a string with a machine's environment
      */
-    public function environment()
+    public function serverEnvironment()
     {
         /*
          * begin function logic
@@ -156,17 +156,17 @@ class Server extends \josephtingiris\Debug
     /**
      * Display a usage message and stop
      */
-    public function usage($note=null)
+    public function serverUsage($note=null)
     {
         /*
          * begin function logic
          */
 
         if (!empty($note)) {
-            echo "NOTE:" . $this->br();
-            echo $this->br();
-            echo "$note" . $this->br();
-            echo $this->br();
+            echo "NOTE:" . $this->serverBr();
+            echo $this->serverBr();
+            echo "$note" . $this->serverBr();
+            echo $this->serverBr();
         }
 
         exit(255);
