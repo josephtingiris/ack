@@ -68,7 +68,7 @@ class Database extends \josephtingiris\Debug
             parent::__construct($debug_level_construct); // execute parent __construct;
         }
 
-        $this->Ack_Config = new \josephtingiris\Ack\Config;
+        $this->Ack_Config = new \josephtingiris\Ack\Config();
 
         // Config_File
         $this->Config_File=$this->Ack_Config->configFilename($this->Config_File);

@@ -70,7 +70,7 @@ class Log extends \josephtingiris\Debug
 
         $this->debug("Class = " . __CLASS__, 20);
 
-        $this->Ack_Alert = new \josephtingiris\Ack\Alert;
+        $this->Ack_Alert = new \josephtingiris\Ack\Alert();
 
         /*
          * end function logic

@@ -67,9 +67,9 @@ class Email extends \josephtingiris\Debug
 
         $this->debug("Class = " . __CLASS__, 20);
 
-        $this->Ack_Alert = new \josephtingiris\Ack\Alert;
-        $this->Ack_Server = new \josephtingiris\Ack\Server;
-        $this->Ack_Variant = new \josephtingiris\Ack\Variant;
+        $this->Ack_Alert = new \josephtingiris\Ack\Alert();
+        $this->Ack_Server = new \josephtingiris\Ack\Server();
+        $this->Ack_Sub = new \josephtingiris\Ack\Sub();
 
         /*
          * end function logic
@@ -736,7 +736,7 @@ class Email extends \josephtingiris\Debug
         }
 
         if (!preg_grep("/^Message-id:/i",$rfc2822_headers)) {
-            $rfc2822_headers[] = 'Message-id: <' . $this->Ack_Variant->variantUUID() . '@' . $rfc2822_domain . '>';
+            $rfc2822_headers[] = 'Message-id: <' . $this->Ack_Sub->subUUID() . '@' . $rfc2822_domain . '>';
         }
 
         if (!preg_grep("/^Return-path:/i",$rfc2822_headers)) {
@@ -748,7 +748,7 @@ class Email extends \josephtingiris\Debug
         }
 
         if (!preg_grep("/^Thread-index:/i",$rfc2822_headers)) {
-            $rfc2822_headers[] = "Thread-index: " . $this->Ack_Variant->variantUUID();
+            $rfc2822_headers[] = "Thread-index: " . $this->Ack_Sub->subUUID();
         }
 
         if (!preg_grep("/^X-priority:/i",$rfc2822_headers)) {
@@ -852,7 +852,7 @@ class Email extends \josephtingiris\Debug
         if (!preg_grep("/^Content-type:/i",$rfc2822_headers)) {
             if (count($body_parts) > 1 || !empty($attachments)) {
                 // create a unique rfc2822 boundary string
-                $rfc2822_boundary = preg_replace("/\\\/","-",get_class($this)) . "-" . $this->Ack_Variant->variantUUID();
+                $rfc2822_boundary = preg_replace("/\\\/","-",get_class($this)) . "-" . $this->Ack_Sub->subUUID();
 
                 $rfc2822_headers[] = "Content-type: multipart/alternative; boundary=$rfc2822_boundary";
             } else {

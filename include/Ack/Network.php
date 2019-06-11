@@ -67,7 +67,8 @@ class Network extends \josephtingiris\Debug
 
         $this->debug("Class = " . __CLASS__, 20);
 
-
+        $this->Ack_Log = new \josephtingiris\Ack\Log();
+        $this->Ack_Sub = new \josephtingiris\Ack\Sub();
 
         /*
          * end function logic
@@ -94,7 +95,7 @@ class Network extends \josephtingiris\Debug
     /**
      * return valid interface(s), or null
      */
-    function networkInterfaces($interface=null)
+    public function networkInterfaces($interface=null)
     {
         /*
          * begin function logic
@@ -120,7 +121,7 @@ class Network extends \josephtingiris\Debug
     }
 
     # optionally convert an integer (or hex) to a decimal IP, validate it, & return it (or null)
-    function networkIPv4($ip=null, $int_ip=false, $hex_ip=false, $little_endian=false) {
+    public function networkIPv4($ip=null, $int_ip=false, $hex_ip=false, $little_endian=false) {
         if ($ip == null) return null;
 
         $return_ip=$ip;
@@ -140,8 +141,7 @@ class Network extends \josephtingiris\Debug
         if ($int_ip) {
             $return_ip=long2ip($return_ip);
         }
-            $Ack_Log = new \josephtingiris\Ack\Log;
-            $Ack_Log->logMessage("invalid ack_ip '$ip'","WARNING");
+        $this->Ack_Log->logMessage("invalid ack_ip '$ip'","WARNING");
         if (!filter_var($return_ip, FILTER_VALIDATE_IP)) {
             $this->Ack_Log->logMessage("invalid ack_ip '$ip'","WARNING");
             $return_ip=null;
@@ -150,8 +150,8 @@ class Network extends \josephtingiris\Debug
         return $return_ip;
     }
 
-    # return an array with an inteface's address(es), cidr, & mask, or optionally a string of the (first) address, cidr, or mask
-    function networkIPv4Address($interface=null, $address=false, $cidr=false, $mask=false) {
+    # return an array with an inteface's address(es), prefix, & mask, or optionally a string of the (first) address, prefix, or mask
+    public function networkIPv4Address($interface=null, $address=false, $prefix=false, $mask=false) {
 
         $interface=trim($interface);
         if (empty($interface)) {
@@ -162,13 +162,13 @@ class Network extends \josephtingiris\Debug
 
         $return_address=null;
         $return_addresses=array();
-        $return_cidr=null;
-        $return_cidrs=array();
-        $return_mask=null; // TODO convert cidr to mask
+        $return_prefix=null;
+        $return_prefixes=array();
+        $return_mask=null; // TODO convert prefix to mask
         $return_masks=array();
 
         $ip_cmd="ip -4 -o addr show $interface";
-        $ip_rc=ackExec($ip_cmd,$ip_stdout,$ip_stderr);
+        $ip_rc=subExec($ip_cmd,$ip_stdout,$ip_stderr);
         if ($ip_rc == 0) {
             // success
             $ip_stdout_lines=explode("\n",$ip_stdout);
@@ -182,32 +182,32 @@ class Network extends \josephtingiris\Debug
                     if (isset($ip_explode_line[1]) && $ip_explode_line[1] == "$interface") {
                         // this line matches $interface
                         if (isset($ip_explode_line[6]) && strpos($ip_explode_line[6],"/") !== false) {
-                            list ($ip_address, $ip_cidr) = explode('/', $ip_explode_line[6]);
+                            list ($ip_address, $ip_prefix) = explode('/', $ip_explode_line[6]);
 
                             $ip_address=networkIPv4($ip_address);
                             if (!empty($ip_address)) {
                                 $Ack->debugValue("ip_address",15,$ip_address);
-                                if ($address && !$cidr && !$mask) {
+                                if ($address && !$prefix && !$mask) {
                                     return $ip_address;
                                 } else {
                                     $Ack->debugValue($ip_explode_line,15);
                                 }
                             }
 
-                            $ip_cidr=trim($ip_cidr);
-                            $ip_cidr=(int)$ip_cidr;
-                            if (isset($ip_cidr) && is_int($ip_cidr)) {
-                                $Ack->debugValue("ip_cidr",15,$ip_cidr);
-                                if (!$address && $cidr && !$mask) {
-                                    return $ip_cidr;
+                            $ip_prefix=trim($ip_prefix);
+                            $ip_prefix=(int)$ip_prefix;
+                            if (isset($ip_prefix) && is_int($ip_prefix)) {
+                                $Ack->debugValue("ip_prefix",15,$ip_prefix);
+                                if (!$address && $prefix && !$mask) {
+                                    return $ip_prefix;
                                 } else {
                                     $Ack->debugValue($ip_explode_line,15);
                                 }
                             }
-                            if (isset($ip_cidr) && is_int($ip_cidr)) {
-                                $Ack->debugValue("ip_cidr",15,$ip_cidr);
-                                if (!$address && !$cidr && $mask) {
-                                    return networkIPv4Netmask($ip_cidr);
+                            if (isset($ip_prefix) && is_int($ip_prefix)) {
+                                $Ack->debugValue("ip_prefix",15,$ip_prefix);
+                                if (!$address && !$prefix && $mask) {
+                                    return networkIPv4Netmask($ip_prefix);
                                 } else {
                                     $Ack->debugValue($ip_explode_line,15);
                                 }
@@ -225,15 +225,15 @@ class Network extends \josephtingiris\Debug
         }
     }
 
-    # if an ip is in a cidr range return true else return false
-    function networkIPv4Authorized($ip, $cidr) {
+    # if an ip is in a prefix range return true else return false
+    public function networkIPv4InRange($ip, $prefix) {
 
         /*
          * begin function logic
          */
 
-        if (strpos($cidr,"/") !== false) {
-            list ($subnet, $bits) = explode('/', $cidr);
+        if (strpos($prefix,"/") !== false) {
+            list ($subnet, $bits) = explode('/', $prefix);
             $ip = ip2long($ip);
             $subnet = ip2long($subnet);
             $mask = -1 << (32 - $bits);
@@ -250,16 +250,16 @@ class Network extends \josephtingiris\Debug
 
     }
 
-    function networkIPv4Netmask($ip) {
+    public function networkIPv4Netmask($ip) {
 
         if (strpos($ip, '/') !== false) {
-            $cidr = substr ($ip, strpos ($ip, '/') + 1) * 1;
+            $prefix = substr ($ip, strpos ($ip, '/') + 1) * 1;
         } else {
             $ip = trim($ip);
-            $cidr = (int)$ip;
+            $prefix = (int)$ip;
         }
 
-        $netmask = str_split (str_pad (str_pad ('', $cidr, '1'), 32, '0'), 8);
+        $netmask = str_split (str_pad (str_pad ('', $prefix, '1'), 32, '0'), 8);
 
         foreach ($netmask as &$element)
             $element = bindec ($element);
@@ -268,10 +268,199 @@ class Network extends \josephtingiris\Debug
 
     }
 
+    public function networkIPv4Route($destination_ip=null, $field=null) {
+
+        if (is_null($destination_ip)) {
+            return;
+        }
+
+        $destination_ip=gethostbyname($destination_ip);
+        if (!filter_var($destination_ip, FILTER_VALIDATE_IP)) {
+            $destination_ip="1";
+        }
+
+        if (!filter_var($destination_ip, FILTER_VALIDATE_IP) && $destination_ip != "1") {
+            return;
+        }
+
+        if (is_null($field)) {
+            $field=strtolower($field);
+        }
+
+        $this->debugValue("destination_ip",22,$destination_ip);
+        $this->debugValue("field",22,$field);
+
+        $destination_route=null;
+        $return_string=null;
+
+        // fields
+        $source_gateway=null;
+        $source_interface=null;
+        $source_ip=null;
+        $source_mac=null;
+        $source_netmask=null;
+        $source_network=null;
+        $source_prefix=null;
+
+        $ip_route_get_cmd="ip -4 -o route get $destination_ip";
+        $ip_route_get_rc=$this->Ack_Sub->subExec($ip_route_get_cmd,$ip_route_get_stdout,$ip_route_get_stderr);
+        if ($ip_route_get_rc === 0) {
+            $ip_route_get_stdout_lines=explode("\n",$ip_route_get_stdout);
+            if (!empty($ip_route_get_stdout_lines)) {
+
+                // source interface, gateway, & source
+                foreach($ip_route_get_stdout_lines as $ip_route_get_stdout_line) {
+                    $this->debug($ip_route_get_stdout_line,24);
+
+                    // source interface
+                    $ip_route_get_stdout_line_dev=explode("dev",$ip_route_get_stdout_line);
+                    if (isset($ip_route_get_stdout_line_dev[1])) {
+                        $ip_route_get_stdout_line_dev=explode(" ",$ip_route_get_stdout_line_dev[1]);
+                    }
+
+                    if (isset($ip_route_get_stdout_line_dev[1])) {
+                        $this->debug($ip_route_get_stdout_line_dev[1],44);
+                        $source_interface=$ip_route_get_stdout_line_dev[1];
+                    }
+
+                    // source gateway
+                    $ip_route_get_stdout_line_via=explode("via",$ip_route_get_stdout_line);
+                    if (isset($ip_route_get_stdout_line_via[1])) {
+                        $ip_route_get_stdout_line_via=explode(" ",$ip_route_get_stdout_line_via[1]);
+                    }
+
+                    if (isset($ip_route_get_stdout_line_via[1])) {
+                        $this->debug($ip_route_get_stdout_line_via[1],44);
+                        $source_gateway=$ip_route_get_stdout_line_via[1];
+                    }
+
+                    // source ip
+                    $ip_route_get_stdout_line_src=explode("src",$ip_route_get_stdout_line);
+                    if (isset($ip_route_get_stdout_line_src[1])) {
+                        $ip_route_get_stdout_line_src=explode(" ",$ip_route_get_stdout_line_src[1]);
+                    }
+
+                    if (isset($ip_route_get_stdout_line_src[1])) {
+                        $this->debug($ip_route_get_stdout_line_src[1],44);
+                        $source_ip=$ip_route_get_stdout_line_src[1];
+                    }
+
+                }
+            }
+        }
+
+        if (is_null($source_gateway)) {
+            if (!is_null($source_ip) && !empty($source_ip)) {
+                $source_gateway=$source_ip;
+            }
+        }
+
+        if (!is_null($source_interface) && !empty($source_interface) && is_readable("/sys/class/net/$source_interface/address")) {
+            $source_mac=$this->networkMAC(file_get_contents("/sys/class/net/$source_interface/address"));
+
+            $ip_route_show_cmd="ip -4 -o route show dev $source_interface scope link";
+            $ip_route_show_rc=$this->Ack_Sub->subExec($ip_route_show_cmd,$ip_route_show_stdout,$ip_route_show_stderr);
+            if ($ip_route_show_rc === 0) {
+
+                $ip_route_show_stdout_lines=explode("\n",$ip_route_show_stdout);
+                if (!empty($ip_route_show_stdout_lines)) {
+                    foreach($ip_route_show_stdout_lines as $ip_route_show_stdout_line) {
+                        $this->debug($ip_route_show_stdout_line,25);
+
+                        // source network
+                        $ip_route_show_stdout_line_network=preg_split("/[[:space:]]/",$ip_route_show_stdout_line);
+                        if (isset($ip_route_show_stdout_line_network[0])) {
+                            $ip_route_show_stdout_line_network=explode("/",$ip_route_show_stdout_line_network[0]);
+                        }
+
+                        if (isset($ip_route_show_stdout_line_network[0])) {
+                            $this->debug($ip_route_show_stdout_line_network[0],44);
+                            $source_network=$ip_route_show_stdout_line_network[0];
+                        }
+
+                        // source prefix
+                        $ip_route_show_stdout_line_prefix=preg_split("/[[:space:]]/",$ip_route_show_stdout_line);
+                        if (isset($ip_route_show_stdout_line_prefix[0])) {
+                            $ip_route_show_stdout_line_prefix=explode("/",$ip_route_show_stdout_line_prefix[0]);
+                        }
+
+                        if (isset($ip_route_show_stdout_line_prefix[1])) {
+                            $this->debug($ip_route_show_stdout_line_prefix[1],44);
+                            $source_prefix=$ip_route_show_stdout_line_prefix[1];
+                        }
+
+                        // source netmask
+
+                        $source_netmask=$this->networkIPv4Netmask($source_prefix);
+                    }
+                }
+
+            }
+
+        }
+
+        if ($destination_ip == "1") {
+            if (is_null($source_prefix)) {
+                $source_prefix="0";
+            }
+            $destination_ip="0.0.0.0";
+        }
+
+        $debug_level=13;
+        $this->debugValue($destination_ip,$debug_level,"destination_ip");
+        $this->debugValue($source_gateway,$debug_level,"source_gateway");
+        $this->debugValue($source_interface,$debug_level,"source_interface");
+        $this->debugValue($source_ip,$debug_level,"source_ip");
+        $this->debugValue($source_mac,$debug_level,"source_mac");
+        $this->debugValue($source_netmask,$debug_level,"source_netmask");
+        $this->debugValue($source_network,$debug_level,"source_network");
+        $this->debugValue($source_prefix,$debug_level,"source_prefix");
+
+        if (is_null($field) || empty($field)) {
+            $return_string="$destination_ip,$source_gateway,$source_interface,$source_ip,$source_mac,$source_netmask,$source_network,$source_prefix";
+        } else {
+            if ($field == "destination" || $field == "destination_ip") {
+                $return_string=$destination_ip;
+            }
+
+            if ($field == "gateway" || $field == "source_gateway" || $field == "default_gateway" || $field == "gw") {
+                $return_string=$source_gateway;
+            }
+
+            if ($field == "interface" || $field == "source_interface") {
+                $return_string=$source_interface;
+            }
+
+            if ($field == "address" || $field == "source" || $field == "source_ip") {
+                $return_string=$source_ip;
+            }
+
+            if ($field == "mac" || $field == "source_mac") {
+                $return_string=$source_mac;
+            }
+
+            if ($field == "netmask" || $field == "source_netmask") {
+                $return_string=$source_netmask;
+            }
+
+            if ($field == "network" || $field == "source_network") {
+                $return_string=$source_network;
+            }
+
+            if ($field == "prefix" || $field == "source_prefix") {
+                $return_string=$source_prefix;
+            }
+
+        }
+
+        $this->debugValue($return_string,$debug_level,"return_string");
+        return $return_string;
+    }
+
     /**
      * validate & return a formatted mac address
      */
-    function networkMAC($mac=null,$mac_ip=null) {
+    public function networkMAC($mac=null,$mac_ip=null) {
 
         /*
          * begin function logic

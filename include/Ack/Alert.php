@@ -271,7 +271,7 @@ class Alert extends \josephtingiris\Debug
             }
         }
 
-        $ack_email = new \josephtingiris\Ack\Email;
+        $ack_email = new \josephtingiris\Ack\email();
         $alert_mail_sent=$ack_email->email($to, $subject, $body, $additional_headers);
         if (!$alert_mail_sent) {
             // todo; slack?

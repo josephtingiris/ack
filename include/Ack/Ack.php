@@ -42,33 +42,34 @@ class Ack extends \josephtingiris\Debug
      * public properties.
      */
 
-    public $Aaa_Cache = null;
-    public $Aaa_Dir = null;
+    public $AAA_Cache = null;
+    public $AAA_Dir = null;
     public $Authorized_IPs = array();
     public $Basename = null;
     public $Build_Dir = null;
     public $Component = null;
     public $Config_File = null;
-    public $Client_Aaa = null;
+    public $Client_AAA = null;
     public $Client_Anaconda = null;
     public $Client_Architecture = null;
     public $Client_Authorized = null;
     public $Client_Bootproto = null;
+    public $Client_Debug = null;
     public $Client_Hostname = null;
-    public $Client_Install_Uri = null;
-    public $Client_Install_Url = null;
+    public $Client_Install_URI = null;
+    public $Client_Install_URL = null;
     public $Client_IP = null;
-    public $Client_IP_0_Address = null;
-    public $Client_IP_0_Interface = null;
+    public $Client_IP_Address_0 = null;
+    public $Client_IP_Interface_0 = null;
     public $Client_Log_Level = null;
-    public $Client_Mac = null;
-    public $Client_Mac_0_Address = null;
-    public $Client_Mac_0_Interface = null;
+    public $Client_MAC = null;
+    public $Client_MAC_Address_0 = null;
+    public $Client_MAC_Interface_0 = null;
     public $Client_Password = null;
-    public $Client_Ppi = null;
+    public $Client_PPI_Include = null;
     public $Client_Serial_Number = null;
     public $Client_System_Release = null;
-    public $Client_Template_Kickstart = null;
+    public $Client_Kickstart_Template = null;
     public $Client_Type = null;
     public $Dir = null;
     public $Dirname = null;
@@ -76,12 +77,12 @@ class Ack extends \josephtingiris\Debug
     public $End_Time = null;
     public $Entity = null;
     public $Environment = null;
-    public $Etc_Dir = null;
-    public $Etc_Dirs = array();
+    public $ETC_Dir = null;
+    public $ETC_Dirs = array();
     public $GET_lower = array();
     public $Group = null;
-    public $Id = null;
-    public $Ini_Section = null;
+    public $ID = null;
+    public $INI_Section = null;
     public $Install_Server = null;
     public $Install_Servers = array();
     public $Label = null;
@@ -105,26 +106,33 @@ class Ack extends \josephtingiris\Debug
 
     // these should probably be static or private
     public $Default_IP_Address=null; // lowest metric? ipv4 or ipv6 ??
-    public $Default_IP_Cidr=null;
-    public $Default_IP_Interface=null;
-    public $Default_IP_Destination=null;
+    public $Default_IP_Destination=null; // lowest metric? ipv4 or ipv6 ??
     public $Default_IP_Gateway=null;
-    public $Default_IP_Mac=null;
+    public $Default_IP_Interface=null;
+    public $Default_IP_MAC=null;
     public $Default_IP_Netmask=null;
+    public $Default_IP_Network=null;
+    public $Default_IP_Prefix=null;
+
     public $IPv4_Default_Address=null;
-    public $IPv4_Default_Cidr=null;
-    public $IPv4_Default_Interface=null;
     public $IPv4_Default_Destination=null;
     public $IPv4_Default_Gateway=null;
-    public $IPv4_Default_Mac=null;
+    public $IPv4_Default_Interface=null;
+    public $IPv4_Default_MAC=null;
     public $IPv4_Default_Netmask=null;
+    public $IPv4_Default_Network=null;
+    public $IPv4_Default_Prefix=null;
+    public $IPv4_Default_Route=null;
+
     public $IPv6_Default_Address=null;
-    public $IPv6_Default_Cidr=null;
-    public $IPv6_Default_Interface=null;
     public $IPv6_Default_Destination=null;
     public $IPv6_Default_Gateway=null;
-    public $IPv6_Default_Mac=null;
+    public $IPv6_Default_Interface=null;
+    public $IPv6_Default_MAC=null;
     public $IPv6_Default_Netmask=null;
+    public $IPv6_Default_Network=null;
+    public $IPv6_Default_Prefix=null;
+    public $IPv6_Default_Route=null;
 
     /*
      * private properties.
@@ -153,11 +161,11 @@ class Ack extends \josephtingiris\Debug
             $this->Start_Time = microtime(true);
         }
 
-        $this->Ack_Config = new \josephtingiris\Ack\Config;
-        $this->Ack_Client = new \josephtingiris\Ack\Client;
-        $this->Ack_Network = new \josephtingiris\Ack\Network;
-        $this->Ack_Server = new \josephtingiris\Ack\Server;
-        $this->Ack_Variant = new \josephtingiris\Ack\Variant;
+        $this->Ack_Config = new \josephtingiris\Ack\Config();
+        $this->Ack_Client = new \josephtingiris\Ack\Client();
+        $this->Ack_Network = new \josephtingiris\Ack\Network();
+        $this->Ack_Server = new \josephtingiris\Ack\Server();
+        $this->Ack_Sub = new \josephtingiris\Ack\Sub();
 
         // Zero
         if (empty($this->Zero)) {
@@ -220,15 +228,15 @@ class Ack extends \josephtingiris\Debug
             $this->Label="ack";
         }
 
-        // Etc_Dir
-        if (empty($this->Etc_Dir)) {
-            $this->Etc_Dir=$this->Dir . "/etc";
+        // ETC_Dir
+        if (empty($this->ETC_Dir)) {
+            $this->ETC_Dir=$this->Dir . "/etc";
         }
 
         // Config_File
         if (empty($this->Config_File)) {
-            if (is_readable($this->Etc_Dir . "/" . $this->Label . ".ini")) {
-                $this->Config_File="$this->Etc_Dir" . "/" . $this->Label . ".ini";
+            if (is_readable($this->ETC_Dir . "/" . $this->Label . ".ini")) {
+                $this->Config_File="$this->ETC_Dir" . "/" . $this->Label . ".ini";
             }
         }
 
@@ -266,25 +274,25 @@ class Ack extends \josephtingiris\Debug
         }
         $this->Ack_Config->Environment = $this->Environment;
 
-        // Ini_Section
-        if (empty($this->Ini_Section)) {
-            $this->Ini_Section = $this->Environment;
+        // INI_Section
+        if (empty($this->INI_Section)) {
+            $this->INI_Section = $this->Environment;
         }
-        $this->Ack_Config->Ini_Section = $this->Ini_Section;
+        $this->Ack_Config->INI_Section = $this->INI_Section;
 
-        // Aaa_Dir
-        if (empty($this->Aaa_Dir)) {
-            $this->Aaa_Dir=$this->Ack_Config->configValue("aaa_dir");
-            if (empty($this->Aaa_Dir)) {
-                $this->Aaa_Dir=$this->Dir . "/aaa";
+        // AAA_Dir
+        if (empty($this->AAA_Dir)) {
+            $this->AAA_Dir=$this->Ack_Config->configValue("aaa_dir");
+            if (empty($this->AAA_Dir)) {
+                $this->AAA_Dir=$this->Dir . "/aaa";
             }
         }
 
-        // Aaa_Cache
-        if (empty($this->Aaa_Cache)) {
-            $this->Aaa_Cache=$this->Ack_Config->configValue("aaa_cache");
-            if (empty($this->Aaa_Cache)) {
-                $this->Aaa_Cache=$this->Aaa_Dir . "/aaa.cache";
+        // AAA_Cache
+        if (empty($this->AAA_Cache)) {
+            $this->AAA_Cache=$this->Ack_Config->configValue("aaa_cache");
+            if (empty($this->AAA_Cache)) {
+                $this->AAA_Cache=$this->AAA_Dir . "/aaa.cache";
             }
         }
 
@@ -306,16 +314,16 @@ class Ack extends \josephtingiris\Debug
             }
         }
 
-        // Etc_Dirs
-        if (empty($this->Etc_Dirs)) {
-            $this->Etc_Dirs = $this->Ack_Config->configValue("etc_dirs");
-            if (empty($this->Etc_Dirs)) {
-                $this->Etc_Dirs[] = "/etc/ack";
-                $this->Etc_Dirs[] = "/etc";
-                $this->Etc_Dirs[] = $this->Etc_Dir;
+        // ETC_Dirs
+        if (empty($this->ETC_Dirs)) {
+            $this->ETC_Dirs = $this->Ack_Config->configValue("etc_dirs");
+            if (empty($this->ETC_Dirs)) {
+                $this->ETC_Dirs[] = "/etc/ack";
+                $this->ETC_Dirs[] = "/etc";
+                $this->ETC_Dirs[] = $this->ETC_Dir;
             }
         }
-        $this->Etc_Dirs=array_unique($this->Etc_Dirs);
+        $this->ETC_Dirs=array_unique($this->ETC_Dirs);
 
         // Group
         if (empty($this->Group)) {
@@ -325,20 +333,33 @@ class Ack extends \josephtingiris\Debug
             }
         }
 
-        // Id
-        if (empty($this->Id)) {
-            $this->Id=$this->Ack_Config->configValue("id");
-            if (empty($this->Id)) {
-                $this->Id= "base";
+        // ID
+        if (empty($this->ID)) {
+            $this->ID=$this->Ack_Config->configValue("id");
+            if (empty($this->ID)) {
+                $this->ID= "base";
             }
         }
 
         // Install_Server
         if (empty($this->Install_Server)) {
-            $this->Install_Server=$this->Ack_Config->configValue("install_server");
-            if (empty($this->Install_Server)) {
-                $this->Install_Server= "localhost";
+            if  (isset($_SERVER["SERVER_NAME"])) {
+                $this->Install_Server=$_SERVER["SERVER_NAME"];
             }
+        }
+
+        if (empty($this->Install_Server)) {
+            if  (isset($_SERVER["HTTP_HOST"])) {
+                $this->Install_Server=$_SERVER["HTTP_HOST"];
+            }
+        }
+
+        if (empty($this->Install_Server)) {
+            $this->Install_Server=$this->Ack_Config->configValue("install_server");
+        }
+
+        if (empty($this->Install_Server)) {
+            $this->Install_Server= "localhost";
         }
 
         // Install_Servers
@@ -442,11 +463,18 @@ class Ack extends \josephtingiris\Debug
         if (empty($this->Ssh_Authorized_Key_Files)) {
             $this->Ssh_Authorized_Key_Files = $this->Ack_Config->configValue("ssh_authorized_key_files");
             if (empty($this->Ssh_Authorized_Key_Files)) {
-                $this->Ssh_Authorized_Key_Files[] = $this->Etc_Dir . "/ack-authorized_keys";
+                foreach($this->ETC_Dirs as $etc_dir) {
+                    if (is_readable($etc_dir . "/ack-authorized_keys")) {
+                        $this->debugValue("Ssh_Authorized_Key_Files etc_dir",78,"$etc_dir");
+                        $this->Ssh_Authorized_Key_Files[] = $etc_dir . "/ack-authorized_keys";
+                    }
+                }
             }
         }
-        $this->Ssh_Authorized_Key_Files=array_unique($this->Ssh_Authorized_Key_Files);
-        usort($this->Ssh_Authorized_Key_Files, "strcasecmp");
+        if (is_array($this->Ssh_Authorized_Key_Files)) {
+            $this->Ssh_Authorized_Key_Files=array_unique($this->Ssh_Authorized_Key_Files);
+            usort($this->Ssh_Authorized_Key_Files, "strcasecmp");
+        }
 
         // Ssh_Authorized_Keys
         if (empty($this->Ssh_Authorized_Keys)) {
@@ -499,7 +527,100 @@ class Ack extends \josephtingiris\Debug
         if (empty($this->UUID)) {
             $this->UUID = $this->Ack_Config->configValue("uuid");
             if (empty($this->UUID)) {
-                $this->UUID = $this->Ack_Variant->variantUUID();
+                $this->UUID = $this->Ack_Sub->subUUID();
+            }
+        }
+
+        if (empty($this->IPv4_Default_Route)) {
+            $this->IPv4_Default_Route=$this->Ack_Network->networkIPv4Route("default","");
+        }
+
+        if (!empty($this->IPv4_Default_Route)) {
+            $ipv4_default_route_exploded=explode(",",$this->IPv4_Default_Route);
+
+            if (empty($this->IPv4_Default_Destination) && isset($ipv4_default_route_exploded[0])) {
+                $this->IPv4_Default_Destination=$ipv4_default_route_exploded[0];
+            }
+
+            if (empty($this->IPv4_Default_Gateway) && isset($ipv4_default_route_exploded[1])) {
+                $this->IPv4_Default_Gateway=$ipv4_default_route_exploded[1];
+            }
+
+            if (empty($this->IPv4_Default_Interface) && isset($ipv4_default_route_exploded[2])) {
+                $this->IPv4_Default_Interface=$ipv4_default_route_exploded[2];
+            }
+
+            if (empty($this->IPv4_Default_Address) && isset($ipv4_default_route_exploded[3])) {
+                $this->IPv4_Default_Address=$ipv4_default_route_exploded[3];
+            }
+
+            if (empty($this->IPv4_Default_MAC) && isset($ipv4_default_route_exploded[4])) {
+                $this->IPv4_Default_MAC=$ipv4_default_route_exploded[4];
+            }
+
+            if (empty($this->IPv4_Default_Netmask) && isset($ipv4_default_route_exploded[5])) {
+                $this->IPv4_Default_Netmask=$ipv4_default_route_exploded[5];
+            }
+
+            if (empty($this->IPv4_Default_Network) && isset($ipv4_default_route_exploded[6])) {
+                $this->IPv4_Default_Network=$ipv4_default_route_exploded[6];
+            }
+
+            if (empty($this->IPv4_Default_Prefix) && isset($ipv4_default_route_exploded[7])) {
+                $this->IPv4_Default_Prefix=$ipv4_default_route_exploded[7];
+            }
+
+        }
+
+        #
+        # todo; finish IPv6
+        #
+
+        if (is_null($this->Default_IP_Address) || $this->Default_IP_Address == "") {
+            if (!is_null($this->IPv4_Default_Address)) {
+                $this->Default_IP_Address=$this->IPv4_Default_Address;
+            }
+        }
+
+        if (is_null($this->Default_IP_Destination) || $this->Default_IP_Destination == "") {
+            if (!is_null($this->IPv4_Default_Destination)) {
+                $this->Default_IP_Destination=$this->IPv4_Default_Destination;
+            }
+        }
+
+        if (is_null($this->Default_IP_Gateway) || $this->Default_IP_Gateway == "") {
+            if (!is_null($this->IPv4_Default_Gateway)) {
+                $this->Default_IP_Gateway=$this->IPv4_Default_Gateway;
+            }
+        }
+
+        if (is_null($this->Default_IP_Interface) || $this->Default_IP_Interface == "") {
+            if (!is_null($this->IPv4_Default_Interface)) {
+                $this->Default_IP_Interface=$this->IPv4_Default_Interface;
+            }
+        }
+
+        if (is_null($this->Default_IP_MAC) || $this->Default_IP_MAC == "") {
+            if (!is_null($this->IPv4_Default_MAC)) {
+                $this->Default_IP_MAC=$this->IPv4_Default_MAC;
+            }
+        }
+
+        if (is_null($this->Default_IP_Netmask) || $this->Default_IP_Netmask == "") {
+            if (!is_null($this->IPv4_Default_Netmask)) {
+                $this->Default_IP_Netmask=$this->IPv4_Default_Netmask;
+            }
+        }
+
+        if (is_null($this->Default_IP_Network) || $this->Default_IP_Network == "") {
+            if (!is_null($this->IPv4_Default_Network)) {
+                $this->Default_IP_Network=$this->IPv4_Default_Network;
+            }
+        }
+
+        if (is_null($this->Default_IP_Prefix) || $this->Default_IP_Prefix == "") {
+            if (!is_null($this->IPv4_Default_Prefix)) {
+                $this->Default_IP_Prefix=$this->IPv4_Default_Prefix;
             }
         }
 
@@ -528,35 +649,43 @@ class Ack extends \josephtingiris\Debug
             $this->Client_Bootproto = "dhcp";
         }
 
-        if (empty($this->Client_Install_Uri)) {
-            $this->Client_Install_Uri = null;
+        if (empty($this->Client_Install_URI)) {
+            $this->Client_Install_URI = null;
         }
 
-        if (empty($this->Client_Install_Url)) {
-            $this->Client_Install_Url = null;
+        if (empty($this->Client_Install_URL)) {
+            $this->Client_Install_URL = null;
         }
 
         if (empty($this->Client_Hostname)) {
             $this->Client_Hostname = "localhost";
         }
 
-        $ack_provisioning_ips=$this->Ack_Client->clientProvisioningIPs();
-        $this->Zzz = $ack_provisioning_ips;
+        $client_provisioning_ips=$this->Ack_Client->clientProvisioningIPs();
+        $this->Zzz = $client_provisioning_ips;
 
         if (empty($this->Client_IP)) {
-            if (!empty($ack_provisioning_ips[0][1])) {
+            if (!empty($client_provisioning_ips[0][1])) {
                 $this->Client_IP = $this->Ack_Network->networkMAC($rhn_provisioning_macs[0][1],$this->Client_IP);
             } else {
-                $this->Client_IP = $this->Ack_Network->networkIPv4("127.0.0.1");
+                if (isset($_SERVER["REMOTE_ADDR"])) {
+                    $this->Client_IP = $this->Ack_Network->networkIPv4($_SERVER["REMOTE_ADDR"]);
+                } else {
+                    $this->Client_IP = $this->Ack_Network->networkIPv4("127.0.0.1");
+                }
             }
         }
 
-        if (empty($this->Client_IP_0_Address)) {
-            $this->Client_IP_0_Address = $this->Client_IP;
+        if (empty($this->Client_IP_Address_0)) {
+            $this->Client_IP_Address_0 = $this->Client_IP;
         }
 
-        if (empty($this->Client_IP_0_Interface)) {
-            $this->Client_IP_0_Interface = "eth0";
+        if (empty($this->Client_IP_Interface_0)) {
+            if (isset($_SERVER["REMOTE_ADDR"])) {
+                $this->Client_IP_Interface_0 = "eth0";
+            } else {
+                $this->Client_IP_Interface_0 = "lo";
+            }
         }
 
         if (empty($this->Client_Log_Level)) {
@@ -565,44 +694,44 @@ class Ack extends \josephtingiris\Debug
 
         $rhn_provisioning_macs=$this->Ack_Client->clientRHNProvisioningMACs();
 
-        if (empty($this->Client_Mac)) {
+        if (empty($this->Client_MAC)) {
             if (!empty($rhn_provisioning_macs[0][1])) {
-                $this->Client_Mac = $this->Ack_Network->networkMAC($rhn_provisioning_macs[0][1],$this->Client_IP);
+                $this->Client_MAC = $this->Ack_Network->networkMAC($rhn_provisioning_macs[0][1],$this->Client_IP);
             } else {
                 if (empty($this->Client_IP)) {
-                    $this->Client_Mac = "000000000000";
+                    $this->Client_MAC = "000000000000";
                 } else {
-                    $this->Client_Mac = $this->Ack_Network->networkMAC(null,$this->Client_IP);
+                    $this->Client_MAC = $this->Ack_Network->networkMAC(null,$this->Client_IP);
                 }
             }
         }
 
-        if (empty($this->Client_Aaa)) {
-            $this->Client_Aaa = $this->Aaa_Dir . "/" . $this->Client_Mac;
+        if (empty($this->Client_AAA)) {
+            $this->Client_AAA = $this->AAA_Dir . "/" . $this->Client_MAC;
         }
 
-        if (empty($this->Client_Mac_0_Address)) {
+        if (empty($this->Client_MAC_Address_0)) {
             if (!empty($rhn_provisioning_macs[0][1])) {
-                $this->Client_Mac = $this->Ack_Network->networkMAC($rhn_provisioning_macs[0][1],$this->Client_IP);
+                $this->Client_MAC = $this->Ack_Network->networkMAC($rhn_provisioning_macs[0][1],$this->Client_IP);
             } else {
-                $this->Client_Mac_0_Address = $this->Client_Mac;
+                $this->Client_MAC_Address_0 = $this->Client_MAC;
             }
         }
 
-        if (empty($this->Client_Mac_0_Interface)) {
+        if (empty($this->Client_MAC_Interface_0)) {
             if (!empty($rhn_provisioning_macs[0][0])) {
-                $this->Client_Mac_0_Address = $this->Ack_Network->networkMAC($rhn_provisioning_macs[0][0],$this->Client_IP);
+                $this->Client_MAC_Address_0 = $this->Ack_Network->networkMAC($rhn_provisioning_macs[0][0],$this->Client_IP);
             } else {
-                $this->Client_Mac_0_Interface = $this->Client_IP_0_Interface;
+                $this->Client_MAC_Interface_0 = $this->Client_IP_Interface_0;
             }
         }
 
         if (empty($this->Client_Password)) {
-            $this->Client_Password = $this->Client_Mac;
+            $this->Client_Password = $this->Client_MAC;
         }
 
-        if (empty($this->Client_Ppi)) {
-            $this->Client_Ppi = $this->Ack_Client->clientPrePostInstall();
+        if (empty($this->Client_PPI_Include)) {
+            $this->Client_PPI_Include = $this->Ack_Client->clientPrePostInstallInclude();
         }
 
         if (empty($this->Client_Serial_Number)) {
@@ -613,13 +742,33 @@ class Ack extends \josephtingiris\Debug
             $this->Client_System_Release = $this->Ack_Client->clientAnacondaSystemRelease();
         }
 
-        if (empty($this->Client_Template_Kickstart)) {
-            $this->Client_Template_Kickstart = null;
+        if (empty($this->Client_Kickstart_Template)) {
+            $this->Client_Kickstart_Template = null;
+            foreach($this->ETC_Dirs as $etc_dir) {
+                $client_templates=array(
+                    $etc_dir . "/ack-template-kickstart-".$this->Client_MAC,
+                    $etc_dir . "/ack-template-kickstart"
+                );
+
+                foreach ($client_templates as $client_template) {
+                    if (is_readable($client_template)) {
+                        $this->Client_Kickstart_Template = $client_template;
+                        break;
+                    }
+                }
+
+                unset($client_templates);
+
+                if (!is_null($this->Client_Kickstart_Template)) {
+                    break;
+                }
+            }
         }
 
         if (empty($this->Client_Type)) {
             $this->Client_Type = null;
         }
+
 
         /*
          * end function logic

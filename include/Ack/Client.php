@@ -203,7 +203,99 @@ class Client extends \josephtingiris\Debug
          */
     }
 
-    public function clientPrePostInstall()
+    /**
+     * output a client kickstart config
+     */
+    public function clientKickstart()
+    {
+        /*
+         * begin function logic
+         */
+
+        $Ack->propertiesPrint();
+
+        $ack_index_header=null;
+        $ack_index_header.="#";
+        $ack_index_header.="\n";
+        $ack_index_header.="#";
+        if (!empty($Ack->Entity)) {
+            $ack_index_header.=" ".$Ack->Entity;
+        }
+        $ack_index_header.=" kickstart";
+        if (!empty($Ack->Label)) {
+            $ack_index_header.=" (".$Ack->Label.")";
+        }
+        $ack_index_header.=" - Install Server [".$Ack->Install_Server."]";
+
+        $ack_index_header.="\n";
+        $ack_index_header.="\n";
+
+        echo $ack_index_header;
+
+        $ack_client_template_kickstart_contents=$this->clientKickstartTemplate($Ack->Client_Kickstart_Template);
+
+        echo $ack_client_template_kickstart_contents;
+
+        #print_r($_SERVER);
+
+        $ack_index_footer=null;
+        $ack_index_footer.="\n";
+        $ack_index_footer.="\n";
+        $ack_index_footer.="#";
+        $ack_index_footer.="\n";
+        $ack_index_footer.="# [".  date("Y-m-d H:i:s") ."]";
+        $ack_index_footer.=" - template";
+
+        echo $ack_index_footer;
+
+        /*
+         * end function logic
+         */
+    }
+
+    /**
+     * output a parsed client kickstart template config
+     */
+    public function clientKickstartTemplate($template_file=null)
+    {
+        /*
+         * begin function logic
+         */
+
+        if (!is_readable($template_file)) {
+            return null;
+        }
+
+        $reflect = new \ReflectionClass($Ack);
+        $reflections = $reflect->getProperties(\ReflectionProperty::IS_PUBLIC);
+
+        $client_kickstart_template_contents=file_get_contents($template_file);
+
+        $client_kickstart_template="";
+        $client_kickstart_template.="# template $template_file - begin\n";
+        foreach($reflections as $reflection) {
+            $client_kickstart_template_key="##ACK_".strtoupper($reflection->name)."##";
+            $client_kickstart_template_value=$Ack->$reflection->name;
+
+            $client_kickstart_template.=$client_kickstart_template_key."\n";
+
+            #if (!is_null($Ack->$reflection->name) && $Ack->$reflection->name != "") {
+                #$client_kickstart_template_contents=str_replace($client_kickstart_template_key,$Ack->$reflection->name,$client_kickstart_template_contents);
+            #}
+
+            unset($client_kickstart_template_key);
+        }
+        $client_kickstart_template.=$client_kickstart_template_contents;
+        $client_kickstart_template.="# template $template_file - end\n";
+
+        return $client_kickstart_template;
+
+        /*
+         * end function logic
+         */
+    }
+
+    public function clientPrePostInstallInclude()
     {
         /*
          * begin function logic
@@ -248,4 +340,5 @@ class Client extends \josephtingiris\Debug
          * end function logic
          */
     }
+
 }

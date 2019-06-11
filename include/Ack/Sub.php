@@ -1,7 +1,7 @@
 <?php
 
 /**
- * aNAcONDA kICKSTART (ack) [Variant]
+ * aNAcONDA kICKSTART (ack) [Sub]
  *
  * Copyright (C) 2015 Joseph Tingiris
  *
@@ -33,9 +33,9 @@ namespace josephtingiris\Ack;
 require(dirname(__FILE__)) . "/Autoload.php";
 
 /**
- * The \josephtingiris\Ack\Variant class
+ * The \josephtingiris\Ack\Sub class
  */
-class Variant extends \josephtingiris\Debug
+class Sub extends \josephtingiris\Debug
 {
     /*
      * public properties.
@@ -67,7 +67,7 @@ class Variant extends \josephtingiris\Debug
 
         $this->debug("Class = " . __CLASS__, 20);
 
-        $this->Ack_Alert = new \josephtingiris\Ack\Alert;
+        $this->Ack_Alert = new \josephtingiris\Ack\Alert();
 
         /*
          * end function logic
@@ -94,7 +94,7 @@ class Variant extends \josephtingiris\Debug
     /**
      * returns curl output as an array
      */
-    public function variantCurl($url=null, $curl_options=null, $abort=false, $alert=false)
+    public function subCurl($url=null, $curl_options=null, $abort=false, $alert=false)
     {
         /*
          * begin function logic
@@ -106,7 +106,7 @@ class Variant extends \josephtingiris\Debug
 
         if (is_null($url)) {
             $failure_reason .= "url is null";
-            return $this->Ack_Alert->failure($failure_reason, $abort, $alert);
+            return $this->Ack_Alert->alertFail($failure_reason, $abort, $alert);
         }
 
         $this->debugValue("curl_init", $debug_level, $url);
@@ -146,7 +146,7 @@ class Variant extends \josephtingiris\Debug
                 if (@curl_setopt($curl_init, $curl_option, $curl_option_value) !== true) {
                     // problem setting option
                     $failure_reason .= "curl_setop failed setting curl option '$curl_option'";
-                    $this->Ack_Alert->failure($failure_reason, $abort, $alert);
+                    $this->Ack_Alert->alertFail($failure_reason, $abort, $alert);
                 }
             }
         }
@@ -173,9 +173,25 @@ class Variant extends \josephtingiris\Debug
     }
 
     /**
+     * non-blocking (async) exec
+     */
+    public function subExec($cmd, &$stdout=null, &$stderr=null) {
+        $cmd = escapeshellcmd($cmd);
+        $proc = proc_open($cmd,[
+            1 => ['pipe','w'],
+            2 => ['pipe','w'],
+        ],$pipes);
+        $stdout .= trim(stream_get_contents($pipes[1]));
+        fclose($pipes[1]);
+        $stderr .= trim(stream_get_contents($pipes[2]));
+        fclose($pipes[2]);
+        return proc_close($proc);
+    }
+
+    /**
      * return a RFC 4122 compliant universally unique identifier
      */
-    public function variantUUID()
+    public function subUUID()
     {
         /*
          * begin function logic
