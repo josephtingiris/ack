@@ -188,6 +188,32 @@ class Sub extends \josephtingiris\Debug
         return proc_close($proc);
     }
 
+    public function subImplode($implode_seperator=null, $implode_array=null) {
+        if (is_null($implode_array)) {
+            return null;
+        }
+
+        if (is_null($implode_seperator)) {
+            $implode_seperator=" ";
+        }
+
+        $return_string="";
+
+        $callback =
+            function ($value, $key) use (&$return_string, &$implode_seperator) {
+                if (is_numeric($key)) {
+                    $return_string .= $value . $implode_seperator;
+                } else {
+                    $return_string .= $key . "=" . $value . $implode_seperator;
+                }
+            };
+
+        array_walk_recursive($implode_array, $callback);
+
+        $return_string=trim($return_string,$implode_seperator);
+        return $return_string;
+    }
+
     /**
      * return a RFC 4122 compliant universally unique identifier
      */

@@ -42,6 +42,7 @@ class Ack extends \josephtingiris\Debug
      * public properties.
      */
 
+    public $_REQUEST_lower = array();
     public $AAA_Cache = null;
     public $AAA_Dir = null;
     public $Authorized_IPs = array();
@@ -54,6 +55,7 @@ class Ack extends \josephtingiris\Debug
     public $Client_Architecture = null;
     public $Client_Authorized = null;
     public $Client_Bootproto = null;
+    public $Client_Console = null;
     public $Client_Debug = null;
     public $Client_Hostname = null;
     public $Client_Install_URI = null;
@@ -66,11 +68,15 @@ class Ack extends \josephtingiris\Debug
     public $Client_MAC_Address_0 = null;
     public $Client_MAC_Interface_0 = null;
     public $Client_Password = null;
-    public $Client_PPI_Include = null;
+    public $Client_Password_Crypt = null;
     public $Client_Serial_Number = null;
     public $Client_System_Release = null;
+    public $Client_Kickstart_Include_Postinstall = null;
+    public $Client_Kickstart_Include_PPI = null;
+    public $Client_Kickstart_Include_Preinstall = null;
     public $Client_Kickstart_Template = null;
     public $Client_Type = null;
+    public $CNC_Server = null;
     public $Dir = null;
     public $Dirname = null;
     public $Distribution_Dir = null;
@@ -79,10 +85,10 @@ class Ack extends \josephtingiris\Debug
     public $Environment = null;
     public $ETC_Dir = null;
     public $ETC_Dirs = array();
-    public $GET_lower = array();
     public $Group = null;
     public $ID = null;
     public $INI_Section = null;
+    public $Install_Domain = null;
     public $Install_Server = null;
     public $Install_Servers = array();
     public $Label = null;
@@ -90,10 +96,8 @@ class Ack extends \josephtingiris\Debug
     public $Log_File = null;
     public $Media_Dir = null;
     public $Network_Interfaces=array();
-    public $POST_lower = array();
     public $Privacy = null;
     public $Release_Dir = null;
-    public $REQUEST_lower = array();
     public $Ssh_Authorized_Key_Files = array();
     public $Ssh_Authorized_Keys = array();
     public $Start_Time = null;
@@ -166,6 +170,11 @@ class Ack extends \josephtingiris\Debug
         $this->Ack_Network = new \josephtingiris\Ack\Network();
         $this->Ack_Server = new \josephtingiris\Ack\Server();
         $this->Ack_Sub = new \josephtingiris\Ack\Sub();
+
+        // _REQUEST_lower
+        if (!empty($_REQUEST) && is_array($_REQUEST)) {
+            $this->_REQUEST_lower = array_change_key_case($_REQUEST, CASE_LOWER);
+        }
 
         // Zero
         if (empty($this->Zero)) {
@@ -240,23 +249,8 @@ class Ack extends \josephtingiris\Debug
             }
         }
 
-        // GET_lower
-        if (!empty($_GET) && is_array($_GET)) {
-            $this->GET_lower = array_change_key_case($_GET, CASE_LOWER);
-        }
-
-        // POST_lower
-        if (!empty($_POST) && is_array($_POST)) {
-            $this->POST_lower = array_change_key_case($_POST, CASE_LOWER);
-        }
-
-        // REQUEST_lower
-        if (!empty($_REQUEST) && is_array($_REQUEST)) {
-            $this->REQUEST_lower = array_change_key_case($_REQUEST, CASE_LOWER);
-        }
-
-        if (isset($REQUEST_lower['debug'])) {
-            $GLOBALS["DEBUG"]=(int)$REQUEST_lower['debug'];
+        if (isset($_REQUEST_lower['debug'])) {
+            $GLOBALS["DEBUG"]=(int)$_REQUEST_lower['debug'];
         }
 
         /*
@@ -364,12 +358,30 @@ class Ack extends \josephtingiris\Debug
 
         // Install_Servers
         if (empty($this->Install_Servers)) {
-            $this->Install_Servers = $this->Ack_Config->configValue("install_servers");
-            if (empty($this->Install_Servers)) {
-                $this->Install_Servers[] = $this->Install_Server;
+            if (!empty($this->Install_Server)) {
+                array_push($this->Install_Servers,$this->Install_Server);
+            }
+            $ack_config_install_servers=$this->Ack_Config->configValue("install_servers");
+            if (!empty($ack_config_install_servers)) {
+                if (is_array($ack_config_install_servers)) {
+                    foreach ($ack_config_install_servers as $ack_config_install_server) {
+                        array_push($this->Install_Servers,$ack_config_install_server);
+                    }
+                }
             }
         }
         $this->Install_Servers=array_unique($this->Install_Servers);
+
+        // Install_Domain
+        if (empty($this->Install_Domain)) {
+            $this->Install_Domain= strstr($this->Install_Server,".");
+            $this->Install_Domain= ltrim($this->Install_Domain,".");
+        }
+
+        // CNC_Server
+        if (empty($this->CNC_Server)) {
+            $this->CNC_Server= $this->Install_Server; # TODO; debt
+        }
 
         // Log_Dir
         if (empty($this->Log_Dir)) {
@@ -498,7 +510,9 @@ class Ack extends \josephtingiris\Debug
         usort($this->Ssh_Authorized_Keys, "strcasecmp");
 
         // Timezone; date() is used throughout; ensure a valid timezone is set
-        if(!ini_get('date.timezone')) {
+        if(ini_get('date.timezone')) {
+            $this->Timezone=ini_get('date.timezone');
+        } else {
 
             $this->Timezone = $this->Ack_Config->configValue("timezone");
             if (empty($this->Timezone)) {
@@ -642,7 +656,7 @@ class Ack extends \josephtingiris\Debug
 
         // Client_Authorized
         if (empty($this->Client_Authorized)) {
-            $this->Client_Authorized = false;
+            $this->Client_Authorized = true; # TODO; default to false & make this work
         }
 
         if (empty($this->Client_Bootproto)) {
@@ -650,15 +664,38 @@ class Ack extends \josephtingiris\Debug
         }
 
         if (empty($this->Client_Install_URI)) {
-            $this->Client_Install_URI = null;
+
+            if (!empty($this->_REQUEST_lower["install"])) {
+                $trans_tbl=$this->Media_Dir . "/" . $this->_REQUEST_lower["install"] . "/TRANS.TBL";
+                if (!is_readable($trans_tbl)) {
+                    $trans_tbl=$this->Dir . "/" . $this->_REQUEST_lower["install"] . "/TRANS.TBL";
+                }
+                $trans_tbl=str_replace("//","/",$trans_tbl);
+
+                $this->debug("/TRANS.TBL **************************** ".$trans_tbl,2);
+
+                if (is_readable($trans_tbl)) {
+                    $trans_tbl=str_replace($this->Dir,"",$trans_tbl);
+                    $trans_tbl=str_replace("/TRANS.TBL","",$trans_tbl);
+                    $this->Client_Install_URI=$trans_tbl;
+                }
+            }
+
         }
 
         if (empty($this->Client_Install_URL)) {
             $this->Client_Install_URL = null;
-        }
-
-        if (empty($this->Client_Hostname)) {
-            $this->Client_Hostname = "localhost";
+            if (!empty($this->Install_Server)) {
+                if (isset($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] == strtolower("on")) {
+                    $this->Client_Install_URL="https://";
+                } else {
+                    $this->Client_Install_URL="http://";
+                }
+                $this->Client_Install_URL.=$this->Install_Server;
+            }
+            if (!empty($this->Client_Install_URI)) {
+                $this->Client_Install_URL.=$this->Client_Install_URI;
+            }
         }
 
         $client_provisioning_ips=$this->Ack_Client->clientProvisioningIPs();
@@ -666,7 +703,7 @@ class Ack extends \josephtingiris\Debug
 
         if (empty($this->Client_IP)) {
             if (!empty($client_provisioning_ips[0][1])) {
-                $this->Client_IP = $this->Ack_Network->networkMAC($rhn_provisioning_macs[0][1],$this->Client_IP);
+                $this->Client_IP = $this->Ack_Network->networkMAC($client_provisioning_ips[0][1],$this->Client_IP);
             } else {
                 if (isset($_SERVER["REMOTE_ADDR"])) {
                     $this->Client_IP = $this->Ack_Network->networkIPv4($_SERVER["REMOTE_ADDR"]);
@@ -695,19 +732,52 @@ class Ack extends \josephtingiris\Debug
         $rhn_provisioning_macs=$this->Ack_Client->clientRHNProvisioningMACs();
 
         if (empty($this->Client_MAC)) {
-            if (!empty($rhn_provisioning_macs[0][1])) {
-                $this->Client_MAC = $this->Ack_Network->networkMAC($rhn_provisioning_macs[0][1],$this->Client_IP);
+            if (!empty($this->_REQUEST_lower["mac"])) {
+                $this->Client_MAC = $this->Ack_Network->networkMAC($this->_REQUEST_lower["mac"]);
             } else {
-                if (empty($this->Client_IP)) {
-                    $this->Client_MAC = "000000000000";
+                if (!empty($rhn_provisioning_macs[0][1])) {
+                    $this->Client_MAC = $this->Ack_Network->networkMAC($rhn_provisioning_macs[0][1],$this->Client_IP);
                 } else {
-                    $this->Client_MAC = $this->Ack_Network->networkMAC(null,$this->Client_IP);
+                    if (empty($this->Client_IP)) {
+                        $this->Client_MAC = "000000000000";
+                    } else {
+                        $this->Client_MAC = $this->Ack_Network->networkMAC(null,$this->Client_IP);
+                    }
+                }
+            }
+        }
+
+        if (empty($this->Client_Hostname)) {
+            if (!empty($this->_REQUEST_lower["hostname"])) {
+                $this->Client_Hostname = $this->_REQUEST_lower["hostname"];
+            } else {
+                if (!empty($this->Client_MAC)) {
+                    $this->Client_Hostname = $this->Client_MAC;
+                } else {
+                    $this->Client_Hostname = "localhost";
                 }
             }
         }
 
         if (empty($this->Client_AAA)) {
             $this->Client_AAA = $this->AAA_Dir . "/" . $this->Client_MAC;
+        }
+
+        if (empty($this->Client_Console)) {
+            if (!empty($this->_REQUEST_lower["console"])) {
+                $this->Client_Console = (int)$this->_REQUEST_lower["console"];
+            } else {
+                $this->Client_Console="tty0";
+            }
+        }
+
+        # client_debug is passed through and used in (template) includes
+        if (empty($this->Client_Debug)) {
+            if (!empty($this->_REQUEST_lower["debug"])) {
+                $this->Client_Debug = (int)$this->_REQUEST_lower["debug"];
+            } else {
+                $this->Client_Debug = 0;
+            }
         }
 
         if (empty($this->Client_MAC_Address_0)) {
@@ -730,9 +800,22 @@ class Ack extends \josephtingiris\Debug
             $this->Client_Password = $this->Client_MAC;
         }
 
-        if (empty($this->Client_PPI_Include)) {
-            $this->Client_PPI_Include = $this->Ack_Client->clientPrePostInstallInclude();
+        if (empty($this->Client_Password_Crypt)) {
+            $this->Client_Password_Crypt = crypt($this->Client_Password, '$6$ackM');
         }
+
+        if (empty($this->Client_Kickstart_Include_Postinstall)) {
+            $this->Client_Kickstart_Include_Postinstall = $this->ackETCFile("ack-template-postinstall");
+        }
+
+        if (empty($this->Client_Kickstart_Include_PPI)) {
+            $this->Client_Kickstart_Include_PPI = $this->ackETCFile("ack-template-ppi");
+        }
+
+        if (empty($this->Client_Kickstart_Include_Preinstall)) {
+            $this->Client_Kickstart_Include_Preinstall = $this->ackETCFile("ack-template-preinstall");
+        }
+
 
         if (empty($this->Client_Serial_Number)) {
             $this->Client_Serial_Number = $this->Ack_Client->clientAnacondaSystemSerialNumber();
@@ -743,26 +826,7 @@ class Ack extends \josephtingiris\Debug
         }
 
         if (empty($this->Client_Kickstart_Template)) {
-            $this->Client_Kickstart_Template = null;
-            foreach($this->ETC_Dirs as $etc_dir) {
-                $client_templates=array(
-                    $etc_dir . "/ack-template-kickstart-".$this->Client_MAC,
-                    $etc_dir . "/ack-template-kickstart"
-                );
-
-                foreach ($client_templates as $client_template) {
-                    if (is_readable($client_template)) {
-                        $this->Client_Kickstart_Template = $client_template;
-                        break;
-                    }
-                }
-
-                unset($client_templates);
-
-                if (!is_null($this->Client_Kickstart_Template)) {
-                    break;
-                }
-            }
+            $this->Client_Kickstart_Template = $this->ackETCFile("ack-template-kickstart");
         }
 
         if (empty($this->Client_Type)) {
@@ -792,6 +856,122 @@ class Ack extends \josephtingiris\Debug
         /*
          * end function logic
          */
+    }
+
+    /*
+     * determines if a file exists in ETC_Dirs and returns its filename
+     */
+
+    public function ackETCFile($etc_file=null)
+    {
+        if (is_null($etc_file)) {
+            return null;
+        }
+
+        if (is_readable($etc_file)) {
+            return $etc_file;
+        }
+
+        foreach($this->ETC_Dirs as $etc_dir) {
+
+            $etc_files=array(
+                $etc_dir . "/" . $etc_file . "-" . $this->Client_MAC,
+                $etc_dir . "/" . $etc_file
+            );
+
+            foreach ($etc_files as $etc_search) {
+
+                $this->debug(__FUNCTION__ . " searching for $etc_search",18);
+                if (is_readable($etc_search)) {
+                    $this->debug(__FUNCTION__ . " found $etc_search",8);
+                    return "$etc_search";
+                }
+
+            }
+        }
+
+        return null;
+    }
+
+    /*
+     * replace all ack keys in a given input string
+     */
+
+    public function ackKeyReplace($input_string=null, $append_keys=false)
+    {
+        if (is_null($input_string) || !is_string($input_string)) {
+            return $input_string;
+        }
+
+        $append_string="";
+        $output_string=$input_string;
+
+        foreach (get_object_vars($this) as $ack_property => $ack_property_value) {
+
+            $ack_property_type=gettype($ack_property_value);
+
+            # hide/skip these
+            if (substr($ack_property,0,1) == "_"
+                || $ack_property_type == "object"
+            ) {
+                continue;
+            }
+
+            $ack_key="##" . strtoupper($this->Label) . "_".strtoupper($ack_property)."##";
+            $append_string.=$ack_key." [".$ack_property_type."]";
+
+            if (!is_null($ack_property_value)) {
+
+                if (is_array($ack_property_value) === true) {
+                    $array_string="(\"" . $this->Ack_Sub->subImplode("\" \"",$ack_property_value) . "\")";
+                    if (is_string($array_string) === true) {
+                        $append_string.=" = $array_string";
+                        $output_string=str_replace($ack_key,$array_string,$output_string);
+                        $this->debugValue("$ack_key",8,"[$ack_property_type] $array_string");
+                    } else {
+                        $this->debugValue("ERROR $ack_key",8,"[$ack_property_type] ???");
+                    }
+                    unset($array_string);
+                } else {
+                    $this->debugValue("$ack_key",8,"[$ack_property_type] $ack_property_value");
+                }
+
+                if (is_bool($ack_property_value) === true) {
+
+                    if ($ack_property_value) {
+                        $append_string.=" = 0";
+                        $output_string=str_replace($ack_key,"0",$output_string);
+                    } else {
+                        $append_string.=" = 1";
+                        $output_string=str_replace($ack_key,"1",$output_string);
+                    }
+
+                }
+
+                if (is_string($ack_property_value) === true) {
+
+                    $append_string.=" = $ack_property_value";
+                    $output_string=str_replace($ack_key,$ack_property_value,$output_string);
+                }
+
+                if (is_numeric($ack_property_value) === true) {
+                    $append_string.=" = $ack_property_value";
+                    $output_string=str_replace($ack_key,"$ack_property_value",$output_string);
+                }
+
+            }
+
+            $append_string.="\n";
+        }
+
+        if ($append_keys) {
+            $output_string.="\n\n# $this->Label keys - start\n\n\n";
+            $output_string.=$append_string;
+            $output_string.="\n\n# $this->Label keys - end\n";
+        }
+
+        return $output_string;
+
     }
 
     /*

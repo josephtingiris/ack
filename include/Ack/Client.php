@@ -212,7 +212,9 @@ class Client extends \josephtingiris\Debug
          * begin function logic
          */
 
-        $Ack->propertiesPrint();
+        $Ack = new \josephtingiris\Ack();
+
+        $this->propertiesPrint();
 
         $ack_index_header=null;
         $ack_index_header.="#";
@@ -226,8 +228,27 @@ class Client extends \josephtingiris\Debug
             $ack_index_header.=" (".$Ack->Label.")";
         }
         $ack_index_header.=" - Install Server [".$Ack->Install_Server."]";
-
+        $ack_index_header.=" - Template [".$Ack->Client_Kickstart_Template."]";
+        if (!empty($Ack->Client_Debug)) {
+            $ack_index_header.=" - [DEBUG=".$Ack->Client_Debug."]";
+        }
         $ack_index_header.="\n";
+        $ack_index_header.="#";
+        $ack_index_header.="\n";
+        $ack_index_header.="# [".  date("Y-m-d H:i:s") ."]";
+        $ack_index_header.=" - config";
+        if (!empty($Ack->Client_IP)) {
+            $ack_index_header.=" - ".$Ack->Client_IP;
+        }
+        if (!empty($Ack->Client_IP_Address_0) && $Ack->Client_IP_Address_0 != $Ack->Client_IP) {
+            $ack_index_header.=" - ".$Ack->Client_IP_Address_0;
+        }
+        if (!empty($Ack->Client_MAC)) {
+            $ack_index_header.=" - ".$Ack->Client_MAC;
+        }
+        $ack_index_header.=" - start";
+        $ack_index_header.="\n";
+        $ack_index_header.="#";
         $ack_index_header.="\n";
 
         echo $ack_index_header;
@@ -244,9 +265,46 @@ class Client extends \josephtingiris\Debug
         $ack_index_footer.="#";
         $ack_index_footer.="\n";
         $ack_index_footer.="# [".  date("Y-m-d H:i:s") ."]";
-        $ack_index_footer.=" - template";
+        $ack_index_footer.=" - config";
+        if (!empty($Ack->Client_IP)) {
+            $ack_index_footer.=" - ".$Ack->Client_IP;
+        }
+        if (!empty($Ack->Client_IP_Address_0) && $Ack->Client_IP_Address_0 != $Ack->Client_IP) {
+            $ack_index_footer.=" - ".$Ack->Client_IP_Address_0;
+        }
+        if (!empty($Ack->Client_MAC)) {
+            $ack_index_footer.=" - ".$Ack->Client_MAC;
+        }
+        $ack_index_footer.=" - end";
+        $ack_index_footer.="\n";
+        $ack_index_footer.="#";
+        $ack_index_footer.="\n";
 
         echo $ack_index_footer;
+
+        /*
+         * end function logic
+         */
+    }
+
+    /**
+     * output a client kickstart include
+     */
+    public function clientKickstartInclude($include_file=null)
+    {
+        /*
+         * begin function logic
+         */
+
+        if (!is_readable($include_file)) {
+            return null;
+        }
+
+        $Ack = new \josephtingiris\Ack();
+
+        $include_contents=$Ack->ackKeyReplace(file_get_contents($include_file));
+
+        return $include_contents;
 
         /*
          * end function logic
@@ -266,48 +324,51 @@ class Client extends \josephtingiris\Debug
             return null;
         }
 
-        $reflect = new \ReflectionClass($Ack);
-        $reflections = $reflect->getProperties(\ReflectionProperty::IS_PUBLIC);
+        $Ack = new \josephtingiris\Ack();
 
-        $client_kickstart_template_contents=file_get_contents($template_file);
+        $client_kickstart_template_contents=$Ack->ackKeyReplace(file_get_contents($template_file),true);
+
+        # if necessary, correct UTC timezone
+        if (preg_match("/\ntimezone(.*)UTC/i",$client_kickstart_template_contents)) {
+            if (!preg_match("/\ntimezone(.*)UTC --utc/i",$client_kickstart_template_contents)) {
+                $client_kickstart_template_contents=preg_replace("/\ntimezone UTC/","\ntimezone UTC --utc",$client_kickstart_template_contents);
+            }
+        }
 
         $client_kickstart_template="";
-        $client_kickstart_template.="# template $template_file - begin\n";
-        foreach($reflections as $reflection) {
-            $client_kickstart_template_key="##ACK_".strtoupper($reflection->name)."##";
-            $client_kickstart_template_value=$Ack->$reflection->name;
 
-            $client_kickstart_template.=$client_kickstart_template_key."\n";
+        $client_kickstart_template.="\n\n# template $template_file - start\n\n\n";
+        if (preg_match("/##ACK_PPI##/i",$client_kickstart_template_contents)) {
+            $client_kickstart_include_ppi=$this->clientKickstartInclude($Ack->Client_Kickstart_Include_PPI);
+            if (!empty($client_kickstart_include_ppi)) {
+                $client_kickstart_include_pre="%pre --log=/var/tmp/ack.pre.log\n";
+                $client_kickstart_include_pre.=$client_kickstart_include_ppi;
+                $client_kickstart_include_pre.="%end\n";
+                $client_kickstart_include_pre.="\n";
+                $client_kickstart_include_post="%post --log=/mnt/sysimage/var/tmp/ack/ack.post.log --nochroot\n";
+                $client_kickstart_include_post.=$client_kickstart_include_ppi;
+                $client_kickstart_include_post.="%end\n";
+                $client_kickstart_include_post.="\n";
 
-            #if (!is_null($Ack->$reflection->name) && $Ack->$reflection->name != "") {
-                #$client_kickstart_template_contents=str_replace($client_kickstart_template_key,$Ack->$reflection->name,$client_kickstart_template_contents);
-            #}
-
-            unset($client_kickstart_template_key);
+                $client_kickstart_include_ppi= "%include /tmp/smartpart\n\n";
+                $client_kickstart_include_ppi.=$client_kickstart_include_pre;
+                $client_kickstart_include_ppi.=$client_kickstart_include_post;
+                $client_kickstart_include_ppi.="\n";
+                $client_kickstart_include_basename=basename($Ack->Client_Kickstart_Include_PPI);
+                $client_kickstart_include_ppi.="\n\n# rm /tmp/$client_kickstart_include_basename; curl --write-out %{http_code} --silent -k https://".$Ack->Install_Server."/?include=$client_kickstart_include_basename&debug=10 -o /tmp/$client_kickstart_include_basename; bash /tmp/$client_kickstart_include_basename\n\n";
+            }
+            $client_kickstart_template_contents=str_replace("##ACK_PPI##",$client_kickstart_include_ppi,$client_kickstart_template_contents);
+        } else {
+            if (preg_match("/##ACK_PREINSTALL##/i",$client_kickstart_template_contents)) {
+            }
+            if (preg_match("/##ACK_POSTINSTALL##/i",$client_kickstart_template_contents)) {
+            }
         }
+
         $client_kickstart_template.=$client_kickstart_template_contents;
-        $client_kickstart_template.="# template $template_file - end\n";
+        $client_kickstart_template.="\n\n# template $template_file - end\n";
 
         return $client_kickstart_template;
-
-        /*
-         * end function logic
-         */
-    }
-
-    public function clientPrePostInstallInclude()
-    {
-        /*
-         * begin function logic
-         */
-
-        $ppi = false;
-
-        if (!empty($this->clientProvisioningIPs())) {
-            $ppi = true;
-        }
-
-        return $ppi;
 
         /*
          * end function logic

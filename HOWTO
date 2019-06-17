@@ -1,0 +1,11 @@
+CREATE ACK-MEDIA
+
+1) Download original media iso & put it in media/distribution
+
+https://www.centos.org/download/
+mv ~jtingiris/Downloads/CentOS-7-x86_64-DVD-1810.iso media/distribution/
+
+
+2) Create the boot media
+
+sbin/ack-media -b CentOS-7-x86_64-DVD-1810.iso -s dev-ack.domain.com
