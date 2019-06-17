@@ -101,41 +101,20 @@ if (empty($Autoload_Enabled)) {
  *
  */
 
-$Debug=0;
-
-$Ack = new \josephtingiris\Ack();
+$Debug=20;
 
 header("Content-Type: text/plain;charset=UTF-8");
 
-if (!empty($Ack->_REQUEST_lower["include"])) {
-    # TODO; debug
-    $Ack_Include_File=$Ack->ackETCFile($Ack->_REQUEST_lower["include"]);
-    if (!empty($Ack_Include_File)) {
-        $Ack_Include_File_Basename=basename($Ack_Include_File);
-        echo $Ack->ackKeyReplace(file_get_contents($Ack_Include_File),true);
-        echo "\n\n# rm /tmp/$Ack_Include_File_Basename; curl --write-out %{http_code} --silent -k https://".$Ack->Install_Server."/?include=$Ack_Include_File_Basename -o /tmp/$Ack_Include_File_Basename; bash /tmp/$Ack_Include_File_Basename\n\n";
-    }
-    exit();
-}
-
-$Ack->propertiesPrint();
-
-$Ack->Ack_Client->clientKickstart();
-
-#print_r($_SERVER);
-
-exit();
-
 # Global (debug)
 
-if (!empty($_REQUEST) && is_array($_REQUEST)) {
-    $_REQUEST_lower = array_change_key_case($_REQUEST, CASE_LOWER);
+if (!empty($_GET) && is_array($_GET)) {
+    $_GET_lower = array_change_key_case($_GET, CASE_LOWER);
 } else {
-    $_REQUEST_lower=array();
+    $_GET_lower=array();
 }
 
-if (isset($_REQUEST_lower['debug'])) {
-    $DEBUG=(int)$_REQUEST_lower['debug'];
+if (isset($_GET_lower['debug'])) {
+    $DEBUG=(int)$_GET_lower['debug'];
 }
 
 if (empty($Default_Timezone)) {
@@ -171,7 +150,7 @@ unset($Ack_Php_Dir, $Ack_Php);
 # Anaconda/Kickstart (AcK)
 function ackIndex() {
 
-    global $_REQUEST_lower,$Ack_Dir;
+    global $_GET_lower,$Ack_Dir;
 
     $Debug = new \josephtingiris\Debug;
 
@@ -244,8 +223,8 @@ function ackIndex() {
     $Debug->debug("ack_client_install_server=".$ack_client_install_server,$debug_level);
 
     if (empty($ack_client_install_uri)) {
-        if (!empty($_REQUEST_lower['install'])) {
-            $ack_client_install_uri=$_REQUEST_lower['install'];
+        if (!empty($_GET_lower['install'])) {
+            $ack_client_install_uri=$_GET_lower['install'];
         }
     }
     $Debug->debug("ack_client_install_uri=".$ack_client_install_uri,$debug_level);
@@ -614,7 +593,7 @@ if (isset($_SERVER["HTTP_X_RHN_PROVISIONING_MAC_0"])) {
 
 if (isset($_SERVER["REMOTE_ADDR"])) $PROVISIONING_IP_REMOTE=trim($_SERVER["REMOTE_ADDR"]);
 
-if (isset($_REQUEST_lower["provisioning_mac"])) $PROVISIONING_MAC=$_REQUEST_lower["provisioning_mac"];
+if (isset($_GET_lower["provisioning_mac"])) $PROVISIONING_MAC=$_GET_lower["provisioning_mac"];
 
 $PROVISIONING_MAC=strtolower($PROVISIONING_MAC);
 
