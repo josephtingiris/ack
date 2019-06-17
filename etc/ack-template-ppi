@@ -1,15 +1,16 @@
 #!/bin/bash
 
 # 20151208, joseph.tingiris@gmail.com, created
+# 20190616, joseph.tingiris@gmail.com, updated
 
 PATH=/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin
 if [ "$DEBUG" == "" ]; then
-    declare -i DEBUG=0
+    declare -i DEBUG=##ACK_CLIENT_DEBUG##
 else
     declare -i DEBUG=$DEBUG
 fi
 
-CONSOLE="##CONSOLE##"
+CONSOLE="##ACK_CLIENT_CONSOLE##"
 
 # defaults are (were) primarily used for development inside the initrd shell, before fully realizing the power of
 # using a dynamic ks config, which is made capable by relying on an http server & a server side scripting engine
@@ -20,22 +21,20 @@ DEFAULT_ACK_LABEL="##ACK_LABEL##"
 
 DEFAULT_ANA_INSTALL_PATH=/mnt/sysimage
 
-DEFAULT_CNC_SERVER="##CNC_SERVER##"
-
 DEFAULT_DIR_EFI_BOOT="/boot/efi"
 DEFAULT_DIR_MEDIA="/tmp/media"
 DEFAULT_DIR_RECOVERY="/tmp/recovery"
 
-DEFAULT_INSTALL_DOMAIN="##INSTALL_DOMAIN##"
-DEFAULT_INSTALL_ID="##INSTALL_ID##"
-DEFAULT_INSTALL_SERVER="##INSTALL_SERVER##"
-DEFAULT_INSTALL_SERVERS="##INSTALL_SERVERS##"
-DEFAULT_INSTALL_SSH_AUTHORIZED_KEYS="##INSTALL_SSH_AUTHORIZED_KEYS##"
+DEFAULT_INSTALL_DOMAIN="##ACK_INSTALL_DOMAIN##"
+DEFAULT_INSTALL_ID="##ACK_ID##"
+DEFAULT_INSTALL_SERVER="##ACK_INSTALL_SERVER##"
+DEFAULT_INSTALL_SERVERS=##ACK_INSTALL_SERVERS##
+DEFAULT_INSTALL_SSH_AUTHORIZED_KEYS=##ACK_SSH_AUTHORIZED_KEYS##
 
 DEFAULT_RECOVERY_INITRD="/initrd.img"
-DEFAULT_RECOVERY_VMLINUZ="/vmlinuz biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn inst.ks=https://$DEFAULT_INSTALL_SERVER/ noverifyssl inst.sshd console=##CONSOLE## inst.syslog=$DEFAULT_INSTALL_SERVER BOOT_IMAGE=vmlinuz"
+DEFAULT_RECOVERY_VMLINUZ="/vmlinuz biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn inst.ks=https://$DEFAULT_INSTALL_SERVER/ noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=$DEFAULT_INSTALL_SERVER BOOT_IMAGE=vmlinuz"
 
-DEFAULT_SUPPORTED_DEVICES="/dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/hda /dev/hdb /dev/hdc /dev/hdd /dev/hde /dev/vda /dev/vdb /dev/vdc /dev/vde"
+DEFAULT_SUPPORTED_DEVICES="/dev/vd[a..z] /dev/hd[a..z] /dev/sd[a..z]"
 
 if [ $DEBUG -gt 100 ]; then
     DEFAULT_SMARTPART=/tmp/smartpart.pre_install
@@ -452,14 +451,14 @@ function Init_Ack() {
         # need to test re-install from recovery partition -jjt
         Debug "install_device is null" 4
 
-        if [ -b /dev/sda ]; then
-            DEFAULT_INSTALL_DISK="sda"
+        if [ -b /dev/vda ]; then
+            DEFAULT_INSTALL_DISK="vda"
         fi
         if [ -b /dev/hda ]; then
             DEFAULT_INSTALL_DISK="hda"
         fi
-        if [ -b /dev/vda ]; then
-            DEFAULT_INSTALL_DISK="vda"
+        if [ -b /dev/sda ]; then
+            DEFAULT_INSTALL_DISK="sda"
         fi
     fi
 
@@ -547,28 +546,6 @@ function Init_Ack() {
         INSTALL_STATE=2
         Debug "INSTALL_STATE = $INSTALL_STATE ($ANA_INSTALL_PATH has mounted filesystems: $ANA_INSTALL_MOUNT)" 2
     fi
-
-    if [ "$CNC_SERVER" == "" ]; then
-        if [ "${DEFAULT_CNC_SERVER:0:2}" == "##" ] || [ "${DEFAULT_CNC_SERVER}" == "" ]; then
-            if [ "$INSTALL_SERVER" != "" ]; then
-                CNC_SERVER=$(echo "$INSTALL_SERVER" | sed -e '/ack\./s//cnc\./g')
-                #sed -e '/ack\./s//cnc\./g') # check
-            fi
-            if [ "$CNC_SERVER " == "" ]; then
-                export CNC_SERVER="localhost"
-                Debug "CNC_SERVER = $CNC_SERVER (localhost)" 4
-            else
-                Debug "CNC_SERVER = $CNC_SERVER (INSTALL_SERVER)" 4
-            fi
-        else
-            CNC_SERVER=$DEFAULT_CNC_SERVER
-            Debug "CNC_SERVER = $CNC_SERVER (default)" 4
-        fi
-    else
-        Debug "CNC_SERVER = $CNC_SERVER" 2
-    fi
-
-    CURL_HEADERS+=" --header \"X-CNC-SERVER: ${CNC_SERVER}\""
 
     if [ "$RECOVERY_INITRD" == "" ]; then
         export RECOVERY_INITRD="$DEFAULT_RECOVERY_INITRD"
@@ -717,61 +694,64 @@ function Init_Authorized_Keys() {
             local embedded_ssh_authorized_keys=$(cat <<EOF
                 # $0 embedded key
 EOF
-            )
-            export INSTALL_SSH_AUTHORIZED_KEYS="$embedded_ssh_authorized_keys"
-            Debug "INSTALL_SSH_AUTHORIZED_KEYS = $INSTALL_SSH_AUTHORIZED_KEYS (embedded)" 200
-        else
-            export INSTALL_SSH_AUTHORIZED_KEYS="$DEFAULT_INSTALL_SSH_AUTHORIZED_KEYS"
-            Debug "INSTALL_SSH_AUTHORIZED_KEYS = $INSTALL_SSH_AUTHORIZED_KEYS (default)" 200
-        fi
+)
+export INSTALL_SSH_AUTHORIZED_KEYS="$embedded_ssh_authorized_keys"
+Debug "INSTALL_SSH_AUTHORIZED_KEYS = $INSTALL_SSH_AUTHORIZED_KEYS (embedded)" 200
+else
+    export INSTALL_SSH_AUTHORIZED_KEYS=$DEFAULT_INSTALL_SSH_AUTHORIZED_KEYS
+    Debug "INSTALL_SSH_AUTHORIZED_KEYS = $INSTALL_SSH_AUTHORIZED_KEYS (default)" 200
+fi
+else
+    Debug "INSTALL_SSH_AUTHORIZED_KEYS = $INSTALL_SSH_AUTHORIZED_KEYS" 200
+fi
+
+local root_ssh_dir="$1"
+
+if [ "$root_ssh_dir" == "" ]; then return; fi
+
+if [ -f "$root_ssh_dir" ] || [ -h "$root_ssh_dir" ]; then
+    Warning "$root_ssh_dir exists as a file or link"
+    return
+fi
+
+Debug "Init_Authorized_Keys() $root_ssh_dir" 1
+
+_Mkdir "$root_ssh_dir"
+
+if [ ! -d "$root_ssh_dir" ]; then
+    Warning "$root_ssh_dir directory not found"
+else
+    _Chmod 700 "$root_ssh_dir"
+fi
+
+if [ ! -f $root_ssh_dir/id_rsa ] && [ ! -f $root_ssh_dir/id_rsa.pub ]; then
+    ssh-keygen -f $root_ssh_dir/id_rsa -t rsa -b 2048 -C '' -N ""
+    local exit_code=$?
+    if [ $exit_code -eq 0 ]; then
+        Debug "ssh-keygen -f $root_ssh_dir/id_rsa succeeded" 200
     else
-        Debug "INSTALL_SSH_AUTHORIZED_KEYS = $INSTALL_SSH_AUTHORIZED_KEYS" 200
+        Warning "ssh-keygen -f $root_ssh_dir/id_rsa failed [$exit_code]"
     fi
+fi
 
-    local root_ssh_dir="$1"
-
-    if [ "$root_ssh_dir" == "" ]; then return; fi
-
-    if [ -f "$root_ssh_dir" ] || [ -h "$root_ssh_dir" ]; then
-        Warning "$root_ssh_dir exists as a file or link"
-        return
+if [ "$INSTALL_SSH_AUTHORIZED_KEYS" != "" ]; then
+    Debug "creating $root_ssh_dir/authorized_keys" 2
+    > $root_ssh_dir/authorized_keys
+    for INSTALL_SSH_AUTHORIZED_KEY in ${SSH_AUTHRIZED_KEYS[@]}; do
+        echo "$INSTALL_SSH_AUTHORIZED_KEYS" >> $root_ssh_dir/authorized_keys
+    done
+    _Chmod 600 "$root_ssh_dir/authorized_keys"
+    if [ $DEBUG -gt 100 ] && [ -f "$root_ssh_dir/authorized_keys" ]; then
+        echo "----------------------------------------------------"
+        cat "$root_ssh_dir/authorized_keys"
+        echo "----------------------------------------------------"
+        exit
     fi
+else
+    Debug "INSTALL_SSH_AUTHORIZED_KEYS = NULL" 2
+fi
 
-    Debug "Init_Authorized_Keys() $root_ssh_dir" 1
-
-    _Mkdir "$root_ssh_dir"
-
-    if [ ! -d "$root_ssh_dir" ]; then
-        Warning "$root_ssh_dir directory not found"
-    else
-        _Chmod 700 "$root_ssh_dir"
-    fi
-
-    if [ ! -f $root_ssh_dir/id_rsa ] && [ ! -f $root_ssh_dir/id_rsa.pub ]; then
-        ssh-keygen -f $root_ssh_dir/id_rsa -t rsa -b 2048 -C '' -N ""
-        local exit_code=$?
-        if [ $exit_code -eq 0 ]; then
-            Debug "ssh-keygen -f $root_ssh_dir/id_rsa succeeded" 200
-        else
-            Warning "ssh-keygen -f $root_ssh_dir/id_rsa failed [$exit_code]"
-        fi
-    fi
-
-    if [ "$INSTALL_SSH_AUTHORIZED_KEYS" != "" ]; then
-        Debug "creating $root_ssh_dir/authorized_keys" 2
-        echo "$INSTALL_SSH_AUTHORIZED_KEYS" > $root_ssh_dir/authorized_keys
-        _Chmod 600 "$root_ssh_dir/authorized_keys"
-        if [ $DEBUG -gt 100 ] && [ -f "$root_ssh_dir/authorized_keys" ]; then
-            echo "----------------------------------------------------"
-            cat "$root_ssh_dir/authorized_keys"
-            echo "----------------------------------------------------"
-            exit
-        fi
-    else
-        Debug "INSTALL_SSH_AUTHORIZED_KEYS = NULL" 2
-    fi
-
-    Debug "Init_Authorized_Keys() end" 1000
+Debug "Init_Authorized_Keys() end" 1000
 }
 
 function Post_Install() {
@@ -818,404 +798,22 @@ function Post_Install() {
 
     Init_Authorized_Keys "$root_dir/.ssh"
 
-    # here's where it starts getting sketchy ...
-
-    DEFAULT_INSTALL_CNC="##INSTALL_CNC##"
-
-    local cnc_basename="${ACK_LABEL}-cnc"
-
-    local cnc_dir=$(echo "/${cnc_basename}/" | sed -e 's#-#/#g' -e 's#//#/#g' -e 's#/$##g')
-
-    local cnc_etc="$cnc_dir/etc"
-    local cnc_sbin="$cnc_dir/sbin"
-    local cnc_install="$cnc_sbin/${cnc_basename}"
-
-    local cnc_post_dir=$(echo "${ANA_INSTALL_PATH}/$cnc_dir" | sed -e 's#//#/#g' -e 's#/$##g')
-
-    local cnc_post_etc="$cnc_post_dir/etc"
-    local cnc_post_sbin="$cnc_post_dir/sbin"
-    local cnc_post_install="$cnc_post_sbin/${cnc_basename}"
-
-    local cnc_post_log="/tmp/${cnc_basename}.log"
-
-    local -i cnc_post_state=0
-
-    Debug "cnc_basename = $cnc_basename" 2
-    Debug "cnc_dir = $cnc_dir" 2
-    Debug "cnc_etc = $cnc_etc" 2
-    Debug "cnc_sbin = $cnc_sbin" 2
-    Debug "cnc_install = $cnc_install" 2
-    Debug "cnc_post_dir = $cnc_post_dir" 2
-    Debug "cnc_post_etc = $cnc_post_etc" 2
-    Debug "cnc_post_sbin = $cnc_post_sbin" 2
-    Debug "cnc_post_install = $cnc_post_install" 2
-    Debug "cnc_post_log = $cnc_post_log" 2
-
-    if [ "$CNC_SERVER" == "" ]; then
-        local cnc_server="$INSTALL_DOMAIN"
-    else
-        local cnc_server="$CNC_SERVER"
-    fi
-    Debug "cnc_server = $cnc_server" 2
-
-    local ack_dirs="$cnc_post_dir $cnc_post_etc $cnc_post_sbin"
-    for ack_dir in $ack_dirs; do
-        if [ ! -d "$ack_dir" ]; then
-            _Mkdir "$ack_dir"
+    local log_files="/tmp/syslog /var/tmp/install.pre.log /var/tmp/install.pre.env /var/tmp/install.post.log /var/log/boot.log /var/log/dmesg $curl_tmp_file ${curl_tmp_file}.md5sum"
+    for log_file in $log_files; do
+        if [ -f "$log_file" ]; then
+            _Cp "$log_file" "$LOG_DIR"
         fi
     done
 
-    echo "$cnc_server" > "$cnc_post_etc"/cnc_server
-
-    touch $cnc_post_log
-    if [ $? -ne 0 ]; then
-        Warning "cnc_post_log creation failed"
-    fi
-
-    echo $(date) >> $cnc_post_log
-
-    local cnc_url="https://$cnc_server/?id"
-    Debug "cnc_url = $cnc_url" 2
-
-    _Rm "$cnc_post_install"
-
-    if [ ! -d "$cnc_post_sbin" ]; then
-        Warning "$cnc_post_sbin directory not found"
-    else
-
-        # this is a thought experiment; get cnc files(s) & their md5sums, compare them, if good then execute file(s)
-
-        # chroot now?
-        # if so have to modify the systemd echo
-
-        local curl_tmp_md5sum_actual=""
-        local curl_tmp_md5sum_expected=""
-
-        local curl_tmps="${cnc_basename}.md5sum ${cnc_basename}"
-
-        for curl_tmp in $curl_tmps; do
-            local curl_tmp_file="/tmp/$curl_tmp"
-
-            _Rm "$curl_tmp_file"
-
-            if [ $cnc_post_state -ne 0 ]; then continue; fi
-
-            local http_code=$(eval curl $CURL_HEADERS --write-out %{http_code} --silent -k $cnc_url=$(Url_Encode "$curl_tmp") -o $curl_tmp_file)
-            if [ "$http_code" == "200" ]; then
-                Debug "curl $cnc_url=$curl_tmp -o $curl_tmp_file succeeded" 4
-            else
-                Warning "curl $cnc_url=$curl_tmp -o $curl_tmp_file failed [$exit_code]"
-                _Rm "$curl_tmp_file"
-            fi
-
-            if [ ! -s "$curl_tmp_file" ]; then
-                Debug "$curl_tmp_file file not found or empty" 4
-                _Rm "$curl_tmp_file"
-                cnc_post_state=1
-                continue
-            else
-                local -l curl_tmp_md5sum=${curl_tmp_file#*.}
-
-                if [ "$curl_tmp_md5sum" == "md5sum" ]; then
-                    curl_tmp_md5sum_expected="$(cat $curl_tmp_file | awk '{print $1}')"
-                    Debug "curl_tmp_file = $curl_tmp_file [$curl_tmp_md5sum_expected] (expected)" 4
-                else
-                    curl_tmp_md5sum_actual="$(md5sum $curl_tmp_file | awk '{print $1}')"
-                    Debug "curl_tmp_file = $curl_tmp_file [$curl_tmp_md5sum_actual] (actual)" 4
-                fi
-
-                Debug_Content "$curl_tmp_file"
-
-            fi
-
-        done
-
-        if [ "$curl_tmp_md5sum_actual" != "" ] && [ "$curl_tmp_md5sum_expected" != "" ] && [ "$curl_tmp_md5sum_actual" == "$curl_tmp_md5sum_expected" ] && [ -s $curl_tmp_file ]; then
-            Debug "verified md5sum for $curl_tmp_file" 4
-
-            local cnc_post_script=$(head -1 "$curl_tmp_file" | grep ^\#! | awk -F! '{print $NF}')
-            if [ "$cnc_post_script" == "" ]; then
-                Debug "$curl_tmp_file is not a valid script" 4
-                cnc_post_state=1
-                cat /dev/null > "$cnc_post_install"
-            else
-                if [ ! -x "$cnc_post_script" ]; then
-                    Debug "$curl_tmp_file is not a valid script ($cnc_post_script)" 4
-                    cnc_post_state=1
-                    cat /dev/null > "$cnc_post_install"
-                else
-                    Debug "$curl_tmp_file is a valid script ($cnc_post_script)" 4
-                    _Chmod 700 "$curl_tmp_file"
-                    eval "$curl_tmp_file"
-                    exit_code=$?
-                    if [ $exit_code -eq 0 ]; then
-                        Debug "$curl_tmp_file execution succeeded"
-                    else
-                        Debug "$curl_tmp_file execution failed, [$exit_code]"
-                        cnc_post_state=1
-                        _Rm "$curl_tmp_file"
-                    fi
-                fi
-            fi
-        else
-            Debug "$curl_tmp_file md5sum failed" 4
-            cnc_post_state=1
-        fi
-
-        if [ $cnc_post_state -ne 0 ]; then
-            Debug "$curl_tmp_file is invalid" 4
-            _Rm "$curl_tmp_file"
-            _Rm "$cnc_post_install"
-        else
-            Debug "$curl_tmp_file is valid" 4
-        fi
-
-        # hmmm; this overrides the above ...
-        cat << 'EOF' > ${cnc_post_install}
-        #!/bin/bash
-
-        ###############
-        # DO NOT EDIT #
-        ###############
-
-        PATH=/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin:/mnt/sysimage/sbin:/mnt/sysimage/bin
-
-        CURL_HEADERS="--header \"X-ACK_LABEL: ##ACK_LABEL##\""
-
-        if [ -d /sys/firmware/efi ]; then
-            EFI_STATE=0
-        else
-            EFI_STATE=1
-        fi
-        CURL_HEADERS+=" --header \"X-EFI-STATE: ${EFI_STATE}\""
-
-        CURL_HEADERS+=" --header \"X-ANACONDA-ARCHITECTURE: $(uname -m)\""
-
-        CURL_HEADERS+=" --header \"X-HOSTNAME: $(hostname)\""
-
-        GATEWAY_INTERFACE=$(netstat -rn 2> /dev/null | grep ^0.0.0.0\ | awk '{print $NF}' | head -1)
-        if [ "$GATEWAY_INTERFACE" != "" ]; then
-            GATEWAY_INTERFACE_IPV4=$(ip -o addr list $GATEWAY_INTERFACE 2> /dev/null | grep -o -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | awk 'NR==1{print $1}' | grep -v [a-z] | grep -v [A-Z])
-            CURL_HEADERS+=" --header \"X-PROVISIONING-IP-0: $GATEWAY_INTERFACE $GATEWAY_INTERFACE_IPV4\""
-
-            GATEWAY_INTERFACE_MAC=$(ip -o link list $GATEWAY_INTERFACE 2> /dev/null | grep -o -E '([[:xdigit:]]{1,2}:){5}[[:xdigit:]]{1,2}'| awk 'NR==1{print tolower($1)}' | sed -e '/:/s///g')
-            CURL_HEADERS+=" --header \"X-PROVISIONING-MAC: $GATEWAY_INTERFACE_MAC\""
-
-            CURL_HEADERS+=" --header \"X-RHN-PROVISIONING-MAC-0: $GATEWAY_INTERFACE $GATEWAY_INTERFACE_MAC\""
-        fi
-
-        CNC_SERVER=$(dirname $0)/../etc/cnc_server
-        if [ -f ${CNC_SERVER} ]; then
-            CNC_URL="https://$(awk '{print $1}' ${CNC_SERVER})/?id"
-        else
-            CNC_URL="https://##CNC_SERVER##/?id"
-        fi
-
-        TMP_FILE=$(mktemp 2> /dev/null)
-
-        if [ "$TMP_FILE" != "" ]; then
-            HTTP_CODE=$(eval curl ${CURL_HEADERS} --write-out %{http_code} --silent -k ${CNC_URL}=cnc -o ${TMP_FILE})
-            if [ "$HTTP_CODE" == "200" ]; then
-                if [ -f "$TMP_FILE" ]; then
-                    # here, not done .. jjt
-                HTTP_CODE=$(eval curl ${CURL_HEADERS} --write-out %{http_code} --silent -k ${CNC_URL}=cnc.md5sum -o ${TMP_FILE}.cnc.md5sum)
-                if [ "$HTTP_CODE" == "200" ] && [ -f ${TMP_FILE}.cnc.md5sum ]; then
-                    CNC_MD5SUM=$(awk '{print $1}' ${TMP_FILE}.cnc.md5sum)
-                else
-                    CNC_MD5SUM=""
-                fi
-
-                if [ "$CNC_MD5SUM" != "" ]; then
-                    TMP_FILE_MD5SUM=$(echo $($(which md5sum 2> /dev/null) ${TMP_FILE}) | awk '{print $1}')
-                else
-                    TMP_FILE_MD5SUM=""
-                fi
-
-                echo "${CNC_URL} ${CURL_HEADERS} ${CNC_MD5SUM} ${TMP_FILE_MD5SUM}"
-
-                touch $TMP_FILE
-                chmod 750 $TMP_FILE
-                $TMP_FILE
-                if [ $? -ne 0 ]; then
-                    echo "$TMP_FILE execution failed"
-                    exit 1
-                fi
-            fi
-        else
-            echo "$0 curl failed"
-            exit 1
-        fi
-
-    fi
-
-    exit
-
-    if [ "$http_code" == "200" ]; then
-        if [ -s /tmp/$CNC_BASENAME_MD5SUM ]; then
-            CNC_BASENAME_MD5SUM=$(awk '{print $1}' /tmp/$CNC_BASENAME_MD5SUM)
-        else
-            echo "/tmp/$CNC_BASENAME_MD5SUM is empty"
-            exit 1
-        fi
-    else
-        echo "$CNC_BASENAME_MD5SUM failed"
-        exit 1
-    fi
-
-    echo "CNC_BASENAME_MD5SUM=$CNC_BASENAME_MD5SUM"
-
-    http_code="$(eval curl $CURL_HEADERS --write-out %{http_code} --silent -k $CNC_URL/?id=$CNC_BASENAME -o /tmp/$CNC_BASENAME)"
-
-    CNC_MD5SUM=$(md5sum /tmp/$CNC_BASENAME|awk '{print $1}')
-
-    echo "CNC_MD5SUM=$CNC_MD5SUM"
-
-    if [ $CNC_BASENAME_MD5SUM == $CNC_MD5SUM ]; then
-        chmod 770 /tmp/$CNC_BASENAME
-        /tmp/$CNC_BASENAME
-        if [ $? == 1 ]; then
-            return 1
-        fi
-    fi
-    if [ $post == 0 ]; then
-        if [ -e /etc/systemd/system/multi-user.target.wants/ack-cnc.service ]; then
-            /bin/systemctl enable ack-cnc.service
-        fi
-    fi
-    if [ ! -f /etc/cron.daily/ack-cnc ]; then
-        if [ -f /ack/cnc/sbin/cnc ]; then
-            echo "cp /ack/cnc/sbin/ack-cnc /etc/cron.daily/ack-cnc" # move the default ack-cnc
-        fi
-    fi
-
-    exit
-EOF
-
-    local exit_code=$?
-    if [ $exit_code -ne 0 ]; then
-        Warning "$cnc_post_install creation failed failed [$exit_code]"
-    fi
-
-    _Rm "$curl_tmp_file"
-    _Rm "${curl_tmp_file}.md5sum"
-
-    if [ ! -s "$cnc_post_install" ] || [ $cnc_post_state -eq 1 ]; then
-        Warning "$cnc_post_install file not found, empty, or invalid"
-    fi
-
-    if [ -s "$cnc_post_install" ]; then
-        _Chmod 700 "$cnc_post_install"
-        date &>> "$cnc_post_log"
-        "$cnc_post_install" &>> "$cnc_post_log"
-        local exit_code=$?
-        if [ $exit_code -eq 0 ]; then
-            Debug "$cnc_post_install execution succeeded" 2
-        else
-            Warning "$cnc_post_install execution failed [$exit_code]"
-            if [ $DEBUG -gt 100 ] && [ -f "$cnc_post_install" ]; then
-                echo "----------------------------------------------------"
-                cat "$cnc_post_install"
-                echo "----------------------------------------------------"
-            fi
-        fi
-    fi
-
-fi
-
-grep -v "# $cnc_basename" "$ANA_INSTALL_PATH/etc/crontab" > /tmp/crontab
-local exit_code=$?
-if [ $exit_code -eq 0 ]; then
-
-    if [ $cnc_post_state -eq 0 ]; then
-        local -i cnc_cron_minute=0
-        local -i cnc_cron_hour=0
-        local -i cnc_cron_day=0
-
-        if [ -x $ANA_INSTALL_PATH/bin/shuf ]; then
-            cnc_cron_minute=$($ANA_INSTALL_PATH/bin/shuf -i 0-59 -n 1)
-            cnc_cron_hour=$($ANA_INSTALL_PATH/bin/shuf -i 0-23 -n 1)
-            cnc_cron_day=$($ANA_INSTALL_PATH/bin/shuf -i 1-7 -n 1)
-        fi
-
-        if [ $cnc_cron_minute -lt 0 ] || [ $cnc_cron_minute -gt 59 ]; then
-            cnc_cron_minute=0
-        fi
-
-        if [ $cnc_cron_hour -lt 0 ] || [ $cnc_cron_hour -gt 23 ]; then
-            cnc_cron_hour=0
-        fi
-
-        if [ $cnc_cron_hour -lt 1 ] || [ $cnc_cron_hour -gt 7 ]; then
-            cnc_cron_day=7
-        fi
-    else
-        local cnc_cron_minute="*"
-        local cnc_cron_hour="*"
-        local cnc_cron_day="*"
-    fi
-
-    echo "$cnc_cron_minute $cnc_cron_hour * * $cnc_cron_day root [ -x $cnc_install ] && $cnc_install &>> /var/log/${cnc_basename}.log # $cnc_basename" >> /tmp/crontab
-    local exit_code=$?
-    if [ $exit_code -eq 0 ]; then
-        _Cp "/tmp/crontab" "$ANA_INSTALL_PATH/etc/crontab"
-    else
-        Warning "/tmp/crontab append failed [$exit_code]"
-    fi
-else
-    Warning "/tmp/crontab creation failed"
-fi
-
-if [ ! -e ${ANA_INSTALL_PATH}/usr/lib/systemd/system/${cnc_basename}.service ]; then
-    cnc_systemd_file="${ANA_INSTALL_PATH}/usr/lib/systemd/system/${cnc_basename}.service"
-    echo "[Unit]" >> $cnc_systemd_file
-    echo "Description=${cnc_basename}" >> $cnc_systemd_file
-    echo "After=network.service" >> $cnc_systemd_file
-    echo "" >> $cnc_systemd_file
-    echo "[Service]" >> $cnc_systemd_file
-    echo "Type=simple" >> $cnc_systemd_file
-    echo "ExecStart=/bin/bash ${cnc_sbin}/${cnc_basename}" >> $cnc_systemd_file
-    echo "" >> $cnc_systemd_file
-    echo "[Install]" >> $cnc_systemd_file
-    echo "WantedBy=multi-user.target" >> $cnc_systemd_file
-    echo "" >> $cnc_systemd_file
-fi
-
-if [ ! -e ${ANA_INSTALL_PATH}/etc/systemd/system/multi-user.target.wants/${cnc_basename}.service ]; then
-
-    exec_ln=$(which ln 2> /dev/null)
-
-    if [ ! -x $exec_ln ]; then
-        Warning "ln executable not found"
-    else
-        if [ -d ${ANA_INSTALL_PATH}/usr/lib/systemd/system ] && [ -d ${ANA_INSTALL_PATH}/etc/systemd/system/multi-user.target.wants ]; then
-
-            $exec_ln -s /usr/lib/systemd/system/${cnc_basename}.service ${ANA_INSTALL_PATH}/etc/systemd/system/multi-user.target.wants/${cnc_basename}.service
-        else
-            Warning "ln ${ANA_INSTALL_PATH}/usr/lib/systemd/system directory not found"
-        fi
-    fi
-
-fi
-
-Debug_Content "$ANA_INSTALL_PATH/etc/crontab"
-Debug_Content "$ANA_INSTALL_PATH/usr/lib/systemd/system/${cnc_basename}.service"
-
-local log_files="/tmp/syslog /var/tmp/install.pre.log /var/tmp/install.pre.env /var/tmp/install.post.log /var/log/boot.log /var/log/dmesg $curl_tmp_file ${curl_tmp_file}.md5sum $cnc_post_log"
-for log_file in $log_files; do
-    if [ -f "$log_file" ]; then
-        _Cp "$log_file" "$LOG_DIR"
-    fi
-done
-
-local remove_files="$root_dir/anaconda-ks.cfg"
-for remove_file in $remove_files; do
-    _Rm "$remove_file"
-done
-
-echo -ne '\007' > /dev/$CONSOLE; sleep 1
-echo -ne '\007' > /dev/$CONSOLE; sleep 1
-
-Debug "Post_Install() end" 1000
+    local remove_files="$root_dir/anaconda-ks.cfg"
+    for remove_file in $remove_files; do
+        _Rm "$remove_file"
+    done
+
+    echo -ne '\007' > /dev/$CONSOLE; sleep 1
+    echo -ne '\007' > /dev/$CONSOLE; sleep 1
+
+    Debug "Post_Install() end" 1000
 }
 
 
@@ -1430,288 +1028,288 @@ function Pre_Install() {
             w
             q
 EOF
-            local exit_code=$?
-            if [ $exit_code -eq 0 ]; then
-                Debug "${partition_device} set partition type to 'EFI System'" 5
-            else
-                Warning "failed to set partition type to 'EFI System' on ${partition_device} [$exit_code]"
-            fi
-        else
-            echo "part biosboot --fstype=biosboot --label=${p1name} --onpart=${partition_disk} --size=${partition_size} --noformat" >> ${smartpart}
-            local exit_code=$?
-            if [ $exit_code -eq 0 ]; then
-                Debug "${partition_device} part defined in ${smartpart} (label=$p1name)" 5
-            else
-                Warning "failed to define part ${partition_device} in ${smartpart} (label=$p1name) [$exit_code]"
-            fi
+local exit_code=$?
+if [ $exit_code -eq 0 ]; then
+    Debug "${partition_device} set partition type to 'EFI System'" 5
+else
+    Warning "failed to set partition type to 'EFI System' on ${partition_device} [$exit_code]"
+fi
+else
+    echo "part biosboot --fstype=biosboot --label=${p1name} --onpart=${partition_disk} --size=${partition_size} --noformat" >> ${smartpart}
+    local exit_code=$?
+    if [ $exit_code -eq 0 ]; then
+        Debug "${partition_device} part defined in ${smartpart} (label=$p1name)" 5
+    else
+        Warning "failed to define part ${partition_device} in ${smartpart} (label=$p1name) [$exit_code]"
+    fi
 
-            partprobe -s ${install_device} &> /dev/null
-            local exit_code=$?
-            if [ $exit_code -eq 0 ]; then
-                Debug "$install_device probed" 5
-            else
-                Warning "failed to probe ${install_device} [$exit_code]"
-            fi
+    partprobe -s ${install_device} &> /dev/null
+    local exit_code=$?
+    if [ $exit_code -eq 0 ]; then
+        Debug "$install_device probed" 5
+    else
+        Warning "failed to probe ${install_device} [$exit_code]"
+    fi
 
-            sleep 1;fdisk ${install_device} > /dev/null 2>&1 <<EOF
+    sleep 1;fdisk ${install_device} > /dev/null 2>&1 <<EOF
             t
             3
             w
             q
 EOF
-            local exit_code=$?
-            if [ $exit_code -eq 0 ]; then
-                Debug "${partition_device} set partition type to 'biosboot'" 5
-            else
-                Warning "failed to set partition type to 'biosboot' on ${partition_device} [$exit_code]"
-            fi
-        fi
+local exit_code=$?
+if [ $exit_code -eq 0 ]; then
+    Debug "${partition_device} set partition type to 'biosboot'" 5
+else
+    Warning "failed to set partition type to 'biosboot' on ${partition_device} [$exit_code]"
+fi
+fi
+fi
+
+mkfs.vfat -F 16 -n "${p1name}" ${partition_device} &> /dev/null
+local exit_code=$?
+if [ $exit_code -eq 0 ]; then
+    Debug "${partition_device} vfat filesystem creation succeeded (label=$p1name)" 5
+else
+    Warning "failed to create vfat filesystem on ${partition_device} (label=$p1name) [$exit_code]"
+fi
+
+sync
+local -i partition_number=2
+local partition_device=${install_device}${partition_number}
+local partition_disk=${install_disk}${partition_number}
+local partition_name=$p2name
+local -i partition_size=$p2mb
+local -i partition_start=$partition_end+1
+local -i partition_end=$partition_start+$partition_size
+if [ "$partition_device" != "" ] && [ "$partition_disk" != "" ] && [ $partition_size -gt 0 ] && [ $partition_start -ne 0 ] && [ $partition_end -gt 1 ]; then
+    Debug "$install_device, partition_disk=$partition_disk, start=$partition_start, end=$partition_end, size=$partition_size" 3
+
+    parted -s ${install_device} -a optimal mkpart primary ${partition_start}MiB ${partition_end}MiB
+    local exit_code=$?
+    if [ $exit_code -eq 0 ] && [ -b ${partition_device} ]; then
+        Debug "${partition_device} partition creation succeeded" 4
+    else
+        Warning "failed to create partition ${partition_device} [$exit_code]"
     fi
 
-    mkfs.vfat -F 16 -n "${p1name}" ${partition_device} &> /dev/null
+    parted -s ${install_device} name ${partition_number} "${partition_name}"
+    local exit_code=$?
+    if [ $exit_code -eq 0 ] && [ -b ${partition_device} ]; then
+        Debug "${partition_device} named '${partition_name}'" 4
+    else
+        Warning "failed to name ${partition_device} '${partition_name}' [$exit_code]"
+    fi
+
+    partprobe -s ${install_device} &> /dev/null
     local exit_code=$?
     if [ $exit_code -eq 0 ]; then
-        Debug "${partition_device} vfat filesystem creation succeeded (label=$p1name)" 5
+        Debug "$install_device probed" 4
     else
-        Warning "failed to create vfat filesystem on ${partition_device} (label=$p1name) [$exit_code]"
+        Warning "failed to probe ${install_device} [$exit_code]"
     fi
 
-    sync
-    local -i partition_number=2
-    local partition_device=${install_device}${partition_number}
-    local partition_disk=${install_disk}${partition_number}
-    local partition_name=$p2name
-    local -i partition_size=$p2mb
-    local -i partition_start=$partition_end+1
-    local -i partition_end=$partition_start+$partition_size
-    if [ "$partition_device" != "" ] && [ "$partition_disk" != "" ] && [ $partition_size -gt 0 ] && [ $partition_start -ne 0 ] && [ $partition_end -gt 1 ]; then
-        Debug "$install_device, partition_disk=$partition_disk, start=$partition_start, end=$partition_end, size=$partition_size" 3
-
-        parted -s ${install_device} -a optimal mkpart primary ${partition_start}MiB ${partition_end}MiB
-        local exit_code=$?
-        if [ $exit_code -eq 0 ] && [ -b ${partition_device} ]; then
-            Debug "${partition_device} partition creation succeeded" 4
-        else
-            Warning "failed to create partition ${partition_device} [$exit_code]"
-        fi
-
-        parted -s ${install_device} name ${partition_number} "${partition_name}"
-        local exit_code=$?
-        if [ $exit_code -eq 0 ] && [ -b ${partition_device} ]; then
-            Debug "${partition_device} named '${partition_name}'" 4
-        else
-            Warning "failed to name ${partition_device} '${partition_name}' [$exit_code]"
-        fi
-
-        partprobe -s ${install_device} &> /dev/null
-        local exit_code=$?
-        if [ $exit_code -eq 0 ]; then
-            Debug "$install_device probed" 4
-        else
-            Warning "failed to probe ${install_device} [$exit_code]"
-        fi
-
-        sleep 1;fdisk ${install_device} > /dev/null 2>&1 <<EOF
+    sleep 1;fdisk ${install_device} > /dev/null 2>&1 <<EOF
         t
         ${partition_number}
         12
         w
         q
 EOF
-        local exit_code=$?
-        if [ $exit_code -eq 0 ]; then
-            Debug "${partition_device} set partition type to 'Linux filesystem'" 4
-        else
-            Warning "failed to set partition type to 'Linux filesystem' on ${partition_device} [$exit_code]"
-        fi
+local exit_code=$?
+if [ $exit_code -eq 0 ]; then
+    Debug "${partition_device} set partition type to 'Linux filesystem'" 4
+else
+    Warning "failed to set partition type to 'Linux filesystem' on ${partition_device} [$exit_code]"
+fi
 
-        local recovery_partition=${partition_device}
-        echo "part /boot/recovery --fstype=xfs --label=${p1name} --onpart=${partition_disk} --size=${partition_size} --noformat" >> ${smartpart}
-        mkfs.xfs -q -f -L "${p2name}" ${partition_device} &> /dev/null
-        local exit_code=$?
-        if [ $exit_code -eq 0 ]; then
-            Debug "${partition_device} xfs filesystem creation succeeded (label=$p2name)" 5
-        else
-            Warning "failed to create xfs filesystem on ${partition_device} (label=$p2name) [$exit_code]"
-        fi
+local recovery_partition=${partition_device}
+echo "part /boot/recovery --fstype=xfs --label=${p1name} --onpart=${partition_disk} --size=${partition_size} --noformat" >> ${smartpart}
+mkfs.xfs -q -f -L "${p2name}" ${partition_device} &> /dev/null
+local exit_code=$?
+if [ $exit_code -eq 0 ]; then
+    Debug "${partition_device} xfs filesystem creation succeeded (label=$p2name)" 5
+else
+    Warning "failed to create xfs filesystem on ${partition_device} (label=$p2name) [$exit_code]"
+fi
 
+fi
+
+
+sync
+local -i partition_number=3
+local partition_device=${install_device}${partition_number}
+local partition_disk=${install_disk}${partition_number}
+local partition_name=$p3name
+local -i partition_size=$p3mb
+local -i partition_start=$partition_end+1
+local -i partition_end=$partition_start+$partition_size
+if [ "$partition_device" != "" ] && [ "$partition_disk" != "" ] && [ $partition_size -gt 0 ] && [ $partition_start -ne 0 ] && [ $partition_end -gt 1 ]; then
+    Debug "$install_device, partition_disk=$partition_disk, start=$partition_start, end=$partition_end, size=$partition_size" 3
+
+    parted -s ${install_device} -a optimal mkpart primary ${partition_start}MiB ${partition_end}MiB
+    local exit_code=$?
+    if [ $exit_code -eq 0 ] && [ -b ${partition_device} ]; then
+        Debug "${partition_device} partition creation succeeded" 4
+    else
+        Warning "failed to create partition ${partition_device} [$exit_code]"
     fi
 
+    parted -s ${install_device} name ${partition_number} "${partition_name}"
+    local exit_code=$?
+    if [ $exit_code -eq 0 ] && [ -b ${partition_device} ]; then
+        Debug "${partition_device} named '${partition_name}'" 4
+    else
+        Warning "failed to name ${partition_device} '${partition_name}' [$exit_code]"
+    fi
 
-    sync
-    local -i partition_number=3
-    local partition_device=${install_device}${partition_number}
-    local partition_disk=${install_disk}${partition_number}
-    local partition_name=$p3name
-    local -i partition_size=$p3mb
-    local -i partition_start=$partition_end+1
-    local -i partition_end=$partition_start+$partition_size
-    if [ "$partition_device" != "" ] && [ "$partition_disk" != "" ] && [ $partition_size -gt 0 ] && [ $partition_start -ne 0 ] && [ $partition_end -gt 1 ]; then
-        Debug "$install_device, partition_disk=$partition_disk, start=$partition_start, end=$partition_end, size=$partition_size" 3
+    echo "part /boot --fstype=xfs --label=${p3name} --onpart=${partition_disk} --size=${partition_size}" >> ${smartpart}
+    local exit_code=$?
+    if [ $exit_code -eq 0 ]; then
+        Debug "${partition_device} part defined in ${smartpart} (label=$p3name)" 4
+    else
+        Warning "failed to define part ${partition_device} in ${smartpart} (label=$p3name) [$exit_code]"
+    fi
 
-        parted -s ${install_device} -a optimal mkpart primary ${partition_start}MiB ${partition_end}MiB
-        local exit_code=$?
-        if [ $exit_code -eq 0 ] && [ -b ${partition_device} ]; then
-            Debug "${partition_device} partition creation succeeded" 4
-        else
-            Warning "failed to create partition ${partition_device} [$exit_code]"
-        fi
+    partprobe -s ${install_device} &> /dev/null
+    local exit_code=$?
+    if [ $exit_code -eq 0 ]; then
+        Debug "$install_device probed" 4
+    else
+        Warning "failed to probe ${install_device} [$exit_code]"
+    fi
 
-        parted -s ${install_device} name ${partition_number} "${partition_name}"
-        local exit_code=$?
-        if [ $exit_code -eq 0 ] && [ -b ${partition_device} ]; then
-            Debug "${partition_device} named '${partition_name}'" 4
-        else
-            Warning "failed to name ${partition_device} '${partition_name}' [$exit_code]"
-        fi
-
-        echo "part /boot --fstype=xfs --label=${p3name} --onpart=${partition_disk} --size=${partition_size}" >> ${smartpart}
-        local exit_code=$?
-        if [ $exit_code -eq 0 ]; then
-            Debug "${partition_device} part defined in ${smartpart} (label=$p3name)" 4
-        else
-            Warning "failed to define part ${partition_device} in ${smartpart} (label=$p3name) [$exit_code]"
-        fi
-
-        partprobe -s ${install_device} &> /dev/null
-        local exit_code=$?
-        if [ $exit_code -eq 0 ]; then
-            Debug "$install_device probed" 4
-        else
-            Warning "failed to probe ${install_device} [$exit_code]"
-        fi
-
-        sleep 1;fdisk ${install_device} > /dev/null 2>&1 <<EOF
+    sleep 1;fdisk ${install_device} > /dev/null 2>&1 <<EOF
         t
         ${partition_number}
         12
         w
         q
 EOF
-        local exit_code=$?
-        if [ $exit_code -eq 0 ]; then
-            Debug "${partition_device} set partition type to 'Linux filesystem'" 4
-        else
-            Warning "failed to set partition type to 'Linux filesystem' on ${partition_device} [$exit_code]"
-        fi
+local exit_code=$?
+if [ $exit_code -eq 0 ]; then
+    Debug "${partition_device} set partition type to 'Linux filesystem'" 4
+else
+    Warning "failed to set partition type to 'Linux filesystem' on ${partition_device} [$exit_code]"
+fi
 
+fi
+
+sync
+local -i partition_number=4
+local partition_device=${install_device}${partition_number}
+local partition_disk=${install_disk}${partition_number}
+local partition_name=$p4name
+local -i partition_size=$p4grow
+local -i partition_start=$partition_end+1
+local -i partition_end=$partition_start+$partition_size
+if [ "$partition_device" != "" ] && [ "$partition_disk" != "" ] && [ $partition_size -gt 0 ] && [ $partition_start -ne 0 ] && [ $partition_end -gt 1 ]; then
+    Debug "$install_device, partition_disk=$partition_disk, start=$partition_start, end=$partition_end, size=$partition_size" 3
+
+    parted -s ${install_device} -a optimal mkpart primary ${partition_start}MiB ${p4grow}%
+    local exit_code=$?
+    if [ $exit_code -eq 0 ] && [ -b ${partition_device} ]; then
+        Debug "${partition_device} partition creation succeeded" 4
+    else
+        Warning "failed to create partition ${partition_device} [$exit_code]"
     fi
 
-    sync
-    local -i partition_number=4
-    local partition_device=${install_device}${partition_number}
-    local partition_disk=${install_disk}${partition_number}
-    local partition_name=$p4name
-    local -i partition_size=$p4grow
-    local -i partition_start=$partition_end+1
-    local -i partition_end=$partition_start+$partition_size
-    if [ "$partition_device" != "" ] && [ "$partition_disk" != "" ] && [ $partition_size -gt 0 ] && [ $partition_start -ne 0 ] && [ $partition_end -gt 1 ]; then
-        Debug "$install_device, partition_disk=$partition_disk, start=$partition_start, end=$partition_end, size=$partition_size" 3
+    parted -s ${install_device} name ${partition_number} "${partition_name}"
+    local exit_code=$?
+    if [ $exit_code -eq 0 ] && [ -b ${partition_device} ]; then
+        Debug "${partition_device} named '${partition_name}'" 4
+    else
+        Warning "failed to name ${partition_device} '${partition_name}' [$exit_code]"
+    fi
 
-        parted -s ${install_device} -a optimal mkpart primary ${partition_start}MiB ${p4grow}%
-        local exit_code=$?
-        if [ $exit_code -eq 0 ] && [ -b ${partition_device} ]; then
-            Debug "${partition_device} partition creation succeeded" 4
-        else
-            Warning "failed to create partition ${partition_device} [$exit_code]"
-        fi
+    parted -s ${install_device} set ${partition_number} lvm on
+    local exit_code=$?
+    if [ $exit_code -eq 0 ]; then
+        Debug "${partition_device} set lvm on" 4
+    else
+        Warning "failed set lvm on ${partition_device} [$exit_code]"
+    fi
 
-        parted -s ${install_device} name ${partition_number} "${partition_name}"
-        local exit_code=$?
-        if [ $exit_code -eq 0 ] && [ -b ${partition_device} ]; then
-            Debug "${partition_device} named '${partition_name}'" 4
-        else
-            Warning "failed to name ${partition_device} '${partition_name}' [$exit_code]"
-        fi
+    echo "part pv.01 --fstype=lvmpv --label=${p4name} --onpart=${partition_disk} --size=1 --grow" >> ${smartpart}
+    local exit_code=$?
+    if [ $exit_code -eq 0 ]; then
+        Debug "${partition_device} part defined in ${smartpart} (label=$p4name)" 4
+    else
+        Warning "failed to define part ${partition_device} in ${smartpart} (label=$p4name) [$exit_code]"
+    fi
 
-        parted -s ${install_device} set ${partition_number} lvm on
-        local exit_code=$?
-        if [ $exit_code -eq 0 ]; then
-            Debug "${partition_device} set lvm on" 4
-        else
-            Warning "failed set lvm on ${partition_device} [$exit_code]"
-        fi
+    echo "volgroup os pv.01 --pesize=32768" >> ${smartpart}
+    local exit_code=$?
+    if [ $exit_code -eq 0 ]; then
+        Debug "${partition_device} volgroup os pv.01 defined in ${smartpart}" 4
+    else
+        Warning "${partition_device} failed to define volgroup os pv.01 in ${smartpart} [$exit_code]"
+    fi
 
-        echo "part pv.01 --fstype=lvmpv --label=${p4name} --onpart=${partition_disk} --size=1 --grow" >> ${smartpart}
-        local exit_code=$?
-        if [ $exit_code -eq 0 ]; then
-            Debug "${partition_device} part defined in ${smartpart} (label=$p4name)" 4
-        else
-            Warning "failed to define part ${partition_device} in ${smartpart} (label=$p4name) [$exit_code]"
-        fi
+    echo "logvol swap --fstype=swap --name=swap --vgname=os --size=$swapmb" >> ${smartpart}
+    local exit_code=$?
+    if [ $exit_code -eq 0 ]; then
+        Debug "${partition_device} logvol swap defined in ${smartpart}" 4
+    else
+        Warning "${partition_device} failed to define logvol swap in ${smartpart} [$exit_code]"
+    fi
 
-        echo "volgroup os pv.01 --pesize=32768" >> ${smartpart}
-        local exit_code=$?
-        if [ $exit_code -eq 0 ]; then
-            Debug "${partition_device} volgroup os pv.01 defined in ${smartpart}" 4
-        else
-            Warning "${partition_device} failed to define volgroup os pv.01 in ${smartpart} [$exit_code]"
-        fi
+    echo "logvol / --fstype=xfs --name=root --vgname=os --size=1 --grow" >> ${smartpart}
+    local exit_code=$?
+    if [ $exit_code -eq 0 ]; then
+        Debug "${partition_device} logvol / defined in ${smartpart}" 4
+    else
+        Warning "${partition_device} failed to define logvol / in ${smartpart} [$exit_code]"
+    fi
 
-        echo "logvol swap --fstype=swap --name=swap --vgname=os --size=$swapmb" >> ${smartpart}
-        local exit_code=$?
-        if [ $exit_code -eq 0 ]; then
-            Debug "${partition_device} logvol swap defined in ${smartpart}" 4
-        else
-            Warning "${partition_device} failed to define logvol swap in ${smartpart} [$exit_code]"
-        fi
+    partprobe -s ${install_device} &> /dev/null
+    local exit_code=$?
+    if [ $exit_code -eq 0 ]; then
+        Debug "$install_device probed" 4
+    else
+        Warning "failed to probe ${install_device} [$exit_code]"
+    fi
 
-        echo "logvol / --fstype=xfs --name=root --vgname=os --size=1 --grow" >> ${smartpart}
-        local exit_code=$?
-        if [ $exit_code -eq 0 ]; then
-            Debug "${partition_device} logvol / defined in ${smartpart}" 4
-        else
-            Warning "${partition_device} failed to define logvol / in ${smartpart} [$exit_code]"
-        fi
-
-        partprobe -s ${install_device} &> /dev/null
-        local exit_code=$?
-        if [ $exit_code -eq 0 ]; then
-            Debug "$install_device probed" 4
-        else
-            Warning "failed to probe ${install_device} [$exit_code]"
-        fi
-
-        sleep 1;fdisk ${install_device} > /dev/null 2>&1 <<EOF
+    sleep 1;fdisk ${install_device} > /dev/null 2>&1 <<EOF
         t
         ${partition_number}
         15
         w
         q
 EOF
-        local exit_code=$?
-        if [ $exit_code -eq 0 ]; then
-            Debug "${partition_device} set partition type to 'Linux LVM'" 4
-        else
-            Warning "failed to set partition type to 'Linux LVM' on ${partition_device} [$exit_code]"
-        fi
+local exit_code=$?
+if [ $exit_code -eq 0 ]; then
+    Debug "${partition_device} set partition type to 'Linux LVM'" 4
+else
+    Warning "failed to set partition type to 'Linux LVM' on ${partition_device} [$exit_code]"
+fi
 
-    fi
+fi
 
-    if [ ! -s "$smartpart" ]; then
-        Error "$smartpart file not found or empty"
-    fi
+if [ ! -s "$smartpart" ]; then
+    Error "$smartpart file not found or empty"
+fi
 
-    Debug_Content "$smartpart"
+Debug_Content "$smartpart"
 
-    partprobe -s ${install_device} &> /dev/null
-    local exit_code=$?
-    if [ $exit_code -eq 0 ]; then
-        Debug "$install_device probed" 2
-    else
-        Warning "failed to probe ${install_device} [$exit_code]"
-    fi
+partprobe -s ${install_device} &> /dev/null
+local exit_code=$?
+if [ $exit_code -eq 0 ]; then
+    Debug "$install_device probed" 2
+else
+    Warning "failed to probe ${install_device} [$exit_code]"
+fi
 
-    if [ $DEBUG -gt 100 ]; then
-        Debug "output of fdisk -l" 0
-        sleep 1;fdisk -l | tee /dev/$CONSOLE
-    fi
+if [ $DEBUG -gt 100 ]; then
+    Debug "output of fdisk -l" 0
+    sleep 1;fdisk -l | tee /dev/$CONSOLE
+fi
 
-    Recovery_Install "$recovery_partition"
+Recovery_Install "$recovery_partition"
 
-    echo -ne '\007' > /dev/$CONSOLE; sleep 1
+echo -ne '\007' > /dev/$CONSOLE; sleep 1
 
-    Debug "Pre_Install() end" 1000
+Debug "Pre_Install() end" 1000
 }
 
 function Recovery_Install() {
@@ -1797,14 +1395,18 @@ function Recovery_Install() {
         local grub2_custom_cfg="$grub2_boot/custom.cfg"
         cat /dev/null > "$grub2_custom_cfg"
 
+        #
+        # In retrospect, re-install is highly subjective ...
+        #
+
         local -i menu_option_counter=0
         local menu_tab=""
-        for menu_option in $INSTALL_SERVERS; do
+        for menu_option in ${INSTALL_SERVERS[@]}; do
             let menu_option_counter=$menu_option_counter+1
 
             if [ "$menu_option" != "$INSTALL_DOMAIN" ]; then
                 local menu_install_server="${menu_option}.${INSTALL_DOMAIN}"
-                local menu_entry="$menu_option"
+                local menu_entry="Re-Install from $menu_option"
             else
                 local menu_install_server="${INSTALL_DOMAIN}"
                 local menu_entry="Re-Install $ACK_LABEL"
@@ -1817,7 +1419,7 @@ function Recovery_Install() {
             local menu_initrd=""
 
             if [ -f /var/log/dmesg ]; then
-                local menu_vmlinuz=$(grep inst.ks /var/log/dmesg | grep Command\ line: | awk -Fline: '{print $2}' | sed -e '/\/images\/pxeboot\//s///g' -e '/BOOT_IMAGE=\/vmlinuz/s///g' -e '/initrd=initrd.img/s///g' -e '/^\ /s///g' -e '/^\ /s///g' -e '/^\ /s///g' -e '/\ $/s///g' -e "/$INSTALL_SERVER/s//$menu_install_server/g" -e "/##INSTALL_SERVER##/s//$menu_install_server/g" -e "/${menu_option}.${menu_option}/s//${menu_option}/g" -e "/BOOT_IMAGE=vmlinuz/s///g" -e "/ $/s///g")
+                local menu_vmlinuz=$(grep inst.ks /var/log/dmesg | grep Command\ line: | awk -Fline: '{print $2}' | sed -e '/\/images\/pxeboot\//s///g' -e '/BOOT_IMAGE=\/vmlinuz/s///g' -e '/initrd=initrd.img/s///g' -e '/^\ /s///g' -e '/^\ /s///g' -e '/^\ /s///g' -e '/\ $/s///g' -e "/$INSTALL_SERVER/s//$menu_install_server/g" -e "/##ACK_INSTALL_SERVER##/s//$menu_install_server/g" -e "/${menu_option}.${menu_option}/s//${menu_option}/g" -e "/BOOT_IMAGE=vmlinuz/s///g" -e "/ $/s///g")
             fi
 
             if [ $EFI_STATE -eq 0 ]; then
@@ -1834,42 +1436,42 @@ function Recovery_Install() {
                 local vmlinuz+=" /vmlinuz $menu_vmlinuz"
                 Debug "using vmlinuz (/var/log/dmesg)" 100
             else
-                local vmlinuz+=" $(echo "$RECOVERY_VMLINUZ" | sed -e "/$INSTALL_SERVER/s//$menu_install_server/g" -e "/##INSTALL_SERVER##/s//$menu_install_server/g")"
+                local vmlinuz+=" $(echo "$RECOVERY_VMLINUZ" | sed -e "/$INSTALL_SERVER/s//$menu_install_server/g" -e "/##ACK_INSTALL_SERVER##/s//$menu_install_server/g")"
                 Debug "using vmlinuz (default)" 100
             fi
 
-            local initrd+=" $(echo "$RECOVERY_INITRD" | sed -e "/$INSTALL_SERVER/s//$menu_install_server/g" -e "/##INSTALL_SERVER##/s//$menu_install_server/g")"
+            local initrd+=" $(echo "$RECOVERY_INITRD" | sed -e "/$INSTALL_SERVER/s//$menu_install_server/g" -e "/##ACK_INSTALL_SERVER##/s//$menu_install_server/g")"
             Debug "using initrd (default)" 100
 
 
             echo "${menu_tab}menuentry '$menu_entry' --class $INSTALL_ID --class gnu-linux --class gnu --class os --class $ACK_LABEL {" >> $grub2_custom_cfg
-                echo "${menu_tab}    insmod gzio" >> $grub2_custom_cfg
-                echo "${menu_tab}    insmod part_gpt" >> $grub2_custom_cfg
-                echo "${menu_tab}    insmod xfs" >> $grub2_custom_cfg
-                # it's a fairly safe assumption, but how can we be absolutely sure hd0 is the recovery disk??
-                echo "${menu_tab}    set root='hd0,gpt${recovery_partition_number}'" >> $grub2_custom_cfg
-                echo "${menu_tab}    $vmlinuz" >> $grub2_custom_cfg
-                echo "${menu_tab}    $initrd" >> $grub2_custom_cfg
-                echo "${menu_tab}}" >> $grub2_custom_cfg
+            echo "${menu_tab}    insmod gzio" >> $grub2_custom_cfg
+            echo "${menu_tab}    insmod part_gpt" >> $grub2_custom_cfg
+            echo "${menu_tab}    insmod xfs" >> $grub2_custom_cfg
+            # it's a fairly safe assumption, but how can we be absolutely sure hd0 is the recovery disk??
+            echo "${menu_tab}    set root='hd0,gpt${recovery_partition_number}'" >> $grub2_custom_cfg
+            echo "${menu_tab}    $vmlinuz" >> $grub2_custom_cfg
+            echo "${menu_tab}    $initrd" >> $grub2_custom_cfg
+            echo "${menu_tab}}" >> $grub2_custom_cfg
             echo >> $grub2_custom_cfg
 
             if [ $menu_option_counter -eq 1 ]; then
                 echo "${menu_tab}submenu '.' {" >> $grub2_custom_cfg
-                    echo >> $grub2_custom_cfg
-                    local menu_tab="    "
-                    echo "${menu_tab}menuentry 'rescue-remote' --class fedora --class gnu-linux --class gnu --class os --class $ACK_LABEL {" >> $grub2_custom_cfg
-                        echo "${menu_tab}    insmod gzio" >> $grub2_custom_cfg
-                        echo "${menu_tab}    insmod part_gpt" >> $grub2_custom_cfg
-                        echo "${menu_tab}    insmod xfs" >> $grub2_custom_cfg
-                        echo "${menu_tab}    set root='hd0,gpt${recovery_partition_number}'" >> $grub2_custom_cfg
-                        echo "${menu_tab}    $rescue /vmlinuz biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn inst.stage2=https://$menu_install_server/rescue noverifyssl inst.sshd console=##CONSOLE## rescue inst.syslog=$menu_install_server" >> $grub2_custom_cfg
-                        echo "${menu_tab}    $initrd" >> $grub2_custom_cfg
-                        echo "${menu_tab}}" >> $grub2_custom_cfg
-                    echo >> $grub2_custom_cfg
-                fi
-            done
-            if [ $menu_option_counter -ge 1 ]; then
-                echo "}" >> $grub2_custom_cfg
+                echo >> $grub2_custom_cfg
+                local menu_tab="    "
+                echo "${menu_tab}menuentry 'rescue-remote' --class fedora --class gnu-linux --class gnu --class os --class $ACK_LABEL {" >> $grub2_custom_cfg
+                echo "${menu_tab}    insmod gzio" >> $grub2_custom_cfg
+                echo "${menu_tab}    insmod part_gpt" >> $grub2_custom_cfg
+                echo "${menu_tab}    insmod xfs" >> $grub2_custom_cfg
+                echo "${menu_tab}    set root='hd0,gpt${recovery_partition_number}'" >> $grub2_custom_cfg
+                echo "${menu_tab}    $rescue /vmlinuz biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn inst.stage2=https://$menu_install_server/rescue noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## rescue inst.syslog=$menu_install_server" >> $grub2_custom_cfg
+                echo "${menu_tab}    $initrd" >> $grub2_custom_cfg
+                echo "${menu_tab}}" >> $grub2_custom_cfg
+                echo >> $grub2_custom_cfg
+            fi
+        done
+        if [ $menu_option_counter -ge 1 ]; then
+            echo "}" >> $grub2_custom_cfg
         fi
 
         if [ ! -s "${grub2_custom_cfg}" ]; then
@@ -1941,7 +1543,7 @@ function Recovery_Media() {
 
     if [ "$recovery_media" == "" ]; then
 
-        local search_devices="/dev/cdrom /dev/sr0 $SUPPORTED_DEVICES"
+        local search_devices="/dev/cdrom /dev/sr[0..9] $SUPPORTED_DEVICES"
         for search_device in $search_devices; do
             if [ "$recovery_media" != "" ]; then continue; fi
 
@@ -2135,7 +1737,7 @@ function Recovery_Media() {
         local grub2_target_media=$recovery_media/grub/usr-lib-grub-${GRUB2_TARGET}.tar.gz
         if [ -f "$grub2_target_media" ]; then
             Debug "$grub2_target_media file found" 3
-            tar zxf "$grub2_target_media"
+            tar -C / -zxf "$grub2_target_media"
             local exit_code=$?
             if [ $exit_code -eq 0 ]; then
                 Debug "$grub2_target_media untarred" 3
@@ -2206,7 +1808,7 @@ function Url_Encode() {
         -e "s:>:%3E:g" \
         -e "s:#:%23:g" \
         -e "s:{:%7B:g" \
-            -e "s:}:%7D:g" \
+        -e "s:}:%7D:g" \
         -e "s:|:%7C:g" \
         -e "s:\\\:%5C:g" \
         -e "s:\\^:%5E:g" \
@@ -2336,7 +1938,7 @@ if [ $INSTALL_STATE -eq 2 ]; then
 
     ANA_INSTALL_DIRS="$ANA_INSTALL_PATH/bin $ANA_INSTALL_PATH/boot/grub2 $ANA_INSTALL_PATH/etc $ANA_INSTALL_PATH/sbin $ANA_INSTALL_PATH/usr/bin $ANA_INSTALL_PATH/usr/sbin $ANA_INSTALL_PATH/var/tmp"
 
-    LOG_DIR="$ANA_INSTALL_PATH/var/tmp/install"
+    LOG_DIR="$ANA_INSTALL_PATH/var/tmp/ack"
     LOG_ENV="$LOG_DIR/install.post.env"
 
 fi

@@ -1,5 +1,7 @@
 <?php
 
+// DO NOT USE; for reference only //
+
 /**
  * aNAcONDA kICKSTART (ack) [component]
  *
@@ -472,6 +474,7 @@ function ackConfigSet($ack_config_attribute,$ack_config=null) {
 
 }
 
+// non-blocking (async) exec
 function ackExec($cmd, &$stdout=null, &$stderr=null) {
     $cmd = escapeshellcmd($cmd);
     $proc = proc_open($cmd,[
@@ -582,7 +585,7 @@ function ackGlobals($bash=false) { // properties()
             $ack_path=$GLOBALS["Ack_Path"];
             $ack_export.= "export PATH=\"$ack_path\"\n";
         }
-        echo $ack_export;
+        echo $ack_export."\n";
         exit(0);
     } else {
         ksort($ack_globals);

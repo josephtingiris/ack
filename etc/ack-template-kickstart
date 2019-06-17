@@ -1,3 +1,5 @@
+# DEFAULT ack-template-kickstart
+
 # https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/installation_guide/sect-kickstart-syntax
 
 install
@@ -5,8 +7,6 @@ install
 eula --agreed
 
 firstboot --disabled
-
-mediacheck --disabled
 
 services --enabled=NetworkManager,sshd
 
@@ -20,9 +20,9 @@ url --url="##ACK_CLIENT_INSTALL_URL##" --noverifyssl
 
 network --onboot yes --bootproto ##ACK_CLIENT_BOOTPROTO## --hostname ##ACK_CLIENT_HOSTNAME##
 
-rootpw --iscrypted ##ACK_CLIENT_PASSWORD##
+rootpw --iscrypted ##ACK_CLIENT_PASSWORD_CRYPT##
 
-sshpw --iscrypted --username=root ##ACK_CLIENT_PASSWORD##
+sshpw --iscrypted --username=root ##ACK_CLIENT_PASSWORD_CRYPT##
 
 firewall --enabled --ssh
 
@@ -30,18 +30,21 @@ selinux --disabled
 
 authconfig --enableshadow --passalgo=sha512
 
-timezone ##ACK_TIMEZONE## --isUtc --ntpservers=pool.ntp.org
+timezone ##ACK_TIMEZONE## --ntpservers=pool.ntp.org
 
 %packages
 @base
 @core
-kexec-tools
 bind-utils
+curl
+git
+kexec-tools
+#php-cli
 net-tools
 nmap
 ntp
 ntpdate
-php-cli
+rsync
 svn
 telnet
 vim-enhanced
