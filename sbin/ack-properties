@@ -1,0 +1,13 @@
+#!/usr/bin/env php
+
+<?php
+
+require_once('../include/Ack/Ack.php');
+
+$Debug = 9;
+
+$Ack = new \josephtingiris\Ack;
+
+$Ack->propertiesPrint(true,'Ack');
+
+?>

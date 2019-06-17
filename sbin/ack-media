@@ -32,6 +32,8 @@ unset Ack_Bash_Dir Ack_Bash
 
 # end Ack.bash.include
 
+ackStart
+
 # GLOBAL_VARIABLES
 
 Default_Date=$(date +%Y%m%d)
@@ -44,7 +46,7 @@ Default_Media_Dir=${Ack_Media_Dir}
 Default_Build_Dir=${Ack_Build_Dir}
 Default_Distribution_Dir=${Ack_Distribution_Dir}
 Default_Release_Dir=${Ack_Release_Dir}
-Default_Virt_Dir=${Ack_Virt_Dir}
+Default_Vm_Dir=${Ack_Vm_Dir}
 
 Media_Architectures=()
 Media_Architectures+=(i386)
@@ -192,7 +194,7 @@ function ackMediaBuild() {
         fi
         debugValue build_media_dir $debug_level
 
-        local build_install_uri="/$(basename $(echo $build_media_dir | sed -e "s!$build_media_uri!!g" 2> /dev/mull))${build_media_uri}"
+        local build_install_uri=$(echo $build_media_dir | sed -e "s!$Ack_Dir!!g")
         if [ "$build_install_uri" == "/" ] || [ "$build_install_uri" == "" ]; then
             printf "\nERROR build_install_uri is wrong\n\n"
             continue
@@ -211,7 +213,7 @@ function ackMediaBuild() {
         if [ ! -d "$build_dir" ]; then
             mkdir -p "$build_dir" &> /dev/null
             if [ $? -ne 0 ]; then
-                printf "\nERROR mkdir -p '$build_dir' failed\n\n"
+                printf "\nERROR build_dir mkdir -p '$build_dir' failed\n\n"
                 continue
             fi
         fi
@@ -321,23 +323,31 @@ function ackMediaBuild() {
         local ack_etc_dir
         local build_menu
         local build_menus=()
-        local build_menu_efi=1
+        local build_menu_uefi=1
         local build_menu_isolinux=1
-        for ack_etc_dir in ${Ack_Etc_Dirs[@]}; do
+        for ack_etc_dir in ${Ack_ETC_Dirs[@]}; do
 
-            if [ $build_uefi -eq 0 ] && [ $build_menu_efi -eq 1 ]; then
+            debugValue ack_etc_dir $debug_level
+
+            if [ $build_uefi -eq 0 ] && [ $build_menu_uefi -eq 1 ]; then
+                debugValue build_uefi $debug_level
+                debugValue build_menu_uefi $debug_level
+
                 if [ -s "${ack_etc_dir}/ack-template-menu-grub-${build_name}" ]; then
                     build_menus+=("${ack_etc_dir}/ack-template-menu-grub-${build_name}++++EFI/BOOT/grub.cfg")
-                    build_menu_efi=0
+                    build_menu_uefi=0
                 else
                     if [ -s "${ack_etc_dir}/ack-template-menu-grub" ]; then
                         build_menus+=("${ack_etc_dir}/ack-template-menu-grub++++EFI/BOOT/grub.cfg")
-                        build_menu_efi=0
+                        build_menu_uefi=0
                     fi
                 fi
             fi
 
             if [ $build_isolinux -eq 0 ] && [ $build_menu_isolinux -eq 1 ]; then
+                debugValue build_isolinux $debug_level
+                debugValue build_menu_isolinux $debug_level
+
                 if [ -s "${ack_etc_dir}/ack-template-menu-isolinux-${build_name}" ]; then
                     build_menus+=("${ack_etc_dir}/ack-template-menu-isolinux-${build_name}++++isolinux/isolinux.cfg")
                     build_menu_isolinux=0
@@ -351,12 +361,14 @@ function ackMediaBuild() {
 
         done
 
+        debugValue build_menus $debug_level
+
         if [ "$build_menus" == "" ]; then
             printf "\nERROR build_menus not found\n\n"
             continue
         fi
 
-        if [ $build_uefi -eq 0 ] && [ $build_menu_efi -eq 1 ]; then
+        if [ $build_uefi -eq 0 ] && [ $build_menu_uefi -eq 1 ]; then
             printf "\nERROR ack-template-menu for efi not found\n\n"
             continue
         fi
@@ -375,9 +387,10 @@ function ackMediaBuild() {
         if [ -f "${build_iso}" ]; then
             if [ $Force_Flag -ne 1 ]; then
                 if [ $Virt_Flag -eq 1 ]; then
-                    ackMediaVirt "${build_iso}"
                     if [ ${build_uefi} -eq 0 ] && [ "$Virt" == "uefi" ]; then
                         ackMediaVirt "${build_iso}" uefi
+                    else
+                        ackMediaVirt "${build_iso}"
                     fi
                     continue
                 else
@@ -432,6 +445,7 @@ function ackMediaBuild() {
                     -e "s!##ACK_BUILD_ISO##!${build_name}-${build_iso_rev}!g"\
                     -e "s!##ACK_BUILD_NAME##!${build_name}!g"\
                     -e "s!##ACK_ENTITY##!${Ack_Entity}!g" \
+                    -e "s!##ACK_CLIENT_CONSOLE##!${Ack_Client_Console}!g" \
                     -e "s!##ACK_INSTALL_SERVER##!${Install_Server}!g" \
                     -e "s!##ACK_INSTALL_URI##!${build_install_uri}!g" \
                     -e "s!##ACK_ISO_DATE##!${Default_Date}!g"\
@@ -535,9 +549,10 @@ function ackMediaBuild() {
         cd "$pwd"
 
         if [ $Virt_Flag -eq 1 ]; then
-            ackMediaVirt "${build_iso}"
             if [ ${build_uefi} -eq 0 ] && [ "$Virt" == "uefi" ]; then
                 ackMediaVirt "${build_iso}" uefi
+            else
+                ackMediaVirt "${build_iso}"
             fi
         fi
 
@@ -652,7 +667,7 @@ function ackMediaMount() {
                     debugValue mount_dir $debug_level "mkdir"
                     mkdir -p "$mount_dir" &> /dev/null
                     if [ $? -ne 0 ]; then
-                        aborting "mkdir $directory directory failed"
+                        aborting "ERROR mount_dir mkdir $mount_dir directory failed"
                     fi
                 fi
 
@@ -740,16 +755,21 @@ function ackMediaVirt() {
 
     debugValue virt_arg $debug_level
 
-    local virt_mode="$2"
-    if [ "$virt_mode" != "" ]; then
-        virt_boot=$virt_mode
+    virt_boot=${virt_arg%%,*}
+    debugValue virt_boot $debug_level
+
+    local -l virt_mode="$2"
+    if [ "$virt_mode" == "" ]; then
+        virt_mode=${virt_arg##*,}
+        if [ "${virt_mode}" != "bios" ] && [ "${virt_mode}" != "uefi" ]; then
+            virt_mode=""
+        fi
+    fi
+
+    if [ "$virt_mode" == "" ]; then
+        virt_mode="bios"
     fi
     debugValue virt_mode $debug_level
-
-    if [ "$virt_boot" == "" ]; then
-        virt_boot="bios"
-    fi
-    debugValue virt_boot $debug_level
 
     local virsh=$(which virsh 2> /dev/null)
     if [ ! -x "$virsh" ]; then
@@ -759,22 +779,22 @@ function ackMediaVirt() {
 
     local virt_install=$(which virt-install 2> /dev/null)
     if [ ! -x "$virt_install" ]; then
-        aborting "virt_install executable not found" 3
+        aborting "virt-install executable not found" 3
     fi
     debugValue virt_install $debug_level
 
-    local virt_basename=$(basename ${virt_arg})
+    local virt_basename=$(basename ${virt_boot})
     debugValue virt_basename $debug_level
 
-    virt_name=${virt_basename}-${virt_boot}
+    virt_name=${virt_basename}-${virt_mode}
     debugValue virt_name $debug_value $debug_level
 
-    local virt_dir=${Virt_Dir}/${virt_basename}
+    local virt_dir=${Vm_Dir}/${virt_basename}
     debugValue virt_dir $debug_level
 
     mkdir -p "${virt_dir}" &> /dev/null
 
-    local virt_disk=${virt_dir}/${virt_name}.qcow2
+    local virt_disk=${virt_dir}/${virt_name}.qcow2 # qcow2
     debugValue virt_disk $debug_level
 
     ${virsh} domstate ${virt_name} &> /dev/null
@@ -799,88 +819,159 @@ function ackMediaVirt() {
 
     # domain does not exist (or was undefined)
 
-    if [ ! -r "${virt_arg}" ]; then
-        aborting "${virt_arg} file not readable"
+    if [ ! -r "${virt_boot}" ] || [ -d "${virt_boot}" ]; then
+        if [ -r "${Media_Dir}/${virt_boot}" ] && [ ! -d "${Media_Dir}/${virt_boot}" ]; then
+            virt_boot="${Media_Dir}/${virt_boot}"
+        else
+            if [ -r "${Build_Dir}/${virt_boot}" ] && [ ! -d "${Build_Dir}/${virt_boot}" ]; then
+                virt_boot="${Build_Dir}/${virt_boot}"
+            else
+                if [ -r "${Distribution_Dir}/${virt_boot}" ] && [ ! -d "${Distribution_Dir}/${virt_boot}" ]; then
+                    virt_boot="${Distribution_Dir}/${virt_boot}"
+                else
+                    if [ -r "${Release_Dir}/${virt_boot}" ] && [ ! -d "${Release_Dir}/${virt_boot}" ]; then
+                        virt_boot="${Release_Dir}/${virt_boot}"
+                    else
+                        if [ -r "${Vm_Dir}/${virt_boot}" ] && [ ! -d "${Vm_Dir}/${virt_boot}" ]; then
+                            virt_boot="${Vm_Dir}/${virt_boot}"
+                        else
+                            aborting "virt_boot '${virt_boot}' file not readable"
+                        fi
+                    fi
+                fi
+            fi
+        fi
+    fi
+
+    # file is readable, so create the domain
+
+    local virt_mac_address_prefix="52:54:00"
+
+    # create a 'consistent' mac address based on the node name
+    # otherwise dhcp leases will quickly run out during testing ...
+    local virt_mac_address_suffix_1=$(echo "${virt_name}" | md5sum 2> /dev/null | cut -c 1-2)
+    if [ "${#virt_mac_address_suffix_1}" -ne 2 ]; then
+        aborting "virt_mac_address_suffix_1 length is not 2 ($virt_mac_address_suffix_1)"
+    fi
+    local virt_mac_address_suffix_2=$(echo "${virt_name}" | md5sum | cut -c 5-6)
+    if [ "${#virt_mac_address_suffix_2}" -ne 2 ]; then
+        aborting "virt_mac_address_suffix_2 length is not 2 ($virt_mac_address_suffix_2)"
+    fi
+    local virt_mac_address_suffix_3=$(echo "${virt_name}" | md5sum | cut -c 9-10)
+    if [ "${#virt_mac_address_suffix_3}" -ne 2 ]; then
+        aborting "virt_mac_address_suffix_3 length is not 2 ($virt_mac_address_suffix_3)"
+    fi
+
+    local virt_mac_address=$(echo "${virt_mac_address_prefix}:${virt_mac_address_suffix_1}:${virt_mac_address_suffix_2}:${virt_mac_address_suffix_3}" | awk '{print tolower($NF)}')
+    if [ "${#virt_mac_address}" -ne 17 ]; then
+        aborting "virt_mac_address length is not 17 ($virt_mac_address)"
+    fi
+
+    debugValue virt_mac_address $debug_level
+
+    local virt_disk_size=8 # G
+    debugValue virt_disk_size $debug_level
+
+    let host_cpus=$(lscpu | grep "^CPU(s)" | awk '{print $NF}')
+    debugValue host_cpus $debug_level
+
+    if [ ${host_cpus} -ge 4 ]; then
+        local virt_cpus=2
     else
-        # file is readable, so create the domain
+        local virt_cpus=1
+    fi
+    debugValue virt_cpus $debug_level
 
-        local virt_mac_address_prefix="52:54:00"
+    let host_ram=$(free | grep ^Mem: | awk '{print $2}')
+    let host_ram=${host_ram}/1000/1000
+    debugValue host_ram $debug_level
 
-         # create a 'consistent' mac address based on the node name
-         # otherwise dhcp leases will quickly run out during testing ...
-         local virt_mac_address_suffix_1=$(echo "${virt_name}" | md5sum 2> /dev/null | cut -c 1-2)
-         if [ "${#virt_mac_address_suffix_1}" -ne 2 ]; then
-             aborting "virt_mac_address_suffix_1 length is not 2 ($virt_mac_address_suffix_1)"
-         fi
-         local virt_mac_address_suffix_2=$(echo "${virt_name}" | md5sum | cut -c 5-6)
-         if [ "${#virt_mac_address_suffix_2}" -ne 2 ]; then
-             aborting "virt_mac_address_suffix_2 length is not 2 ($virt_mac_address_suffix_2)"
-         fi
-         local virt_mac_address_suffix_3=$(echo "${virt_name}" | md5sum | cut -c 9-10)
-         if [ "${#virt_mac_address_suffix_3}" -ne 2 ]; then
-             aborting "virt_mac_address_suffix_3 length is not 2 ($virt_mac_address_suffix_3)"
-         fi
+    if [ ${host_ram} -ge 8 ]; then
+        local virt_ram=4096
+    else
+        local virt_ram=2048
+    fi
+    debugValue virt_ram $debug_level
 
-         local virt_mac_address=$(echo "${virt_mac_address_prefix}:${virt_mac_address_suffix_1}:${virt_mac_address_suffix_2}:${virt_mac_address_suffix_3}" | awk '{print tolower($NF)}')
-         if [ "${#virt_mac_address}" -ne 17 ]; then
-             aborting "virt_mac_address length is not 17 ($virt_mac_address)"
-         fi
+    if [ "$Ack_Default_IP_Interface" == "br0" ]; then
+        local virt_network="bridge=${Ack_Default_IP_Interface}"
+    else
+        if [ "$Ack_Default_IP_Interface" == "" ]; then
+            local virt_network="eth0"
+        else
+            local virt_network="${Ack_Default_IP_Interface}"
+        fi
+    fi
 
-         debugValue virt_mac_address $debug_level
+    if [ "$virt_mac_address" != "" ]; then
+        virt_network+=",mac=$virt_mac_address"
+    fi
 
-         local virt_disk_size=8 # G
-         debugValue virt_disk_size $debug_level
+    debugValue virt_network $debug_level
 
-         local virt_cpus=1
-         debugValue virt_cpus $debug_level
+    if [ "${virt_mode}" == "uefi" ]; then
+        local virt_boot_options="${virt_mode},"
+    else
+        local virt_boot_options=""
+    fi
+    virt_boot_options+="hd,"
+    virt_boot_options+="cdrom,"
+    virt_boot_options+="useserial=on,"
+    #virt_boot_options+="menu=on"
 
-         local virt_ram=1024
-         debugValue virt_ram $debug_level
+    # trim trailing commas
+    while [ "${virt_boot_options:${#virt_boot_options}-1:1}" == "," ]; do 
+        virt_boot_options=${virt_boot_options%,*}
+    done
 
-         if [ "$Ack_Default_Ip_Interface" == "br0" ]; then
-             local virt_network="bridge=${Ack_Default_Ip_Interface}"
-         else
-             if [ "$Ack_Default_Ip_Interface" == "" ]; then
-                 local virt_network="eth0"
-             else
-                 local virt_network="${Ack_Default_Ip_Interface}"
-             fi
-         fi
+    debugValue virt_boot_options $debug_level
 
-         if [ "$virt_mac_address" != "" ]; then
-             virt_network+=",mac=$virt_mac_address"
-         fi
+    # TODO: test this with various virt_basenames
 
-         debugValue virt_network $debug_level
+    local virt_os=${virt_basename%%-*}
+    debugValue virt_os $debug_level
 
-         if [ "${virt_mode}" != "" ]; then
-            local virt_boot_options="${virt_mode},"
-         else
-            local virt_boot_options=""
-         fi
-         virt_boot_options+="hd,"
-         virt_boot_options+="cdrom,"
-         virt_boot_options+="useserial=on,"
-         #virt_boot_options+="menu=on"
-         debugValue virt_boot_options $debug_level
+    local virt_os_version=${virt_basename#*-}
+    virt_os_version=${virt_os_version%%-*}
+    debugValue virt_os_version $debug_level
 
-         ${virt_install} \
-             --name ${virt_name} \
-             --boot ${virt_boot_options} \
-             --cdrom ${virt_arg} \
-             --console pty,target_type=virtio \
-             --cpus ${virt_cpus} \
-             --disk path=${virt_disk},device=disk,bus=virtio,size=${virt_disk_size},sparse=true,format=qcow2 \
-             --graphics none \
-             --network ${virt_network} \
-             --metadata name=${virt_name},title=${virt_name} \
-             --os-type=linux \
-             --os-variant=virtio26 \
-             --ram ${virt_ram} \
-             --serial pty \
-             --rng /dev/urandom
+    local virt_os_variant
+    local osinfos=$(osinfo-query os | grep ^\ ${virt_os} | awk '{print $1}' | sort -uV)
+    for osinfo in $osinfos; do
+        virt_os_variant=$osinfo
+        if [ "${virt_os}${virt_os_version}" == "${osinfo}" ]; then
+            break;
+        fi
+    done
+    debugValue virt_os_variant $debug_level
 
-     fi
+    local virt_install_args=""
+    virt_install_args+=" --name ${virt_name}"
+    virt_install_args+=" --boot ${virt_boot_options}"
+    virt_install_args+=" --cdrom ${virt_boot}"
+    virt_install_args+=" --console pty,target_type=virtio"
+    virt_install_args+=" --cpus ${virt_cpus}"
+    virt_install_args+=" --disk path=${virt_disk},device=disk,bus=virtio,size=${virt_disk_size},sparse=true,format=qcow2"
+    virt_install_args+=" --network ${virt_network}"
+    virt_install_args+=" --metadata name=${virt_name},title=${virt_name}"
+    #if [ "${virt_mode}" != "uefi" ]; then
+        #virt_install_args+=" --graphics none"
+    #fi
+    virt_install_args+=" --os-type=linux"
+    if [ ${#virt_os_variant} -gt 0 ]; then
+        virt_install_args+=" --os-variant $virt_os_variant"
+    fi
+    virt_install_args+=" --memory ${virt_ram}"
+    virt_install_args+=" --serial pty"
+    virt_install_args+=" --virt-type kvm"
+    virt_install_args+=" --rng /dev/random"
+
+    virt_install_args=${virt_install_args## } # trim leading spaces
+    virt_install_args=${virt_install_args%% } # trim trailing spaces
+
+    debugValue "virt_install_args" $((debug_level+1))
+
+    ${virt_install} ${virt_install_args}
 
     # virt-viewer ${virt_basename} # works with --vnc
 
@@ -1146,7 +1237,7 @@ function usage() {
     echo "  -d | --domain <name>            = set build domain <name> [DEFAULT=$Default_Domain]"
     echo "  -s | --server <name>            = set build (install) server <name> [DEFAULT=$Default_Install_Server]"
     echo
-    echo "  -v | --virt <iso>               = create and boot an iso with virsh utilities [DEFAULT=none]"
+    echo "  -v | --virt <iso>[,mode]        = create and boot an iso, using optional mode (bios or uefi), with virsh utilities [DEFAULT=none]"
     echo
     echo "  -m | --mount <iso>              = mount iso file(s) [DEFAULT=$Default_Distribution_Dir]"
     echo "  -r | --remount <iso>            = remount iso file(s) [DEFAULT=$Default_Distribution_Dir]"
@@ -1162,6 +1253,8 @@ function usage() {
     # end function logic
 
     debugFunction $@
+
+    ackStop
 
     exit 1
 }
@@ -1330,6 +1423,8 @@ if [ $Build_Flag -eq 0 ]; then
     fi
 fi
 
+debugValue Ack_Dir 12
+
 Media_Dir=$(readlink -e $Media_Dir 2> /dev/null)
 if [ "$Media_Dir" == "" ] || [ "$Media_Dir" == "/" ]; then
     Media_Dir=$(readlink -e $Default_Media_Dir 2> /dev/null)
@@ -1349,7 +1444,7 @@ fi
 if [ "$Build_Dir" == "" ] || [ "$Build_Dir" == "/" ] || [ ! -d "$Build_Dir" ]; then
     mkdir -p "${Build_Dir}" &> /dev/null
     if [ $? -ne 0 ]; then
-        aborting "mkdir -p '${Build_Dir}' failed"
+        aborting "Build_Dir mkdir -p '${Build_Dir}' failed"
     fi
 fi
 debugValue Build_Dir 12
@@ -1364,7 +1459,7 @@ fi
 if [ "$Distribution_Dir" == "" ] || [ "$Distribution_Dir" == "/" ] || [ ! -d "$Distribution_Dir" ]; then
     mkdir -p "${Distribution_Dir}" &> /dev/null
     if [ $? -ne 0 ]; then
-        aborting "mkdir -p '${Distribution_Dir}' failed"
+        aborting "Distribution_Dir mkdir -p '${Distribution_Dir}' failed"
     fi
 fi
 debugValue Distribution_Dir 12
@@ -1379,25 +1474,25 @@ fi
 if [ "$Release_Dir" == "" ] || [ "$Release_Dir" == "/" ] || [ ! -d "$Release_Dir" ]; then
     mkdir -p "${Release_Dir}" &> /dev/null
     if [ $? -ne 0 ]; then
-        aborting "mkdir -p '${Release_Dir}' failed"
+        aborting "Release_Dir mkdir -p '${Release_Dir}' failed"
     fi
 fi
 debugValue Release_Dir 12
 
-Virt_Dir=$(readlink -e $Virt_Dir 2> /dev/null)
-if [ "$Virt_Dir" == "" ] || [ "$Virt_Dir" == "/" ]; then
-    Virt_Dir=$(readlink -e ${Default_Virt_Dir} 2> /dev/null)
-    if [ "$Virt_Dir" == "" ] || [ "$Virt_Dir" == "/" ]; then
-        Virt_Dir="${Default_Virt_Dir}"
+Vm_Dir=$(readlink -e $Vm_Dir 2> /dev/null)
+if [ "$Vm_Dir" == "" ] || [ "$Vm_Dir" == "/" ]; then
+    Vm_Dir=$(readlink -e ${Default_Vm_Dir} 2> /dev/null)
+    if [ "$Vm_Dir" == "" ] || [ "$Vm_Dir" == "/" ]; then
+        Vm_Dir="${Default_Vm_Dir}"
     fi
 fi
-if [ "$Virt_Dir" == "" ] || [ "$Virt_Dir" == "/" ] || [ ! -d "$Virt_Dir" ]; then
+if [ "$Virt_Dir" != "" ] && [ "$Virt_Dir" != "/" ] && [ ! -d "$Virt_Dir" ]; then
     mkdir -p "${Virt_Dir}" &> /dev/null
     if [ $? -ne 0 ]; then
-        aborting "mkdir -p '${Virt_Dir}' failed"
+        aborting "Vm_Dir mkdir -p '${Vm_Dir}' failed"
     fi
 fi
-debugValue Virt_Dir 12
+debugValue Vm_Dir 12
 
 if [ "$Uri" == "" ]; then
     Uri=$Distribution_Dir
@@ -1405,15 +1500,18 @@ fi
 debugValue Uri 20
 if [ $Uri_Flag -eq 1 ]; then
     ackMediaUri "$Uri"
+    ackStop
     exit # --uri by itself does nothing else
 fi
 
 if [ "$Virt" == "" ]; then
     Virt=$Distribution_Dir
 fi
+
 debugValue Virt 20
 if [ $Virt_Flag -eq 1 ] && [ $Build_Flag -eq 0 ]; then
     ackMediaVirt "$Virt"
+    ackStop
     exit # --virt by itself does nothing else
 fi
 
@@ -1440,6 +1538,7 @@ if [ $Mount_Flag -eq 1 ]; then
 fi
 
 if [ $Build_Flag -eq 0 ]; then
+    ackStop
     exit # if not building then exit here
 fi
 

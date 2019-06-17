@@ -1,0 +1,11 @@
+#!/usr/bin/env php
+
+<?php
+
+require_once('../include/Ack.functions.php.ref');
+
+$Debug = 9;
+
+\josephtingiris\Ack\ackGlobals(true);
+
+?>

@@ -117,30 +117,8 @@ if (empty($Default_Timezone)) {
 }
 date_default_timezone_set($Default_Timezone);
 
-# begin Ack.functions.php.include
-
-$Ack_Php="Ack.functions.php";
-$Ack_Php_Dir=dirname(__FILE__);
-if (is_link($Ack_Php_Dir)) $Ack_Php_Dir=readlink($Ack_Php_Dir);
-while (!empty($Ack_Php_Dir) && $Ack_Php_Dir != "/" && is_dir($Ack_Php_Dir)) { # search backwards
-    foreach (array($Ack_Php_Dir, $Ack_Php_Dir . "/include/debug-php", $Ack_Php_Dir . "/include") as $Ack_Php_Source_Dir) {
-        $Ack_Php_Source=$Ack_Php_Source_Dir . "/" . $Ack_Php;
-        if (is_readable($Ack_Php_Source)) {
-            require_once($Ack_Php_Source);
-            break;
-        } else {
-            unset($Ack_Php_Source);
-        }
-    }
-    if (!empty($Ack_Php_Source)) break;
-    $Ack_Php_Dir=dirname("$Ack_Php_Dir");
-}
-if (empty($Ack_Php_Source)) { echo "$Ack_Php file not found\n"; exit(1); }
-unset($Ack_Php_Dir, $Ack_Php);
-
-# end Ack.functions.php.include
-
-ackGlobals();
+$Ack = new \josephtingiris\Ack;
+$Ack_Sub = new \josephtingiris\Ack\Sub;
 
 $Ack_Test_Url=null;
 
@@ -199,13 +177,13 @@ if (filter_var($Ack_Test_Url,FILTER_VALIDATE_URL)) {
     curl_setopt($curl_init,CURLOPT_SSL_VERIFYPEER,false);
 
     $curl_headers=array();
-    array_push($curl_headers,"X-ACK-PROVISIONING-IP-0: $Ack_Default_Ip_Interface $Ack_Default_Ip_Address");
+    array_push($curl_headers,"X-PROVISIONING-IP-0: " . $Ack->Default_IP_Interface . " " . $Ack->Default_IP_Address);
 
-    $uname=null; ackExec("uname -m",$uname); $uname=trim($uname);
+    $uname=null; $Ack_Sub->subExec("uname -m",$uname); $uname=trim($uname);
     array_push($curl_headers,"X-ANACONDA-ARCHITECTURE: $uname");
 
     # /sys/class/dmi/id/product_serial
-    $serial_number=null; $serial_number=basename($Ack_0); $serial_number=trim($serial_number);
+    $serial_number=null; $serial_number=basename($Ack->Zero); $serial_number=trim($serial_number);
     array_push($curl_headers,"X-SYSTEM-SERIAL-NUMBER: $serial_number");
 
     // product really comes from dracut via

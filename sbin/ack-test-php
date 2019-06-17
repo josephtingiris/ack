@@ -104,28 +104,34 @@ if (empty($Autoload_Enabled)) {
 
 $Debug=20;
 
-$Ack_Alert = new \josephtingiris\Ack\Alert;
-#$Ack_Alert->failure("test",true,true);
-
-$Ack_Config = new \josephtingiris\Ack\Config;
-
 $Ack = new \josephtingiris\Ack;
 
 for ($c=0; $c<=256; $c++) {
     $Ack->debug("debug=$c",$c);
 }
-
-$Ack->debugValue("Config_File",4,$Ack->Config_File);
-$Ack->debugValue("Environment",4,$Ack->Environment);
-
-$Alert_From = $Ack_Config->value("alert_from");
-$Ack->debugValue("Alert_From",5);
-
-$Nothing = $Ack_Config->value("nothing");
-$Ack->debugValue("Nothing",5);
+#exit();
 
 $Ack->properties();
 #$Ack->properties(true,'Ack');
+
+#$Ack_Log = new \josephtingiris\Ack\Log;
+#$Ack_Log->Log_File = "/tmp/public-property.log";
+#$GLOBALS["Log_File"] = '/tmp/global.log';
+#$Ack_Log->message("log test","WARNING");
+
+#$Ack_Alert = new \josephtingiris\Ack\Alert;
+#$Ack_Alert->failure("test",true,true);
+
+#$Ack_Config = new \josephtingiris\Ack\Config;
+
+#$Ack->debugValue("Config_File",4,$Ack->Config_File);
+#$Ack->debugValue("Environment",4,$Ack->Environment);
+
+#$Alert_From = $Ack_Config->value("alert_from");
+#$Ack->debugValue("Alert_From",5);
+
+#$Nothing = $Ack_Config->value("nothing");
+#$Ack->debugValue("Nothing",5);
 
 $Ack_Client = new \josephtingiris\Ack\Client;
 $Ack_Client->debug("debug=10",10);

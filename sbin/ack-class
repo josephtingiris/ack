@@ -1,0 +1,48 @@
+#!/bin/env php
+<?php
+
+$Debug=10;
+
+echo "Autoload\n";
+require(dirname(__FILE__)) . "/../include/Ack/Autoload.php";
+
+echo "Ack\n";
+$Ack = new \josephtingiris\Ack();
+
+echo "Ack_Alert\n";
+$Ack_Alert = new \josephtingiris\Ack\Alert();
+
+echo "Ack_Authorize\n";
+$Ack_Authorize = new \josephtingiris\Ack\Authorize();
+
+echo "Ack_Client\n";
+$Ack_Client = new \josephtingiris\Ack\Client();
+
+echo "Ack_Config\n";
+$Ack_Config = new \josephtingiris\Ack\Config();
+
+echo "Ack_Database\n";
+$Ack_Database = new \josephtingiris\Ack\Database();
+
+echo "Ack_Email\n";
+$Ack_Email = new \josephtingiris\Ack\Email();
+
+echo "Ack_Example\n";
+$Ack_Example = new \josephtingiris\Ack\Example();
+
+echo "Ack_File\n";
+$Ack_File = new \josephtingiris\Ack\File();
+
+echo "Ack_Log\n";
+$Ack_Log = new \josephtingiris\Ack\Log();
+
+echo "Ack_Network\n";
+$Ack_Network = new \josephtingiris\Ack\Network();
+
+echo "Ack_Server\n";
+$Ack_Server = new \josephtingiris\Ack\Server();
+
+echo "Ack_Sub\n";
+$Ack_Sub = new \josephtingiris\Ack\Sub();
+
+?>
