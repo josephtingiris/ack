@@ -124,15 +124,18 @@ class Client extends \josephtingiris\Debug
 
         $anaconda = false;
 
-        if (!empty($this->clientAnacondaArchitecture())) {
+        $architecture=$this->clientAnacondaArchitecture();
+        if (!empty($architecture)) {
             $anaconda = true;
         }
 
-        if (!empty($this->clientAnacondaSystemRelease())) {
+        $system_release=$this->clientAnacondaSystemRelease();
+        if (!empty($system_release)) {
             $anaconda = true;
         }
 
-        if (!empty($this->clientRHNProvisioningMACs())) {
+        $provisioning_macs=$this->clientRHNProvisioningMACs();
+        if (!empty($provisioning_macs)) {
             $anaconda = true;
         }
 

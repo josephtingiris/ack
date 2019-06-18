@@ -175,7 +175,7 @@ function ackMediaBuild() {
             fi
             local build_dirname=$(readlink -e $(dirname $build_readlink))
         else
-            aborting "$build not found"
+            aborting "$build build file not found"
         fi
 
         debugValue build_dirname $debug_level
@@ -621,18 +621,22 @@ function ackMediaMount() {
         debugValue mount_basename $debug_level
 
         local mount_dirname=$(readlink -e $(dirname $mount))
+        debugValue mount_dirname $debug_level
 
         if [ -a "$mount" ]; then
             # if it's a real file then only seriously consider ISOs
             mount_readlink=$(readlink -e $mount)
-            local mount_file=$(file $mount_readlink 2> /dev/null | grep ISO)
-            debugValue mount_file $debug_level "found"
-            if [ "$mount_file" == "" ]; then
+            debugValue mount_readlink $debug_level "found"
+
+            isoinfo -i "$mount_readlink" 2> /dev/null
+            if [ $? -ne 0 ]; then
+                echo "'$mount_readlink' is not an ISO"
                 continue
             fi
+
             local mount_dirname=$(readlink -e $(dirname $mount_readlink))
         else
-            aborting "$mount not found"
+            aborting "$mount mount file not found"
         fi
 
         debugValue mount_dirname $debug_level
@@ -646,9 +650,9 @@ function ackMediaMount() {
         fi
 
         local mount_dir=${mount_dirname}${media_uri}
-        debugValue mount_dir $debug_level
+        mount_dir="${mount_dir%"${mount_dir##*[!/]}"}" # trim trailing slashes
 
-        mount ${mount_dir} &> /dev/null
+        mount | grep "on ${mount_dir} " &> /dev/null
         if [ $? -eq 1 ]; then
             # not mounted
             local mounted=1
@@ -656,6 +660,8 @@ function ackMediaMount() {
             # mounted, or busy (etc)
             local mounted=0
         fi
+
+        debugValue mount_dir $debug_level $mounted
 
         if [ $mounted -eq 1 ]; then
 
@@ -675,16 +681,20 @@ function ackMediaMount() {
                 debugValue mount_dir $debug_level "found"
             fi
 
-            mount -o loop $mount $mount_dir &> /dev/null
-            if [ $? -eq 0 ]; then
-                ((++mount_count))
-                printf "%s -> %s ... mounted\n" "$mount_basename" "$mount_dir"
+            if [ -d "${mount_dir}" ]; then
+                mount -o loop $mount $mount_dir &> /dev/null
+                if [ $? -eq 0 ]; then
+                    ((++mount_count))
+                    printf "%s -> %s ... mounted\n" "$mount_basename" "$mount_dir"
+                else
+                    aborting "mount -o loop '$mount' '$mount_dir' failed"
+                fi
             else
-                aborting "mount -o loop '$mount' '$mount_dir' failed"
+                aborting "'$mount_dir' directory not found"
             fi
 
         else
-            printf "%s -> %s ... mounted already\n" "$mount_basename" "$mount_dir"
+            printf "%s -> %s ... already mounted\n" "$mount_basename" "$mount_dir"
         fi
 
     done
@@ -955,7 +965,7 @@ function ackMediaVirt() {
     virt_install_args+=" --network ${virt_network}"
     virt_install_args+=" --metadata name=${virt_name},title=${virt_name}"
     #if [ "${virt_mode}" != "uefi" ]; then
-        #virt_install_args+=" --graphics none"
+    #virt_install_args+=" --graphics none"
     #fi
     virt_install_args+=" --os-type=linux"
     if [ ${#virt_os_variant} -gt 0 ]; then
@@ -996,7 +1006,7 @@ function ackMediaUri() {
 
     # http(s)://<hostname>/<distribution>/<major>[.minor]/[platform]/<image>/<architecture>
 
-    local debug_level=33
+    local debug_level=3
 
     local uri_arg="$1"
 
@@ -1025,16 +1035,19 @@ function ackMediaUri() {
         local uri_dirname=$(readlink -e $(dirname $uri))
 
         debugValue uri_basename $debug_level
+        debugValue uri_dirname $debug_level
 
         if [ -a "$uri" ]; then
             # if it's a real file then only seriously consider ISOs
             uri_readlink=$(readlink -e $uri)
-            local uri_file=$(file $uri_readlink 2> /dev/null | grep ISO)
-            debugValue uri_file $debug_level
-            if [ "$uri_file" == "" ]; then
+            debugValue uri_readlink $debug_level
+
+            isoinfo -i "${uri_readlink}" 2> /dev/null
+            if [ $? -ne 0 ]; then
                 #printf "%s\n" "$uri"
                 continue
             fi
+
             local uri_dirname=$(readlink -e $(dirname $uri_readlink))
         fi
 
@@ -1518,6 +1531,7 @@ fi
 if [ "$Unmount" == "" ]; then
     Unmount=$Distribution_Dir
 fi
+
 if [ $Unmount_Flag -eq 1 ]; then
     ackMediaUnmount "$Unmount"
 fi
@@ -1525,6 +1539,7 @@ fi
 if [ "$Remount" == "" ]; then
     Remount=$Distribution_Dir
 fi
+
 if [ $Remount_Flag -eq 1 ]; then
     ackMediaUnmount "$Remount"
     ackMediaMount "$Remount"
@@ -1533,7 +1548,11 @@ fi
 if [ "$Mount" == "" ]; then
     Mount=$Distribution_Dir
 fi
+
 if [ $Mount_Flag -eq 1 ]; then
+    if [ ! -r "$Mount" ]; then
+        Mount="${Distribution_Dir}/${Mount}"
+    fi
     ackMediaMount "$Mount"
 fi
 

@@ -1,11 +1,22 @@
+PRE-REQUISITES
+
+yum install genisoimage isomd5sum syslinux
+
+SETUP
+
+There must be a 'media' directory with sufficient permissions for apache to read from it.  Typically, this is put on another filesystem due to the fact it can consume quite a bit of space.  This is where the ISOs, VMs, etc. are stored.
+
+# mkdir -p media/build media/distribution media/release media/vm
+
 CREATE ACK-MEDIA
 
 1) Download original media iso & put it in media/distribution
 
 https://www.centos.org/download/
-mv ~jtingiris/Downloads/CentOS-7-x86_64-DVD-1810.iso media/distribution/
+
+# mv ~jtingiris/Downloads/CentOS-7-x86_64-DVD-1810.iso media/distribution/
 
 
 2) Create the boot media
 
-sbin/ack-media -b CentOS-7-x86_64-DVD-1810.iso -s dev-ack.domain.com
+# sbin/ack-media -b CentOS-7-x86_64-DVD-1810.iso -s dev-ack.domain.com
