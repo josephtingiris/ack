@@ -59,29 +59,29 @@ menu color cmdline 0 #ffffffff #00000000 none
 #menu separator # insert an empty line
 #menu separator # insert an empty line
 
-label ##ACK_LABEL##
-  menu default
-  menu label ^Install from ##ACK_INSTALL_SERVER## [BIOS]
+label rescue-server
+  menu indent count 5
+  menu label ^Rescue from ##ACK_INSTALL_SERVER## [BIOS]
   kernel vmlinuz
-  append initrd=initrd.img biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks=https://##ACK_INSTALL_SERVER##/?install=##ACK_INSTALL_URI##
+  append initrd=initrd.img biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.stage2=https://##ACK_INSTALL_SERVER####ACK_INSTALL_URI## rescue
 
 menu separator
 
 menu begin ^.
   menu title .
 
+label dhcp
+  menu default
+  menu label ^Install from ##ACK_INSTALL_SERVER## [DHCP]
+  kernel vmlinuz
+  append initrd=initrd.img biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks=https://##ACK_INSTALL_SERVER##/?install=##ACK_INSTALL_URI##
+
+menu separator
+
 label static-ip
   menu label ^Install from ##ACK_INSTALL_SERVER## [STATIC IP]
   # ip=ip::gateway:netmask:hostname:interface:none
   kernel vmlinuz
   append initrd=initrd.img biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks=https://##ACK_INSTALL_SERVER##/?install=##ACK_INSTALL_URI## dns=1.1.1.1 ip=1.2.3.4::1.2.3.1:255.255.255.0::eth0:none
-
-menu separator
-
-label rescue-server
-  menu indent count 5
-  menu label ^rescue-server
-  kernel vmlinuz
-  append initrd=initrd.img biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.stage2=https://##ACK_INSTALL_SERVER####ACK_INSTALL_URI## rescue
 
 menu end
