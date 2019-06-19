@@ -1,6 +1,10 @@
 PRE-REQUISITES
 
-yum install genisoimage isomd5sum syslinux
+# yum install genisoimage isomd5sum syslinux
+
+CentOS 7
+
+# yum install epel-release php php-bcmath php-cli php-common php-gd php-imap php-ldap php-mbstring php-mcrypt php-mysqlnd php-pdo php-pear php-php-gettext php-process php-snmp php-xml mod_ssl
 
 SETUP
 
@@ -19,4 +23,4 @@ https://www.centos.org/download/
 
 2) Create the boot media
 
-# sbin/ack-media -b CentOS-7-x86_64-DVD-1810.iso -s dev-ack.domain.com
+# ack-media -b CentOS-7-x86_64-DVD-1810.iso -s dev-ack.domain.com
