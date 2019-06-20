@@ -765,11 +765,15 @@ class Ack extends \josephtingiris\Debug
         }
 
         # client_debug is passed through and used in (template) includes
-        if (empty($this->Client_Debug)) {
-            if (!empty($this->_REQUEST_lower["debug"])) {
+        if (!empty($this->_REQUEST_lower["debug"])) {
+            if (empty($this->Client_Debug)) {
                 $this->Client_Debug = (int)$this->_REQUEST_lower["debug"];
             } else {
                 $this->Client_Debug = 0;
+            }
+            if (empty($GLOBALS['Debug'])) {
+                error_log("debug is " . $GLOBALS['Debug']);
+                $GLOBALS['Debug'] = (int)$this->_REQUEST_lower["debug"];
             }
         }
 
