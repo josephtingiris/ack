@@ -113,6 +113,208 @@ function ackStop() {
     # end function logic
 }
 
+# This function is an attempt to formulate a consistent, repeatable URI naming structure for various
+# Enterprise Linux distrubtions that have changed naming conventions over the course of many releases.
+# Essentially; CentOS, Fedora, RedHat (et al) have different naming schemes for virutally the same things.
+
+# If a URI name *can* be formulated then it will be output, otherwise the original input will be output.
+
+# distribution (centos, fedora, rhel); $Media_Distributions
+# major version (first set of 'numbered' strings, i.e. 1, 1.2, 1.2.3, v1234, etc)
+# minor version (release) [optional] (second set of 'numbered' strings)
+# platform (bin, server, workstation) [optional] $Media_Platforms
+# extras [optional] (can be anything, including tertiary set of 'numbered' strings)
+# architecture (i386, x86_64) $Media_Architectures
+
+# http(s)://<hostname>/<distribution>/<major>[.minor]/[platform]/[extras]/<architecture>
+
+function ackURI() {
+    local uri_arg="$1"
+
+    if [ "$uri_arg" == "" ]; then return 1; fi
+
+    local debug_level=30
+
+    debugValue uri_arg ${debug_level}
+
+    local -i uri_continue=$2
+
+    local uri
+    local uris=()
+    if [ -d "$uri_arg" ]; then
+        while read uri; do
+            uris+=("$uri")
+        done <<< "$(find "${uri_arg}/" -maxdepth 1 -type f)"
+        unset uri
+    else
+        debugValue uri_arg $debug_level file
+        uris+=("$uri_arg")
+    fi
+
+    local uri
+    for uri in ${uris[@]}; do
+        debugValue uri_basename $((${debug_level}+20))
+
+        local uri_basename=$(basename $uri)
+
+        local uri_dashes
+        uri_dashes=${uri_basename//[^-]}
+
+        local uri_distribution media_distribution
+        local uri_major_version
+        local uri_minor_version
+        local uri_platform media_platform
+        local uri_architecture media_architecture
+        local uri_extras
+
+        local uri_cut uri_cut_dash uri_cut_found
+
+        local uri_return
+
+        if [ ${#uri_dashes} -gt 1 ] && [[ "${uri_basename,,}" =~ .iso$ ]]; then
+            uri_basename="${uri_basename%"${uri_basename##*[!.iso]}"}" # trim trailing .iso
+
+            debugValue uri_basename $((${debug_level}+5)) ${#uri_dashes}
+
+            uri_cut=${uri_basename,,}
+            for (( d=0; d<=${#uri_dashes}; d++)); do
+                uri_cut_dash=${uri_cut%%-*}
+                uri_cut_found=1
+
+                debugValue uri_cut_dash $((${debug_level}+16)) ${uri_cut}
+
+                if [ ${#uri_distribution} -eq 0 ]; then
+                    for media_distribution in ${Media_Distributions[@]}; do
+                        if [ "${media_distribution}" == "${uri_cut_dash}" ]; then
+                            uri_distribution=${uri_cut_dash}
+                            uri_cut_found=0
+                            break
+                        fi
+                    done
+                    if [ ${uri_cut_found} -eq 0 ]; then 
+                        uri_cut=${uri_cut#*-}
+                        continue
+                    fi
+                fi
+
+                if [ ${#uri_architecture} -eq 0 ]; then
+                    for media_architecture in ${Media_Architectures[@]}; do
+                        if [ "${media_architecture}" == "${uri_cut_dash}" ]; then
+                            uri_architecture=${uri_cut_dash}
+                            uri_cut_found=0
+                            break
+                        fi
+                    done
+                    if [ ${uri_cut_found} -eq 0 ]; then 
+                        uri_cut=${uri_cut#*-}
+                        continue
+                    fi
+                fi
+
+                if [ ${#uri_platform} -eq 0 ]; then
+                    for media_platform in ${Media_Platforms[@]}; do
+                        if [ "${media_platform}" == "${uri_cut_dash}" ]; then
+                            uri_platform=${uri_cut_dash}
+                            uri_cut_found=0
+                            break
+                        fi
+                    done
+                    if [ ${uri_cut_found} -eq 0 ]; then 
+                        uri_cut=${uri_cut#*-}
+                        continue
+                    fi
+                fi
+
+                if [[ ${uri_cut_dash} =~ [0-9]+(\.[0-9]+)* ]]; then
+                    if [ ${#uri_major_version} -eq 0 ]; then
+                        uri_major_version=${uri_cut_dash}
+                        uri_cut=${uri_cut#*-}
+                        continue
+                    fi
+                    if [ ${#uri_minor_version} -eq 0 ]; then
+                        uri_minor_version+=.${uri_cut_dash}
+                    else
+                        uri_minor_version+=-${uri_cut_dash}
+                    fi
+                    uri_cut=${uri_cut#*-}
+                    continue
+                fi
+
+                if [ ${uri_cut_found} -ne 0 ]; then
+                    uri_extras+=${uri_cut_dash}-
+                fi
+
+                uri_cut=${uri_cut#*-}
+            done
+
+            debugValue uri_extras $((${debug_level}+7))
+
+            if [ ${#uri_distribution} -gt 0 ]; then
+
+                uri_return="/"
+
+                uri_distribution="${uri_distribution%"${uri_distribution##*[!-]}"}" # trim trailing -
+                uri_return+="${uri_distribution}/"
+
+                if [ ${#uri_major_version} -gt 0 ]; then
+                    uri_major_version="${uri_major_version%"${uri_major_version##*[!.]}"}" # trim trailing .
+                    uri_return+="${uri_major_version}"
+                fi
+
+                if [ ${#uri_minor_version} -gt 0 ]; then
+                    uri_minor_version="${uri_minor_version%"${uri_minor_version##*[!-]}"}" # trim trailing -
+                    uri_minor_version="${uri_minor_version%"${uri_minor_version##*[!.]}"}" # trim trailing .
+                    uri_return+="${uri_minor_version}"
+                fi
+
+                if [ ${#uri_major_version} -gt 0 ] || [ ${#uri_minor_version} -gt 0 ]; then
+                    uri_return+="/"
+                fi
+
+                if [ ${#uri_platform} -gt 0 ]; then
+                    uri_platform="${uri_platform%"${uri_platform##*[!-]}"}" # trim trailing -
+                    uri_return+="${uri_platform}/"
+                fi
+
+                if [ ${#uri_extras} -gt 0 ]; then
+                    uri_extras="${uri_extras%"${uri_extras##*[!-]}"}" # trim trailing -
+                    uri_return+="${uri_extras}/"
+                fi
+
+                if [ ${#uri_architecture} -gt 0 ]; then
+                    uri_architecture="${uri_architecture%"${uri_architecture##*[!-]}"}" # trim trailing -
+                    uri_return+="${uri_architecture}"
+                fi
+
+                uri_return+="/"
+
+                uri_return=${uri_return//\/\//\/}
+
+            else
+                uri_return=${uri_basename}
+            fi
+
+        else
+            uri_return=${uri_basename}
+        fi
+
+        printf "${uri_return}\n"
+
+        unset -v uri_distribution media_distribution
+        unset -v uri_major_version
+        unset -v uri_minor_version
+        unset -v uri_platform media_platform
+        unset -v uri_architecture media_architecture
+        unset -v uri_extras
+
+        unset -v uri_cut uri_cut_dash uri_cut_found
+
+        unset -v uri_return
+
+    done
+
+}
+
 # Main
 
 debugValue PATH 50
@@ -132,4 +334,3 @@ Ack_User_Exists=$(cat /etc/passwd | grep ^$Ack_User:)
 if [ "$Ack_User_Exists" == "" ]; then
     aborting "user '$Ack_User' not found" 1
 fi
-
