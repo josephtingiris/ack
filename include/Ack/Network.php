@@ -67,8 +67,8 @@ class Network extends \josephtingiris\Debug
 
         $this->debug("Class = " . __CLASS__, 20);
 
-        $this->Ack_Log = new \josephtingiris\Ack\Log();
-        $this->Ack_Sub = new \josephtingiris\Ack\Sub();
+        $this->Ack_Log = new \josephtingiris\Ack\Log($debug_level_construct);
+        $this->Ack_Sub = new \josephtingiris\Ack\Sub($debug_level_construct);
 
         /*
          * end function logic

@@ -67,7 +67,7 @@ class Authorize extends \josephtingiris\Debug
 
         $this->debug("Class = " . __CLASS__, 20);
 
-        $this->Ack_Network = new \josephtingiris\Ack\Network();
+        $this->Ack_Network = new \josephtingiris\Ack\Network($debug_level_construct);
 
         /*
          * end function logic
