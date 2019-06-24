@@ -228,7 +228,7 @@ class Sub extends \josephtingiris\Debug
         if (file_exists($directory) && is_dir($directory)) {
             return $directory;
         } else {
-            if (!file_exists($directory) && !is_dir($directory)) {
+            if (!is_dir($directory) && !is_link($directory)) {
                 # it doesn't exist and it's not a directory
                 if (mkdir($directory, $mode, $recursive)) {
                     return $directory;
