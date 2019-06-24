@@ -67,7 +67,7 @@ class Sub extends \josephtingiris\Debug
 
         $this->debug("Class = " . __CLASS__, 20);
 
-        $this->Ack_Alert = new \josephtingiris\Ack\Alert();
+        $this->Ack_Alert = new \josephtingiris\Ack\Alert($debug_level_construct);
 
         /*
          * end function logic
@@ -175,7 +175,8 @@ class Sub extends \josephtingiris\Debug
     /**
      * non-blocking (async) exec
      */
-    public function subExec($cmd, &$stdout=null, &$stderr=null) {
+    public function subExec($cmd, &$stdout=null, &$stderr=null)
+    {
         $cmd = escapeshellcmd($cmd);
         $proc = proc_open($cmd,[
             1 => ['pipe','w'],
@@ -188,7 +189,8 @@ class Sub extends \josephtingiris\Debug
         return proc_close($proc);
     }
 
-    public function subImplode($implode_seperator=null, $implode_array=null) {
+    public function subImplode($implode_seperator=null, $implode_array=null)
+    {
         if (is_null($implode_array)) {
             return null;
         }
@@ -200,7 +202,8 @@ class Sub extends \josephtingiris\Debug
         $return_string="";
 
         $callback =
-            function ($value, $key) use (&$return_string, &$implode_seperator) {
+            function ($value, $key) use (&$return_string, &$implode_seperator)
+            {
                 if (is_numeric($key)) {
                     $return_string .= $value . $implode_seperator;
                 } else {
@@ -212,6 +215,34 @@ class Sub extends \josephtingiris\Debug
 
         $return_string=trim($return_string,$implode_seperator);
         return $return_string;
+    }
+
+    public function subMkdir($directory=null, $mode=0775, $recursive=true)
+    {
+        $tmp_dir="/var/tmp";
+
+        if (is_null($directory) || $directory == "") {
+            $directory=$tmp_dir;
+        }
+
+        if (file_exists($directory) && is_dir($directory)) {
+            return $directory;
+        } else {
+            if (!file_exists($directory) && !is_dir($directory)) {
+                # it doesn't exist and it's not a directory
+                if (mkdir($directory, $mode, $recursive)) {
+                    return $directory;
+                } else {
+                    $directory=$tmp_dir;
+                }
+
+            } else {
+                # it does exist and it's not a directory
+                $directory=$tmp_dir;
+            }
+        }
+
+        return $directory;
     }
 
     /**

@@ -73,8 +73,8 @@ class Config extends \josephtingiris\Debug
 
         $this->debug("Class = " . __CLASS__, 20);
 
-        $this->Ack_Alert = new \josephtingiris\Ack\Alert();
-        $this->Ack_Server = new \josephtingiris\Ack\Server();
+        $this->Ack_Alert = new \josephtingiris\Ack\Alert($debug_level_construct);
+        $this->Ack_Server = new \josephtingiris\Ack\Server($debug_level_construct);
 
         /*
          * end function logic

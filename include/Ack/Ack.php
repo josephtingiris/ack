@@ -104,7 +104,7 @@ class Ack extends \josephtingiris\Debug
     public $Timezone = null;
     public $User = null;
     public $UUID = null;
-    public $Vm_Dir = null;
+    public $VM_Dir = null;
     public $Zero = null;
     public $Zzz = null;
 
@@ -241,6 +241,7 @@ class Ack extends \josephtingiris\Debug
         if (empty($this->ETC_Dir)) {
             $this->ETC_Dir=$this->Dir . "/etc";
         }
+        $this->ETC_Dir=$this->Ack_Sub->subMkdir($this->ETC_Dir);
 
         // Config_File
         if (empty($this->Config_File)) {
@@ -281,6 +282,7 @@ class Ack extends \josephtingiris\Debug
                 $this->AAA_Dir=$this->Dir . "/aaa";
             }
         }
+        $this->AAA_Dir=$this->Ack_Sub->subMkdir($this->AAA_Dir);
 
         // AAA_Cache
         if (empty($this->AAA_Cache)) {
@@ -390,6 +392,7 @@ class Ack extends \josephtingiris\Debug
                 $this->Log_Dir=$this->Dir . "/log";
             }
         }
+        $this->Log_Dir=$this->Ack_Sub->subMkdir($this->Log_Dir);
 
         // Log_File
         if (empty($this->Log_File)) {
@@ -407,9 +410,7 @@ class Ack extends \josephtingiris\Debug
                 $this->Media_Dir=$this->Dir . "/media";
             }
         }
-        if (!is_readable($this->Media_Dir)) {
-            $this->Media_Dir="/var/tmp";
-        }
+        $this->Media_Dir=$this->Ack_Sub->subMkdir($this->Media_Dir);
 
         // Build_Dir
         if (empty($this->Build_Dir)) {
@@ -418,9 +419,7 @@ class Ack extends \josephtingiris\Debug
                 $this->Build_Dir=$this->Media_Dir . "/build";
             }
         }
-        if (!is_writable($this->Build_Dir)) {
-            $this->Build_Dir="/var/tmp";
-        }
+        $this->Build_Dir=$this->Ack_Sub->subMkdir($this->Build_Dir);
 
         // Distribution_Dir
         if (empty($this->Distribution_Dir)) {
@@ -429,9 +428,7 @@ class Ack extends \josephtingiris\Debug
                 $this->Distribution_Dir=$this->Media_Dir . "/distribution";
             }
         }
-        if (!is_writable($this->Distribution_Dir)) {
-            $this->Distribution_Dir="/var/tmp";
-        }
+        $this->Distribution_Dir=$this->Ack_Sub->subMkdir($this->Distribution_Dir);
 
         // Release_Dir
         if (empty($this->Release_Dir)) {
@@ -440,20 +437,16 @@ class Ack extends \josephtingiris\Debug
                 $this->Release_Dir=$this->Media_Dir . "/release";
             }
         }
-        if (!is_writable($this->Release_Dir)) {
-            $this->Release_Dir="/var/tmp";
-        }
+        $this->Release_Dir=$this->Ack_Sub->subMkdir($this->Release_Dir);
 
-        // Vm_Dir
-        if (empty($this->Vm_Dir)) {
-            $this->Vm_Dir=$this->Ack_Config->configValue("vm_dir");
-            if (empty($this->Vm_Dir)) {
-                $this->Vm_Dir=$this->Media_Dir . "/vm";
+        // VM_Dir
+        if (empty($this->VM_Dir)) {
+            $this->VM_Dir=$this->Ack_Config->configValue("vm_dir");
+            if (empty($this->VM_Dir)) {
+                $this->VM_Dir=$this->Media_Dir . "/vm";
             }
         }
-        if (!is_writable($this->Vm_Dir)) {
-            $this->Vm_Dir="/var/tmp";
-        }
+        $this->VM_Dir=$this->Ack_Sub->subMkdir($this->VM_Dir);
 
         // Network_Interfaces
         if (empty($this->Network_Interfaces)) {
@@ -772,11 +765,15 @@ class Ack extends \josephtingiris\Debug
         }
 
         # client_debug is passed through and used in (template) includes
-        if (empty($this->Client_Debug)) {
-            if (!empty($this->_REQUEST_lower["debug"])) {
+        if (!empty($this->_REQUEST_lower["debug"])) {
+            if (empty($this->Client_Debug)) {
                 $this->Client_Debug = (int)$this->_REQUEST_lower["debug"];
             } else {
                 $this->Client_Debug = 0;
+            }
+            if (empty($GLOBALS['Debug'])) {
+                error_log("debug is " . $GLOBALS['Debug']);
+                $GLOBALS['Debug'] = (int)$this->_REQUEST_lower["debug"];
             }
         }
 
