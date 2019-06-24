@@ -101,25 +101,23 @@ if (empty($Autoload_Enabled)) {
  *
  */
 
-$Debug=10;
+# enable debugging with ack/etc/base-debug
+
+echo "<html>";
+
+echo "<h1>AnaConda Kickstart</h1>";
 
 $Ack = new \josephtingiris\Ack();
 
-header("Content-Type: text/plain;charset=UTF-8");
+echo "<a href=/client/>/client/</a><br>";
+echo "<a href=/media/>/media/</a><br>";
 
-if (!empty($Ack->_REQUEST_lower["include"])) {
-    # TODO; debug; harden (only allow getting of (etc) templates)
-    $Ack_Include_File=$Ack->ackETCFile($Ack->_REQUEST_lower["include"]);
-    if (!empty($Ack_Include_File)) {
-        $Ack_Include_File_Basename=basename($Ack_Include_File);
-        echo $Ack->ackKeyReplace(file_get_contents($Ack_Include_File),true);
-        echo "\n\n# rm /tmp/$Ack_Include_File_Basename; curl --write-out %{http_code} --silent -k https://".$Ack->Install_Server."/?include=$Ack_Include_File_Basename -o /tmp/$Ack_Include_File_Basename; bash /tmp/$Ack_Include_File_Basename\n\n";
-    }
-    exit();
+if ($Ack->is_debug()) {
+    echo "<br>debug level is ".$Ack->level()."<br>";
+    $Ack->propertiesPrint(); // via Debug()
 }
 
-$Ack->propertiesPrint();
 
-$Ack->Ack_Client->clientKickstart();
+echo "</html>";
 
 ?>
