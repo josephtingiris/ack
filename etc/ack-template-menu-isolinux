@@ -74,7 +74,7 @@ label dhcp
   menu default
   menu label ^Install from ##ACK_INSTALL_SERVER## [DHCP]
   kernel vmlinuz
-  append initrd=initrd.img biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks=https://##ACK_INSTALL_SERVER##/?install=##ACK_INSTALL_URI##
+  append initrd=initrd.img biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks=https://##ACK_CLIENT_INSTALL_URL##/?build=##ACK_BUILD_URI##&install=##ACK_INSTALL_URI##
 
 menu separator
 
@@ -82,6 +82,6 @@ label static-ip
   menu label ^Install from ##ACK_INSTALL_SERVER## [STATIC IP]
   # ip=ip::gateway:netmask:hostname:interface:none
   kernel vmlinuz
-  append initrd=initrd.img biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks=https://##ACK_INSTALL_SERVER##/?install=##ACK_INSTALL_URI## dns=1.1.1.1 ip=1.2.3.4::1.2.3.1:255.255.255.0::eth0:none
+  append initrd=initrd.img biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks=https://##ACK_CLIENT_INSTALL_URL##/?build=##ACK_BUILD_URI##&install=##ACK_INSTALL_URI## dns=1.1.1.1 ip=1.2.3.4::1.2.3.1:255.255.255.0::eth0:none
 
 menu end

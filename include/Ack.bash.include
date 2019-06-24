@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Copyright (C) 2018 Joseph Tingiris (joseph.tingiris@gmail.com)
 
 # This program is free software: you can redistribute it and/or modify
@@ -13,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-if [ "$DEBUG" == "" ] && [ "$Debug" == "" ]; then
+if [ "${DEBUG}" == "" ] && [ "${Debug}" == "" ]; then
     Debug=0
 fi
 
@@ -21,9 +23,9 @@ fi
 
 Ack_Bash="Ack.bash"
 Ack_Bash_Dirs=()
-Ack_Bash_Dirs+=($(dirname $(readlink -e $BASH_SOURCE)))
+Ack_Bash_Dirs+=($(dirname $(readlink -e ${BASH_SOURCE})))
 for Ack_Bash_Dir in ${Ack_Bash_Dirs[@]}; do
-    while [ "$Ack_Bash_Dir" != "" ] && [ "$Ack_Bash_Dir" != "/" ]; do # search backwards
+    while [ "${Ack_Bash_Dir}" != "" ] && [ "${Ack_Bash_Dir}" != "/" ]; do # search backwards
         Ack_Bash_Source_Dirs=()
         Ack_Bash_Source_Dirs+=("${Ack_Bash_Dir}")
         Ack_Bash_Source_Dirs+=("${Ack_Bash_Dir}/include")
@@ -36,11 +38,11 @@ for Ack_Bash_Dir in ${Ack_Bash_Dirs[@]}; do
                 unset Ack_Bash_Source
             fi
         done
-        if [ "$Ack_Bash_Source" != "" ]; then break; fi
-        Ack_Bash_Dir=$(dirname "$Ack_Bash_Dir") # search backwards
+        if [ "${Ack_Bash_Source}" != "" ]; then break; fi
+        Ack_Bash_Dir=$(dirname "${Ack_Bash_Dir}") # search backwards
     done
 done
-if [ "$Ack_Bash_Source" == "" ]; then echo "$Ack_Bash file not found"; exit 1; fi
+if [ "${Ack_Bash_Source}" == "" ]; then echo "${Ack_Bash} file not found"; exit 1; fi
 unset Ack_Bash_Dir Ack_Bash
 
 # end Ack.bash.include

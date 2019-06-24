@@ -55,6 +55,8 @@ class Ack extends \josephtingiris\Debug
     public $Client_Architecture = null;
     public $Client_Authorized = null;
     public $Client_Bootproto = null;
+    public $Client_Build_URI = null;
+    public $Client_Build_URL = null;
     public $Client_Console = null;
     public $Client_Debug = null;
     public $Client_Hostname = null;
@@ -165,11 +167,11 @@ class Ack extends \josephtingiris\Debug
             $this->Start_Time = microtime(true);
         }
 
-        $this->Ack_Config = new \josephtingiris\Ack\Config();
-        $this->Ack_Client = new \josephtingiris\Ack\Client();
-        $this->Ack_Network = new \josephtingiris\Ack\Network();
-        $this->Ack_Server = new \josephtingiris\Ack\Server();
-        $this->Ack_Sub = new \josephtingiris\Ack\Sub();
+        $this->Ack_Config = new \josephtingiris\Ack\Config($debug_level_construct);
+        $this->Ack_Client = new \josephtingiris\Ack\Client($debug_level_construct);
+        $this->Ack_Network = new \josephtingiris\Ack\Network($debug_level_construct);
+        $this->Ack_Server = new \josephtingiris\Ack\Server($debug_level_construct);
+        $this->Ack_Sub = new \josephtingiris\Ack\Sub($debug_level_construct);
 
         // _REQUEST_lower
         if (!empty($_REQUEST) && is_array($_REQUEST)) {
@@ -376,8 +378,14 @@ class Ack extends \josephtingiris\Debug
 
         // Install_Domain
         if (empty($this->Install_Domain)) {
-            $this->Install_Domain= strstr($this->Install_Server,".");
-            $this->Install_Domain= ltrim($this->Install_Domain,".");
+            $this->Install_Domain=strstr($this->Install_Server,".");
+            $this->Install_Domain=ltrim($this->Install_Domain,".");
+            if (empty($this->Install_Domain)) {
+                $ack_config_domain=$this->Ack_Config->configValue("domain");
+                if (!empty($ack_config_domain)) {
+                    $this->Install_Domain=$ack_config_domain;
+                }
+            }
         }
 
         // CNC_Server
@@ -656,6 +664,41 @@ class Ack extends \josephtingiris\Debug
             $this->Client_Bootproto = "dhcp";
         }
 
+        if (empty($this->Client_Build_URI)) {
+
+            if (!empty($this->_REQUEST_lower["build"])) {
+                $iso_md5sum=$this->Build_Dir . "/" . $this->_REQUEST_lower["build"] . "/iso.md5sum";
+                if (!is_readable($iso_md5sum)) {
+                    $iso_md5sum=$this->Dir . "/" . $this->_REQUEST_lower["build"] . "/iso.md5sum";
+                }
+                $iso_md5sum=str_replace("//","/",$iso_md5sum);
+
+                $this->debug("/iso.md5sum **************************** ".$iso_md5sum,2);
+
+                if (is_readable($iso_md5sum)) {
+                    $iso_md5sum=str_replace($this->Dir,"",$iso_md5sum);
+                    $iso_md5sum=str_replace("/iso.md5sum","",$iso_md5sum);
+                    $this->Client_Build_URI=$iso_md5sum;
+                }
+            }
+
+        }
+
+        if (empty($this->Client_Build_URL)) {
+            $this->Client_Build_URL = null;
+            if (!empty($this->Install_Server)) {
+                if (isset($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] == strtolower("on")) {
+                    $this->Client_Build_URL="https://";
+                } else {
+                    $this->Client_Build_URL="http://";
+                }
+                $this->Client_Build_URL.=$this->Install_Server;
+            }
+            if (!empty($this->Client_Build_URI)) {
+                $this->Client_Build_URL.=$this->Client_Build_URI;
+            }
+        }
+
         if (empty($this->Client_Install_URI)) {
 
             if (!empty($this->_REQUEST_lower["install"])) {
@@ -684,7 +727,7 @@ class Ack extends \josephtingiris\Debug
                 } else {
                     $this->Client_Install_URL="http://";
                 }
-                $this->Client_Install_URL.=$this->Install_Server;
+                $this->Client_Install_URL.=$this->Install_Server."/client";
             }
             if (!empty($this->Client_Install_URI)) {
                 $this->Client_Install_URL.=$this->Client_Install_URI;
@@ -772,7 +815,6 @@ class Ack extends \josephtingiris\Debug
                 $this->Client_Debug = 0;
             }
             if (empty($GLOBALS['Debug'])) {
-                error_log("debug is " . $GLOBALS['Debug']);
                 $GLOBALS['Debug'] = (int)$this->_REQUEST_lower["debug"];
             }
         }
@@ -915,7 +957,8 @@ class Ack extends \josephtingiris\Debug
             }
 
             $ack_key="##" . strtoupper($this->Label) . "_".strtoupper($ack_property)."##";
-            $append_string.=$ack_key." [".$ack_property_type."]";
+            $append_string.=sprintf("%-50s",$ack_key);
+            $append_string.=sprintf("%-9s","[".$ack_property_type."]");
 
             if (!is_null($ack_property_value)) {
 
@@ -962,9 +1005,11 @@ class Ack extends \josephtingiris\Debug
         }
 
         if ($append_keys) {
-            $output_string.="\n\n# $this->Label keys - start\n\n\n";
+            $output_string.="\n\n# [".  date("Y-m-d H:i:s") ."]";
+            $output_string.="- $this->Label keys - begin\n\n\n";
             $output_string.=$append_string;
-            $output_string.="\n\n# $this->Label keys - end\n";
+            $output_string.="\n\n# [".  date("Y-m-d H:i:s") ."]";
+            $output_string.="- $this->Label keys - end\n";
         }
 
         return $output_string;

@@ -226,12 +226,11 @@ class Client extends \josephtingiris\Debug
         if (!empty($Ack->Entity)) {
             $ack_index_header.=" ".$Ack->Entity;
         }
-        $ack_index_header.=" kickstart";
+        $ack_index_header.=" aNAcONDA kICKSTART";
         if (!empty($Ack->Label)) {
             $ack_index_header.=" (".$Ack->Label.")";
         }
         $ack_index_header.=" - Install Server [".$Ack->Install_Server."]";
-        $ack_index_header.=" - Template [".$Ack->Client_Kickstart_Template."]";
         if (!empty($Ack->Client_Debug)) {
             $ack_index_header.=" - [DEBUG=".$Ack->Client_Debug."]";
         }
@@ -239,7 +238,7 @@ class Client extends \josephtingiris\Debug
         $ack_index_header.="#";
         $ack_index_header.="\n";
         $ack_index_header.="# [".  date("Y-m-d H:i:s") ."]";
-        $ack_index_header.=" - config";
+        $ack_index_header.=" - client";
         if (!empty($Ack->Client_IP)) {
             $ack_index_header.=" - ".$Ack->Client_IP;
         }
@@ -268,7 +267,7 @@ class Client extends \josephtingiris\Debug
         $ack_index_footer.="#";
         $ack_index_footer.="\n";
         $ack_index_footer.="# [".  date("Y-m-d H:i:s") ."]";
-        $ack_index_footer.=" - config";
+        $ack_index_footer.=" - client";
         if (!empty($Ack->Client_IP)) {
             $ack_index_footer.=" - ".$Ack->Client_IP;
         }
@@ -278,7 +277,7 @@ class Client extends \josephtingiris\Debug
         if (!empty($Ack->Client_MAC)) {
             $ack_index_footer.=" - ".$Ack->Client_MAC;
         }
-        $ack_index_footer.=" - end";
+        $ack_index_footer.=" - finish";
         $ack_index_footer.="\n";
         $ack_index_footer.="#";
         $ack_index_footer.="\n";
@@ -306,6 +305,11 @@ class Client extends \josephtingiris\Debug
         $Ack = new \josephtingiris\Ack();
 
         $include_contents=$Ack->ackKeyReplace(file_get_contents($include_file));
+
+        if ($Ack->is_debug()) {
+            $include_basename=basename($include_file);
+            $include_contents.="\n\n# rm /tmp/$include_basename; curl --write-out %{http_code} --silent -k ".$Ack->Client_Install_URL."/?include=$include_basename&debug=10 -o /tmp/$include_basename; bash /tmp/$include_basename\n\n";
+        }
 
         return $include_contents;
 
@@ -340,7 +344,8 @@ class Client extends \josephtingiris\Debug
 
         $client_kickstart_template="";
 
-        $client_kickstart_template.="\n\n# template $template_file - start\n\n\n";
+        $client_kickstart_template="\n\n# [".  date("Y-m-d H:i:s") ."]";
+        $client_kickstart_template.="- template $template_file - begin\n\n\n";
         if (preg_match("/##ACK_PPI##/i",$client_kickstart_template_contents)) {
             $client_kickstart_include_ppi=$this->clientKickstartInclude($Ack->Client_Kickstart_Include_PPI);
             if (!empty($client_kickstart_include_ppi)) {
@@ -358,7 +363,7 @@ class Client extends \josephtingiris\Debug
                 $client_kickstart_include_ppi.=$client_kickstart_include_post;
                 $client_kickstart_include_ppi.="\n";
                 $client_kickstart_include_basename=basename($Ack->Client_Kickstart_Include_PPI);
-                $client_kickstart_include_ppi.="\n\n# rm /tmp/$client_kickstart_include_basename; curl --write-out %{http_code} --silent -k https://".$Ack->Install_Server."/?include=$client_kickstart_include_basename&debug=10 -o /tmp/$client_kickstart_include_basename; bash /tmp/$client_kickstart_include_basename\n\n";
+
             }
             $client_kickstart_template_contents=str_replace("##ACK_PPI##",$client_kickstart_include_ppi,$client_kickstart_template_contents);
         } else {
@@ -369,7 +374,8 @@ class Client extends \josephtingiris\Debug
         }
 
         $client_kickstart_template.=$client_kickstart_template_contents;
-        $client_kickstart_template.="\n\n# template $template_file - end\n";
+        $client_kickstart_template.="\n\n# [".  date("Y-m-d H:i:s") ."]";
+        $client_kickstart_template.="- template $template_file - end\n";
 
         return $client_kickstart_template;
 
