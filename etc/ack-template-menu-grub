@@ -26,20 +26,20 @@ fi
 search --no-floppy --set=root -l '##ACK_BUILD_ISO## [UEFI]'
 
 menuentry 'Rescue from ##ACK_INSTALL_SERVER## [UEFI]' --class fedora --class gnu-linux --class gnu --class os --class ##ACK_LABEL## {
-    linuxefi /images/pxeboot/vmlinuz biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.stage2=https://##ACK_INSTALL_SERVER####ACK_INSTALL_URI## rescue
+    linuxefi /images/pxeboot/vmlinuz biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.stage2='https://##ACK_INSTALL_SERVER####ACK_INSTALL_URI##' rescue
     initrdefi /images/pxeboot/initrd.img
 }
 
 submenu '.' {
 
     menuentry 'Install from ##ACK_INSTALL_SERVER## [DHCP]' --class fedora --class gnu-linux --class gnu --class os --class ##ACK_LABEL## {
-        linuxefi /images/pxeboot/vmlinuz biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks=https://##ACK_INSTALL_SERVER##/?install=##ACK_INSTALL_URI##
+        linuxefi /images/pxeboot/vmlinuz biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks='https://##ACK_CLIENT_INSTALL_URL##/?build=##ACK_BUILD_URI##&install=##ACK_INSTALL_URI##'
         initrdefi /images/pxeboot/initrd.img
     }
 
     menuentry 'Install from ##ACK_INSTALL_SERVER## [STATIC IP]' --class fedora --class gnu-linux --class gnu --class os --class ##ACK_LABEL## {
         # ip=ip::gateway:netmask:hostname:interface:none
-        linuxefi /images/pxeboot/vmlinuz biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks=https://##ACK_INSTALL_SERVER##/?install=##ACK_INSTALL_URI## dns=1.1.1.1 ip=1.2.3.4::1.2.3.1:255.255.255.0::eth0:none
+        linuxefi /images/pxeboot/vmlinuz biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks='https://##ACK_CLIENT_INSTALL_URL##/?build=##ACK_BUILD_URI##&install=##ACK_INSTALL_URI##' dns=1.1.1.1 ip=1.2.3.4::1.2.3.1:255.255.255.0::eth0:none
         initrdefi /images/pxeboot/initrd.img
     }
 
