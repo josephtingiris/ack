@@ -109,11 +109,13 @@ echo "<h1>AnaConda Kickstart</h1>";
 
 $Ack = new \josephtingiris\Ack();
 
-echo "<a href=/client/>/client/</a><br>";
-echo "<a href=/media/>/media/</a><br>";
+echo "<a href=/media/release/>Download bootable ISOs</a><br>";
 
 if ($Ack->is_debug()) {
     echo "<br>debug level is ".$Ack->level()."<br>";
+    echo "<br>";
+    echo "<a href=/client/>/client/</a><br>";
+    echo "<a href=/media/>/media/</a><br>";
     $Ack->propertiesPrint(); // via Debug()
 }
 
