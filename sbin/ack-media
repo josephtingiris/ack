@@ -52,6 +52,7 @@ Default_VM_Dir=${Ack_VM_Dir}
 
 declare -i Build_Flag=1
 declare -i Domain_Flag=1
+declare -i Extract_Flag=1
 declare -i Force_Flag=1
 declare -i Install_Server_Flag=1
 declare -i Mount_Flag=1
@@ -72,6 +73,9 @@ function ackMediaBuild() {
 
     local build_arg="$1"
     debugValue build_arg ${debug_level}
+
+    local parameter_arg="$2"
+    debugValue parameter_arg ${debug_level}
 
     if [ ${#build_arg} -eq 0 ]; then
         aborting "${FUNCNAME} requires an argument" 3
@@ -159,6 +163,7 @@ function ackMediaBuild() {
     debugValue build_media_basename ${debug_level}
 
     local build_media_dirname=$(dirname ${build_media})
+    local build_media_dirname=$(dirname $(realpath ${build_media}))
     debugValue build_media_dirname ${debug_level}
 
     local build_media_uri=$(ackURI "${build_media}" iso)
@@ -182,7 +187,9 @@ function ackMediaBuild() {
 
     debugValue build_media_dir ${debug_level}
 
-    local build_media_install_uri=$(echo ${build_media_dir} | sed -e "s!${Ack_Dir}!!g")
+    local build_media_install_uri=$(echo ${Ack_Distribution_Dir} | sed -e "s!${Ack_Dir}!!g")
+    build_media_install_uri+=${build_media_uri}
+
     build_media_install_uri="${build_media_install_uri%"${build_media_install_uri##*[!/]}"}" # trim trailing slashes
 
     if [ "${build_media_install_uri}" == "/" ] || [ "${build_media_install_uri}" == "" ]; then
@@ -233,6 +240,12 @@ function ackMediaBuild() {
     build_name=${build_name//--/-}
     debugValue build_name ${debug_level}
 
+    build_name_short=${build_distribution}
+    build_name_short+=-${build_version}
+    build_name_short+=-${Default_Monthstamp}
+    build_name_short+=-$(echo "${Install_Server}" | awk -F\. '{print $1}')
+    debugValue build_name_short ${debug_level}
+
     local build_name_uri=$(ackURI "${build_name}") # not an iso (yet)
     build_name_uri=${build_name_uri//\/\//\/}
     debugValue build_name_uri ${debug_level}
@@ -261,66 +274,35 @@ function ackMediaBuild() {
     build_dir_uri="${build_dir_uri%"${build_dir_uri##*[!/]}"}" # trim trailing slashes
     debugValue build_dir_uri ${debug_level}
 
+    local build_include_dir=${Build_Dir}/include/${build_media_uri}/
+    build_include_dir=${build_include_dir//\/\//\/}
+    if [ ! -d "${build_include_dir}" ]; then
+        mkdir -p "${build_include_dir}" &> /dev/null
+        if [ $? -ne 0 ]; then
+            aborting "'mkdir -p ${build_include_dir}' failed"
+        fi
+    fi
+
+    debugValue build_include_dir ${debug_level}
+
+    local build_isolinux=0
     local build_uefi=0
 
     local build_require
 
     local build_requires=()
     build_requires+=("EFI")
-
-    for build_require in ${build_requires[@]}; do
-
-        # verify the build_media has the required (EFI) directory
-        if [ -d ${build_media_dir}/${build_require} ]; then
-            debugValue build_require ${debug_level} "directory found"
-        else
-            debugValue build_require ${debug_level} "directory not found"
-
-            # disable UEFI
-            build_uefi=1
-        fi
-
-        if [ ${build_uefi} -eq 0 ]; then
-            local rsync_args="-a ${build_media_dir}/${build_require}/ ${build_dir}/${build_require}/"
-            rsync_args=${rsync_args//\/\//\/}
-            debug "rsync ${rsync_args}" ${debug_level}
-
-            ${rsync} ${rsync_args}
-            if [ $? -ne 0 ]; then
-                aborting "'${rsync} ${rsync_args}' failed"
-            fi
-
-            if [ ! -a ${build_dir}/${Ack_Label} ] && [ ! -d ${build_dir}/${Ack_Label} ]; then
-                mkdir -p "${build_dir}/${Ack_Label}" &> /dev/null
-                if [ $? -ne 0 ]; then
-                    aborting "'mkdir -p ${build_dir}/${Ack_Label}' failed"
-                fi
-            fi
-
-            unset rsync_args
-        fi
-
-    done
-
-    local release_isolinux=0
-
-    build_requires=()
     build_requires+=("images")
     build_requires+=("isolinux")
 
     for build_require in ${build_requires[@]}; do
 
-        # verify the build_media has the required (isolinux) directories
+        # verify the build_media has the required directory
+
         if [ -d ${build_media_dir}/${build_require} ]; then
+
             debugValue build_require ${debug_level} "directory found"
-        else
-            debugValue build_require ${debug_level} "directory not found"
 
-            # disable isolinux
-            local release_isolinux=1
-        fi
-
-        if [ ${release_isolinux} -eq 0 ]; then
             local rsync_args="-a ${build_media_dir}/${build_require}/ ${build_dir}/${build_require}/"
             rsync_args=${rsync_args//\/\//\/}
             debug "rsync ${rsync_args}" ${debug_level}
@@ -331,16 +313,29 @@ function ackMediaBuild() {
             fi
 
             unset rsync_args
+
+        else
+
+            debugValue build_require ${debug_level} "directory not found"
+
+            if [ "${build_require}" == "EFI" ]; then
+                # disable build for EFI (uefi)
+                build_uefi=1
+            else
+                # disable build for isolinux (bios)
+                build_isolinux=1
+            fi
+
         fi
 
     done
 
-    unset build_require build_requires
 
     # some more checks ...
 
+
     debugValue build_uefi ${debug_level}
-    debugValue release_isolinux ${debug_level}
+    debugValue build_isolinux ${debug_level}
 
     if [ ${build_uefi} -eq 0 ]; then
 
@@ -350,7 +345,7 @@ function ackMediaBuild() {
 
     fi
 
-    if [ ${release_isolinux} -eq 0 ]; then
+    if [ ${build_isolinux} -eq 0 ]; then
 
         if [ ! -f "${build_dir}/isolinux/boot.cat" ]; then
             aborting "'${build_dir}/isolinux/boot.cat' file not found"
@@ -360,11 +355,42 @@ function ackMediaBuild() {
             aborting "'${build_dir}/isolinux/isolinux.bin' file not found"
         fi
 
-        # remove bloat; TODO make this better
-        if [ -f "${build_dir}/images/boot.iso" ]; then
-            rm "${build_dir}/images/boot.iso" &> /dev/null # this is bloat on 'everything' cds
+    fi
+
+    # remove bloat; TODO make this better
+
+    if [ -f "${build_dir}/images/boot.iso" ]; then
+        rm "${build_dir}/images/boot.iso" &> /dev/null # e.g., this is bloat on 'everything' cds
+        if [ $? -ne 0 ]; then
+            aborting "'rm ${build_dir}/images/boot.iso' failed"
+        fi
+    fi
+
+
+    # add additional build items
+
+    if [ ! -a ${build_dir}/${Ack_Label} ] && [ ! -d ${build_dir}/${Ack_Label} ]; then
+        mkdir -p "${build_dir}/${Ack_Label}" &> /dev/null
+        if [ $? -ne 0 ]; then
+            aborting "'mkdir -p ${build_dir}/${Ack_Label}' failed"
+        fi
+    fi
+
+    # TODO: maybe not the most ideal directoy ...
+    # rsync 'manual' include files into the build dir
+    if [ -d "${build_dir}" ] && [ -d "${build_include_dir}" ]; then
+        local rsync_args="-a ${build_include_dir}/ ${build_dir}/"
+        rsync_args=${rsync_args//\/\//\/}
+        debug "rsync ${rsync_args}" ${debug_level}
+
+        ${rsync} ${rsync_args}
+        if [ $? -ne 0 ]; then
+            aborting "'${rsync} ${rsync_args}' failed"
         fi
 
+        unset rsync_args
+
+        ls -l "${build_dir}"
     fi
 
     local ack_etc_dir
@@ -393,7 +419,7 @@ function ackMediaBuild() {
         debugValue build_uefi ${debug_level}
         debugValue build_menu_uefi ${debug_level}
 
-        if [ ${release_isolinux} -eq 0 ] && [ ${build_menu_isolinux} -eq 1 ]; then
+        if [ ${build_isolinux} -eq 0 ] && [ ${build_menu_isolinux} -eq 1 ]; then
 
             if [ -s "${ack_etc_dir}/ack-template-menu-isolinux-${build_name}" ]; then
                 build_menus+=("${ack_etc_dir}/ack-template-menu-isolinux-${build_name}++++isolinux/isolinux.cfg")
@@ -406,7 +432,7 @@ function ackMediaBuild() {
             fi
         fi
 
-        debugValue release_isolinux ${debug_level}
+        debugValue build_isolinux ${debug_level}
         debugValue build_menu_isolinux ${debug_level}
 
     done
@@ -419,15 +445,26 @@ function ackMediaBuild() {
         aborting "ack-template-menu for efi not found"
     fi
 
-    if [ ${release_isolinux} -eq 0 ] && [ ${build_menu_isolinux} -eq 1 ]; then
+    if [ ${build_isolinux} -eq 0 ] && [ ${build_menu_isolinux} -eq 1 ]; then
         aborting "ack-template-menu for isolinux not found"
     fi
 
     local release_iso_rev=${Default_Monthstamp}
     debugValue release_iso_rev ${debug_level}
 
-    local release_iso_basename=${build_name}.iso
+    if [ "${parameter_arg}" == "" ]; then
+        local release_iso_basename=${build_name}.iso
+    else
+        local release_iso_basename=${build_name}-${parameter_arg}.iso
+    fi
     debugValue release_iso_basename ${debug_level}
+
+    if [ "${parameter_arg}" == "" ]; then
+        local release_iso_shortname=${build_name_short}.iso
+    else
+        local release_iso_shortname=${build_name_short}-${parameter_arg}.iso
+    fi
+    debugValue release_iso_shortname ${debug_level}
 
     local release_iso_dirname="${Release_Dir}"
     debugValue release_iso_dirname ${debug_level}
@@ -435,10 +472,18 @@ function ackMediaBuild() {
     local release_iso="${release_iso_dirname}/${release_iso_basename}"
     debugValue release_iso ${debug_level}
 
+    local release_iso_short="${release_iso_dirname}/${release_iso_shortname}"
+    debugValue release_iso_short ${debug_level}
+
     local build_action="doing noth"
 
     # don't overwrite an existing release, unless forced ...
     if [ -f "${release_iso}" ]; then
+
+        if [ ! -e "${release_iso_short}" ]; then
+            ln -s "${release_iso}" "${release_iso_short}"
+        fi
+
         if [ ${Force_Flag} -ne 0 ]; then
             aborting "'${release_iso}' exists (use --force)"
         else
@@ -476,18 +521,27 @@ function ackMediaBuild() {
             echo "##" >> ${build_menu_destination}
             echo >> ${build_menu_destination}
 
+            if [ "${parameter_arg}" != "" ]; then
+                parameter_arg="\&${parameter_arg}"
+            fi
+
             sed \
+                -e "s!##ACK_BUILD_DISTRIBUTION##!${build_distribution}!g"\
                 -e "s!##ACK_BUILD_ISO##!${build_name}-${release_iso_rev}!g"\
                 -e "s!##ACK_BUILD_NAME##!${build_name}!g"\
                 -e "s!##ACK_BUILD_URI##!${build_dir_uri}!g"\
+                -e "s!##ACK_BUILD_VERSION##!${build_version}!g"\
                 -e "s!##ACK_ENTITY##!${Ack_Entity}!g" \
+                -e "s!##ACK_CLIENT_BUILD_URI##!${build_dir_uri}!g"\
                 -e "s!##ACK_CLIENT_CONSOLE##!${Ack_Client_Console}!g" \
                 -e "s!##ACK_CLIENT_INSTALL_URL##!${Client_Install_URL}!g" \
+                -e "s!##ACK_CLIENT_INSTALL_URI##!${build_media_install_uri}!g" \
                 -e "s!##ACK_INSTALL_SERVER##!${Install_Server}!g" \
                 -e "s!##ACK_INSTALL_URI##!${build_media_install_uri}!g" \
                 -e "s!##ACK_ISO_DATE##!${Default_Date}!g"\
                 -e "s!##ACK_ISO_REV##!${release_iso_rev}!g" \
                 -e "s!##ACK_LABEL##!${Ack_Label}!g" \
+                -e "s!##ACK_PARAMETER##!${parameter_arg}!g" \
                 -e "s!##ACK##!!g" \
                 "${build_menu_template}" >> ${build_menu_destination}
 
@@ -515,37 +569,7 @@ function ackMediaBuild() {
 
     debugValue cwd ${debug_level}
 
-    for build_subdir in $(find "${build_dir}/" -type d 2> /dev/null | sort -r); do
-        build_subdir=${build_subdir//\/\//\/}
-        debugValue build_subdir ${debug_level}
-
-        if [ "${build_subdir}" == "" ] || [ "${build_subdir}" == "/" ]; then
-            aborting "build_subdir is empty"
-        fi
-
-        cd "${build_subdir}"
-
-        if [ $? -ne 0 ]; then
-            aborting "failed to cd '${build_subdir}'"
-        fi
-
-        local build_subdir_md5sum=$(basename ${build_subdir}).md5sum
-        debugValue build_subdir_md5sum ${debug_level}
-
-        printf "[%s] %sing %s ...\n\n" "${build_name}" "${build_action}" "${build_subdir_md5sum}"
-
-        find . -type f | xargs -r ${md5sum} \
-            | egrep -ve "\.md5sum$|\/boot.cat$|\/grub.cfg$|\/isolinux.cfg$|\/BOOT$|\/TRANS.TBL$" \
-            | sort -k 2 > ${build_subdir_md5sum}
-
-    done
-
-    cd "${build_dir}"
-    find "." -type f | xargs -r ${md5sum} \
-        | egrep -ve "\/boot.cat$|\/grub.cfg$|\/isolinux.cfg$|\/BOOT$|\/TRANS.TBL$" \
-        | sort -k 2 > ${build_dir}/iso.md5sum
-
-    cd "$cwd"
+    ackMediaBuildMd5sum "${build_dir}"
 
     local release_publisher=$(logname)
     debugValue release_publisher ${debug_level}
@@ -565,6 +589,8 @@ function ackMediaBuild() {
     debugValue release_volume_set_id ${debug_level}
 
     printf "[%s] %sing %s ...\n\n" "${build_name}" "${build_action}" "$(basename ${release_iso})"
+
+    printf "[%s] volume id %s, set $s\n\n" "${build_name}" "${release_volume_id}" "${release_volume_set_id}"
 
     cd "${build_dir}"
 
@@ -586,6 +612,8 @@ function ackMediaBuild() {
     printf "\n"
 
     cd "$cwd"
+
+    ackMediaBuildMd5sum "${build_dir}"
 
     ${implantisomd5} ${release_iso}
     if [ $? -ne 0 ]; then
@@ -611,9 +639,162 @@ function ackMediaBuild() {
 
     md5sum "$(basename ${release_iso})" > "${release_iso_md5sum}"
 
+    if [ -e "${release_iso_short}" ]; then
+        rm -f "${release_iso_short}"
+    fi
+
+    ln -s "${release_iso}" "${release_iso_short}"
+
     cd "$cwd"
 
     printf "%s ... finished\n\n" "${release_iso}"
+
+    # end function logic
+
+    debugFunction $@
+}
+
+function ackMediaBuildMd5sum() {
+    debugFunction $@
+
+    # begin function logic
+
+    local debug_level=5
+
+    local md5sum_dir="$1"
+    debugValue md5sum_dir ${debug_level}
+
+    if [ ${#md5sum_dir} -eq 0 ]; then
+        aborting "${FUNCNAME} requires an argument" 3
+    fi
+
+    if [ ! -d "${md5sum_dir}" ] || [ ! -r "${md5sum_dir}" ]; then
+        aborting "${FUNCNAME} '${md5sum_dir}' directory not readable" 3
+    fi
+
+    local md5sum=$(type -P md5sum)
+    if [ ${#md5sum} -eq 0 ] || [ ! -x "${md5sum}" ]; then
+        aborting "md5sum executable not found" 3
+    fi
+    debugValue md5sum ${debug_level}
+
+    local cwd="${PWD}"
+
+    local subdir subdir_md5sum
+
+    for subdir in $(find "${md5sum_dir}/" -type d 2> /dev/null | sort -r); do
+        subdir=${subdir//\/\//\/}
+        debugValue subdir ${debug_level}
+
+        if [ "${subdir}" == "" ] || [ "${subdir}" == "/" ]; then
+            aborting "${FUNCNAME} subdir is empty"
+        fi
+
+        cd "${subdir}"
+
+        if [ $? -ne 0 ]; then
+            aborting "failed to cd '${subdir}'"
+        fi
+
+        local subdir_md5sum=$(basename ${subdir}).md5sum
+        debugValue subdir_md5sum ${debug_level}
+
+        printf "[%s] %sing %s ...\n\n" "${build_name}" "${build_action}" "${subdir_md5sum}"
+
+        find . -type f | xargs -r ${md5sum} \
+            | egrep -ve "\.md5sum$|\/boot.cat$|\/efiboot.img$|\/grub.cfg$|\/isolinux.bin$|\/isolinux.cfg$|\/BOOT$|\/TRANS.TBL$" \
+            | sort -k 2 > ${subdir_md5sum}
+
+        done
+
+        cd "${md5sum_dir}"
+
+        find "." -type f | xargs -r ${md5sum} \
+            | egrep -ve "\/boot.cat$|\/efiboot.img$|\/grub.cfg$|\/isolinux.bin$|\/isolinux.cfg$|\/BOOT$|\/TRANS.TBL$" \
+            | sort -k 2 > ${md5sum_dir}/${Ack_Label}-image.md5sum
+
+        cd "$cwd"
+
+    # end function logic
+
+    debugFunction $@
+}
+
+function ackMediaExtract() {
+    debugFunction $@
+
+    # begin function logic
+
+    local debug_level=6
+
+    local iso="$1"
+
+    local iso_basename iso_dirname
+
+    if [ -r "${iso}" ]; then
+        iso=$(realpath "${iso}")
+        iso_basename="$(basename "${iso}")"
+        iso_dirname="$(dirname "${iso}")"
+    else
+        iso="${Distribution_Dir}/${iso}"
+        if [ -r "${iso}" ]; then
+            iso=$(realpath "${iso}")
+            iso_basename="$(basename "${iso}")"
+            iso_dirname="$(dirname "${iso}")"
+        else
+            usage "${iso} file not found readable"
+        fi
+    fi
+
+    debugValue iso ${debug_level}
+    debugValue iso_basename ${debug_level}
+    debugValue iso_dirname ${debug_level}
+
+    debugValue Distribution_Dir ${debug_level}
+
+    if [ ${#iso} -eq 0 ] || [ ! -r "${iso}" ]; then
+        usage "must supply a valid iso filename to extract"
+    fi
+
+    local bsdtar=$(which bsdtar 2> /dev/null)
+    if [ ! -x "$bsdtar" ]; then
+        aborting "bsdtar executable not found" 3
+    fi
+    debugValue bsdtar ${debug_level}
+
+    local media_uri=$(ackURI "${iso}" iso)
+    debugValue media_uri $debug_level
+
+    if [ "${media_uri}" == "/" ] || [ "${media_uri}" == "" ]; then
+        printf "\nERROR media_uri is wrong\n\n"
+    fi
+
+    local extract_dir="${Distribution_Dir}/${media_uri}"
+
+    if [ ! -d "${extract_dir}" ]; then
+        mkdir -p "${extract_dir}"
+        if [ $? -ne 0 ]; then
+            aborting "failed to mkdir ${extract_dir}"
+        fi
+    fi
+    extract_dir=$(realpath "${extract_dir}")
+
+    debugValue extract_dir ${debug_level}
+
+    cd "${extract_dir}"
+
+    local media_files=$(ls -1 2>&1)
+
+    if [ ${#media_files} -gt 0 ]; then
+        ls -1
+        aborting "${extract_dir} already has files in it"
+    else
+        echo
+        echo "+ extracting ${iso} to ${extract_dir}"
+        echo
+    fi
+
+    $bsdtar xvf "${iso}"
 
     # end function logic
 
@@ -1062,6 +1243,7 @@ function usage() {
     echo "  -b | --build <iso>              = build ack install media from (distribution) <iso(s)> [DEFAULT=${Default_Distribution_Dir}]"
     # TODO add --flash flag
     echo "  -d | --domain <name>            = set build domain <name> [DEFAULT=${Default_Domain}]"
+    echo "  -e | --extract <iso>            = extract iso to media distribution directory [DEFAULT=${Default_Distribution_Dir}]"
     echo "  -s | --server <name>            = set build (install) server <name> [DEFAULT=${Default_Install_Server}]"
     echo
     echo "  -v | --virt <iso>[,mode]        = create and boot an iso, using optional mode (bios or uefi), with virsh utilities [DEFAULT=none]"
@@ -1131,6 +1313,19 @@ for ((ARGUMENT=1; ARGUMENT <= $ARGUMENTS; ARGUMENT++)); do
                 Domain=""
             else
                 declare Domain=$2
+                shift
+            fi
+            ;;
+        -e | --extract | -extract)
+            Extract_Flag=0
+            Extract="$2"
+            if [ "${Extract}" != "" ] && [ ${Extract:0:1} == "-" ]; then
+                Extract=""
+            fi
+            if [ "${Extract}" == "" ]; then
+                Extract=""
+            else
+                declare Extract=$2
                 shift
             fi
             ;;
@@ -1240,9 +1435,11 @@ if [ ${Build_Flag} -ne 0 ]; then
     if [ ${Mount_Flag} -ne 0 ]; then
         if [ ${Remount_Flag} -ne 0 ]; then
             if [ ${Unmount_Flag} -ne 0 ]; then
-                if [ ${URI_Flag} -ne 0 ]; then
-                    if [ ${Virt_Flag} -ne 0 ]; then
-                        usage
+                if [ ${Extract_Flag} -ne 0 ]; then
+                    if [ ${URI_Flag} -ne 0 ]; then
+                        if [ ${Virt_Flag} -ne 0 ]; then
+                            usage
+                        fi
                     fi
                 fi
             fi
@@ -1316,6 +1513,12 @@ debugValue URI 20
 
 if [ ${URI_Flag} -eq 0 ]; then
     ackURI "${URI}" iso
+    ackStop
+    exit # --uri by itself does nothing else
+fi
+
+if [ ${Extract_Flag} -eq 0 ]; then
+    ackMediaExtract "${Extract}"
     ackStop
     exit # --uri by itself does nothing else
 fi
@@ -1405,7 +1608,8 @@ fi
 
 debugValue Install_Server 12
 
-Client_Install_URL="${Install_Server}/client"
+# TODO: make this work via Ack.php; cli replaces localhost for cli, so for now ...
+Client_Install_URL="https://${Install_Server}/client"
 debugValue Client_Install_URL 12
 
 if [ "${Domain}" == "" ]; then
@@ -1444,4 +1648,5 @@ fi
 
 if [ ${Build_Flag} -eq 0 ]; then
     ackMediaBuild "${Build}"
+    ackMediaBuild "${Build}" recovery
 fi
