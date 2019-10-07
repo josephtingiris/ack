@@ -1,3 +1,61 @@
 #!/bin/bash
 
-echo "ack-template-preinstall"
+PATH=/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin
+
+ACK_LABEL=##ACK_LABEL##
+
+if [ "$DEBUG" == "" ]; then
+    declare -i DEBUG=##ACK_CLIENT_DEBUG##
+else
+    declare -i DEBUG=$DEBUG
+fi
+
+TEMPLATE_ID="default"
+
+echo
+echo "ack-template-preinstall-${TEMPLATE_ID}"
+echo
+
+# get passwd.master
+HTTP_CODE=$(curl --silent -k --write-out "%{http_code}" "##ACK_CLIENT_INSTALL_URL##/file/${TEMPLATE_ID}/etc/passwd.master" -o /tmp/passwd.master)
+
+if [ "${HTTP_CODE}" == "200" ]; then
+    if [ -f /tmp/passwd.master ]; then
+        if grep -q ^root:x:0:0: /tmp/passwd.master 2> /dev/null; then
+            mkdir -p /mnt/sysimage/etc
+            chmod 0755 /mnt/sysimage/etc
+            cp /tmp/passwd.master /mnt/sysimage/etc/passwd
+            chown root:root /mnt/sysimage/etc/passwd
+            chmod 0644 /mnt/sysimage/etc/passwd
+            unset -v HTTP_CODE
+
+            # get group.master
+            HTTP_CODE=$(curl --silent -k --write-out "%{http_code}" "##ACK_CLIENT_INSTALL_URL##/file/${TEMPLATE_ID}/etc/group.master" -o /tmp/group.master)
+            if [ "${HTTP_CODE}" == "200" ]; then
+                if [ -f /tmp/group.master ]; then
+                    if grep -q ^root:x:0: /tmp/group.master 2> /dev/null; then
+                        mkdir -p /mnt/sysimage/etc
+                        chmod 0755 /mnt/sysimage/etc
+                        cp /tmp/group.master /mnt/sysimage/etc/group
+                        chown root:root /mnt/sysimage/etc/group
+                        chmod 0644 /mnt/sysimage/etc/group
+                        unset -v HTTP_CODE
+                    fi
+                fi
+            fi
+        fi
+    fi
+fi
+
+TMP_FILES=()
+TMP_FILES+=("/var/tmp/${ACK_LABEL}.pre.log")
+TMP_FILES+=("/var/tmp/${ACK_LABEL}.pre-install.log")
+
+mkdir -p /mnt/sysimage/var/tmp
+chmod 1777 /mnt/sysimage/var/tmp
+
+for TMP_FILE in "${TMP_FILES[@]}"; do
+    if [ -f "${TMP_FILE}" ]; then
+        cp "${TMP_FILE}" /mnt/sysimage/var/tmp
+    fi
+done

@@ -1,6 +1,6 @@
-# DEFAULT ack-template-kickstart [default]
-
-# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/installation_guide/sect-kickstart-syntax
+# ##ACK_CLIENT_KICKSTART_TEMPLATE## [default-8]
+#
+# https://pykickstart.readthedocs.io/en/latest/
 
 install
 
@@ -38,6 +38,7 @@ reboot
 @base
 @core
 bind-utils
+-cockpit
 curl
 git
 kexec-tools

@@ -1,4 +1,4 @@
-# DEFAULT ack-template-kickstart [default]
+# DEFAULT ack-template-kickstart [default-7]
 
 # https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/installation_guide/sect-kickstart-syntax
 
@@ -43,15 +43,14 @@ git
 kexec-tools
 net-tools
 nmap
+ntp
+ntpdate
 rsync
 svn
 telnet
 vim-enhanced
 wget
+whois
 %end
 
-##ACK_PRE##
-
-##ACK_PREINSTALL##
-
-##ACK_POST##
+##ACK_PPI##

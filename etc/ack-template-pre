@@ -1,0 +1,91 @@
+#!/bin/bash
+
+PATH=/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin
+
+if [ "$DEBUG" == "" ]; then
+    declare -i DEBUG=##ACK_CLIENT_DEBUG##
+else
+    declare -i DEBUG=$DEBUG
+fi
+
+TEMPLATE_ID="default"
+
+echo
+echo "ack-template-pre-${TEMPLATE_ID}"
+echo
+
+if [ $DEBUG -gt 100 ]; then
+    # useful; an invalid include will cause anaconda to terminate in the pre shell -jjt
+    SMARTPART=/tmp/smartpart.pre
+else
+    SMARTPART=/tmp/smartpart
+fi
+
+ACK_CLIENT_RECOVERY=##ACK_CLIENT_RECOVERY##
+ACK_LABEL=##ACK_LABEL##
+
+SUPPORTED_DEVICES="$(echo /dev/vd{a..z}) $(echo /dev/hd{a..z}) $(echo /dev/sd{a..z})"
+
+ACK_DEVICE=$(ls -1 -l /dev/disk/by-label/${ACK_LABEL}-* 2> /dev/null | head -1)
+ACK_DEVICE=${ACK_DEVICE##*/}
+
+# Functions
+
+function aborting() {
+    echo
+    echo "aborting ... $@"
+    echo
+    exit 2
+}
+
+# Main
+
+INSTALL_DEVICE=""
+for SUPPORTED_DEVICE in ${SUPPORTED_DEVICES}; do
+    SUPPORTED_DEVICE=${SUPPORTED_DEVICE##*/}
+    if [ "${SUPPORTED_DEVICE}" != "${ACK_DEVICE}" ]; then
+        if [ -b "/dev/${SUPPORTED_DEVICE}" ]; then
+            INSTALL_DEVICE=${SUPPORTED_DEVICE}
+            break
+        fi
+    fi
+done
+unset -v SUPPORTED_DEVICE
+
+if [ ${#INSTALL_DEVICE} -eq 0 ] || [ ! -b /dev/${INSTALL_DEVICE} ]; then
+    aborting "invalid install device"
+fi
+
+INSTALL_DEVICE_SIZE=$(lsblk -n -b -o SIZE /dev/${INSTALL_DEVICE} 2> /dev/null | head -1) # bytes
+if [[ "${INSTALL_DEVICE_SIZE}" =~ ^[0-9]+$ ]]; then
+    let INSTALL_DEVICE_SIZE=${INSTALL_DEVICE_SIZE}/1024/1024 # megabytes
+fi
+
+if [ ${INSTALL_DEVICE_SIZE} -gt 16384 ]; then
+    SWAP_SIZE=8192 # default, 8G
+else
+    SWAP_SIZE=1024
+fi
+
+echo "ACK_LABEL      = $ACK_LABEL"
+echo "ACK_DEVICE     = $ACK_DEVICE"
+echo "INSTALL_DEVICE = $INSTALL_DEVICE ($INSTALL_DEVICE_SIZE)"
+echo
+
+echo "zerombr" > $SMARTPART
+echo "clearpart --all --drives=${INSTALL_DEVICE}" >> $SMARTPART
+if [ -d /sys/firmware/efi ]; then
+    echo "part /boot/efi --asprimary --fstype=efi --label=efi --size=256" >> $SMARTPART
+else
+    echo "part biosboot --asprimary --fstype=biosboot --label=bios --size=1" >> $SMARTPART
+fi
+echo "part /boot --asprimary --fstype=xfs --label=boot --size=512" >> $SMARTPART # hd0,gpt2
+if [ ${ACK_CLIENT_RECOVERY} -eq 0 ]; then
+    echo "part /boot/recovery --asprimary --fstype=xfs --label=recovery --size=1024" >> $SMARTPART # hd0,gpt3
+fi
+echo "part pv.01 --asprimary --fstype="lvmpv" --label=base --size 1 --grow" >> $SMARTPART
+echo "volgroup os --pesize=32768 pv.01" >> $SMARTPART
+echo "logvol swap --fstype=swap --size=${SWAP_SIZE} --name=swap --vgname=os" >> $SMARTPART
+echo "logvol / --fstype=xfs --grow --size=1 --name=root --vgname=os" >> $SMARTPART
+
+cat $SMARTPART

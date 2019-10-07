@@ -19,8 +19,23 @@ CREATE ACK-MEDIA
 https://www.centos.org/download/
 
 # mv ~jtingiris/Downloads/CentOS-7-x86_64-DVD-1810.iso media/distribution/
+# chown root:apache media/distribution/*iso
+# chmod 0644 media/distribution/*iso
 
+2) Extract the distribution media
 
-2) Create the boot media
+# mkdir -p media/distribution/$(ack-media -p CentOS-7-x86_64-DVD-1810.iso)
+# bsdtar xvf CentOS-7-x86_64-DVD-1810.iso -c media/distribution/$(ack-media -p CentOS-7-x86_64-DVD-1810.iso)
 
-# ack-media -b CentOS-7-x86_64-DVD-1810.iso -s dev-ack.domain.com
+2a) Add files to include
+
+# e.g. media/build/include/centos/7.1810/dvd/x86_64/grub/usr-lib-grub-i386-pc.tar.gz
+
+3) Create the boot media
+
+# ack-media -b CentOS-7-x86_64-DVD-1810.iso -s ack.domain.com
+
+DEBUGGING
+
+echo 10 > etc/base-debug && chmod 644 etc/base-debug
+

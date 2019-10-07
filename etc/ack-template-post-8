@@ -1,0 +1,209 @@
+#!/bin/bash
+
+#
+# globals
+#
+
+PATH=/usr/sbin:/sbin:/usr/bin:/bin
+
+ACK_BUILD_ISO=##ACK_BUILD_ISO##
+ACK_BUILD_MAJOR=##ACK_BUILD_MAJOR##
+ACK_CLIENT_RECOVERY=##ACK_CLIENT_RECOVERY##
+
+if [ "${DEBUG}" == "" ]; then
+    declare -i DEBUG=##ACK_CLIENT_DEBUG##
+else
+    declare -i DEBUG=${DEBUG}
+fi
+
+TEMPLATE_ID="default"
+
+echo
+echo "+ ack-template-post-${TEMPLATE_ID} (${ACK_BUILD_ISO})"
+
+echo "$(basename "${ACK_BUILD_ISO}")" > /etc/ack-release
+
+if [ -r "/mnt/sysimage/etc/passwd" ]; then
+    # for testing via pre shell
+    ROOT_DIR="/mnt/sysimage"
+else
+    # normal postinstall runs via chroot
+    ROOT_DIR=""
+fi
+
+if [ ${#ROOT_DIR} -gt 0 ]; then
+    echo "ROOT_DIR  = ${ROOT_DIR}"
+    echo
+fi
+
+echo
+echo "+ update authorized_keys"
+
+SSH_DIR="${ROOT_DIR}/root/.ssh"
+
+mkdir -p "${SSH_DIR}"
+chown root:root "${SSH_DIR}"
+chmod 0700 "${SSH_DIR}"
+
+ACK_SSH_AUTHORIZED_KEYS=##ACK_SSH_AUTHORIZED_KEYS##
+
+if [ "${ACK_SSH_AUTHORIZED_KEYS}" != "" ]; then
+    >"${SSH_DIR}/authorized_keys"
+    for ACK_SSH_AUTHORIZED_KEY in "${ACK_SSH_AUTHORIZED_KEYS[@]}"; do
+        echo ${ACK_SSH_AUTHORIZED_KEY} >> "${SSH_DIR}/authorized_keys"
+    done
+    chmod 0600 "${SSH_DIR}"/authorized_keys
+fi
+
+echo
+echo "+ curl & copy client files"
+echo
+
+# file,owner,mode; default is root:root 0644
+CLIENT_FILES=()
+CLIENT_FILES+=("/etc/colordiffrc")
+CLIENT_FILES+=("/etc/shells")
+CLIENT_FILES+=("/etc/sudoers,root:root,0400")
+CLIENT_FILES+=("/etc/ssh/ssh_config,root:root,0644")
+CLIENT_FILES+=("/etc/ssh/sshd_config,root:root,0600")
+CLIENT_FILES+=("/etc/profile.d/aliases.sh")
+CLIENT_FILES+=("/etc/profile.d/editor.sh")
+CLIENT_FILES+=("/etc/profile.d/prompt.sh")
+CLIENT_FILES+=("/etc/profile.d/root.sh")
+CLIENT_FILES+=("/etc/profile.d/timezone.sh")
+CLIENT_FILES+=("/etc/profile.d/whom.sh")
+CLIENT_FILES+=("/etc/profile.d/zzz-path.sh")
+CLIENT_FILES+=("/root/.ssh/config,root:root,0600")
+
+for CLIENT_FILE_DATA in "${CLIENT_FILES[@]}"; do
+    CLIENT_FILE=${CLIENT_FILE_DATA%%,*}
+
+    CLIENT_FILE_BASENAME="$(basename "${CLIENT_FILE}")"
+    URL="##ACK_CLIENT_INSTALL_URL##/file/${TEMPLATE_ID}/${CLIENT_FILE}"
+    HTTP_CODE=$(curl --silent -k --write-out "%{http_code}" "${URL}" -o "/tmp/${CLIENT_FILE_BASENAME}")
+
+    if [ "${HTTP_CODE}" != "200" ]; then
+        echo "ERROR: curl '${URL}' failed (HTTP_CODE=${HTTP_CODE})"
+    else
+        CLIENT_FILE_OWNER=${CLIENT_FILE_DATA#*,}
+        CLIENT_FILE_OWNER=${CLIENT_FILE_OWNER%,*}
+
+        if [ "${CLIENT_FILE_OWNER}" == "${CLIENT_FILE}" ]; then
+            CLIENT_FILE_OWNER="root:root"
+        fi
+
+        CLIENT_FILE_MODE=${CLIENT_FILE_DATA##*,}
+        if [ "${CLIENT_FILE_MODE}" == "${CLIENT_FILE}" ] || [ "${CLIENT_FILE_MODE}" == "${CLIENT_FILE_OWNER}" ]; then
+            CLIENT_FILE_MODE="0644"
+        fi
+
+        echo "CLIENT_FILE  = ${CLIENT_FILE} (${HTTP_CODE}) [${CLIENT_FILE_MODE},${CLIENT_FILE_OWNER}]"
+
+        if [ "${HTTP_CODE}" == "200" ]; then
+            cp "/tmp/${CLIENT_FILE_BASENAME}" "${CLIENT_FILE}"
+            if [ $? -eq 0 ]; then
+                chown "${CLIENT_FILE_OWNER}" "${CLIENT_FILE}"
+                chmod "${CLIENT_FILE_MODE}" "${CLIENT_FILE}"
+            fi
+            rm -f "/tmp/${CLIENT_FILE_BASENAME}"
+        fi
+    fi
+
+done
+
+if [ ${ACK_CLIENT_RECOVERY} -eq 0 ]; then
+
+    echo
+    echo "+ install recovery partition & boot files"
+    echo
+
+    # boot recovery partition
+    BOOT_DIR="${ROOT_DIR}/boot"
+    RECOVERY_DIR="${BOOT_DIR}/recovery"
+
+    if [ -d "${BOOT_DIR}" ] && [ -d "${RECOVERY_DIR}" ]; then
+
+        URL="##ACK_CLIENT_RELEASE_URL##/${ACK_BUILD_ISO}"
+        HTTP_CODE=$(curl --silent -k --write-out "%{http_code}" "${URL}" -o "${RECOVERY_DIR}/${ACK_BUILD_ISO}")
+
+        if [ "${HTTP_CODE}" != "200" ]; then
+            echo "ERROR: curl '${URL}' failed (HTTP_CODE=${HTTP_CODE})"
+        else
+            if [ ! -s "${RECOVERY_DIR}/${ACK_BUILD_ISO}" ]; then
+                echo "ERROR: '${RECOVER_DIR}/${ACK_BUILD_ISO}' is zero bytes"
+            else
+
+                GRUB_CFG="$(find "${BOOT_DIR}" -type f -name grub.cfg | head -1)"
+                if [ ! -r "${GRUB_CFG}" ]; then
+                    echo "ERROR: '${GRUB_CFG}' file not readable"
+                else
+                    echo "GRUB_CFG = ${GRUB_CFG}"
+
+                    if [ ! -d "${BOOT_DIR}/grub2" ]; then
+                        echo "ERROR: '${BOOT_DIR}/grub2' directory not found"
+                    else
+                        GRUB_DIR="$(dirname "${GRUB_CFG}")"
+                        echo "GRUB_DIR = ${GRUB_DIR}"
+
+                        CUSTOM_CFG="custom.cfg"
+                        URL="##ACK_CLIENT_INSTALL_URL##/?build=##ACK_CLIENT_BUILD_URI##&install=##ACK_CLIENT_INSTALL_URI##&include=ack-template-recovery-grub&recovery"
+                        HTTP_CODE=$(curl --silent -k --write-out "%{http_code}" "${URL}" -o "/tmp/${CUSTOM_CFG}")
+
+                        if [ "${HTTP_CODE}" != "200" ]; then
+                            echo "ERROR: curl '${URL}' failed (HTTP_CODE=${HTTP_CODE})"
+                        else
+                            if (grep -q ^[[:blank:]]*menuentry "/tmp/${CUSTOM_CFG}"); then
+
+                                if [ -d /sys/firemware/efi ]; then
+
+                                    # uefi
+                                    cat "/tmp/${CUSTOM_CFG}" | sed \
+                                        -e 's!BIOS!UEFI!g' \
+                                        > "${GRUB_DIR}/custom.cfg"
+
+                                else
+
+                                    # bios
+                                    cat "/tmp/${CUSTOM_CFG}" | sed \
+                                        -e 's!UEFI!BIOS!g' \
+                                        -e 's!initrdefi!initrd!g' \
+                                        -e 's!linuxefi!linux!g' \
+                                        -e 's!,gpt!,msdos!g' \
+                                        > "${GRUB_DIR}/custom.cfg"
+
+                                fi
+
+                                cat "${GRUB_DIR}/custom.cfg" && echo
+
+                                echo "+ grub2-mkconfig -o ${GRUB_CFG}"
+                                echo
+                                grub2-mkconfig -o "${GRUB_CFG}"
+
+                                mkdir -p "${RECOVERY_DIR}/grub2"
+                                cp "${GRUB_CFG}" "${RECOVERY_DIR}/grub2"
+                                cp "${GRUB_DIR}/custom.cfg" "${RECOVERY_DIR}/grub2"
+                            else
+                                echo "ERROR: '/tmp/${CUSTOM_CFG}' has no menuentry"
+                            fi
+                        fi
+                    fi
+                fi
+            fi
+        fi
+    fi
+fi
+
+echo
+echo "+ apply misc mods"
+echo
+
+# allow root logins
+touch ${ROOT_DIR}/root/.Allow
+
+# update /etc/shadow & /etc/gshadow
+pwconv 2> /dev/null
+grpconv 2> /dev/null
+
+# empty TERM=screen* PROMPT_COMMAND
+touch /etc/sysconfig/bash-prompt-screen
+chmod 0755 /etc/sysconfig/bash-prompt-screen

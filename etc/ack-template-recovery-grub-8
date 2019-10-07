@@ -1,0 +1,30 @@
+set fallback='Rescue ##ACK_BUILD_DISTRIBUTION## ##ACK_BUILD_VERSION## from ##ACK_INSTALL_SERVER##'
+
+submenu 'Recover ##ACK_BUILD_DISTRIBUTION## ##ACK_BUILD_VERSION## from ##ACK_INSTALL_SERVER##' --hotkey=I {
+
+    menuentry 'Rescue ##ACK_BUILD_DISTRIBUTION## ##ACK_BUILD_VERSION## from ##ACK_INSTALL_SERVER##' --hotkey=R --class fedora --class gnu-linux --class gnu --class os --class ##ACK_LABEL## {
+        set iso="##ACK_BUILD_ISO##"
+        set root='hd0,gpt3'
+        loopback loop ($root)/$iso
+        linuxefi (loop)/images/pxeboot/vmlinuz inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.stage2='##ACK_CLIENT_INSTALL_URL####ACK_CLIENT_INSTALL_URI##' rescue
+        initrdefi (loop)/images/pxeboot/initrd.img
+    }
+
+    menuentry 'Install ##ACK_BUILD_DISTRIBUTION## ##ACK_BUILD_VERSION## from ##ACK_INSTALL_SERVER## [DHCP]' --hotkey=D --class fedora --class gnu-linux --class gnu --class os --class ##ACK_LABEL## {
+        set iso="##ACK_BUILD_ISO##"
+        set root='hd0,gpt3'
+        loopback loop ($root)/$iso
+        linuxefi (loop)/images/pxeboot/vmlinuz inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks='##ACK_CLIENT_INSTALL_URL##/?build=##ACK_CLIENT_BUILD_URI##&install=##ACK_CLIENT_INSTALL_URI##&recovery'
+        initrdefi (loop)/images/pxeboot/initrd.img
+    }
+
+    menuentry 'Install ##ACK_BUILD_DISTRIBUTION## ##ACK_BUILD_VERSION## from ##ACK_INSTALL_SERVER## [STATIC IP]' --hotkey=S --class fedora --class gnu-linux --class gnu --class os --class ##ACK_LABEL## {
+        # ip=ip::gateway:netmask:hostname:interface:none
+        set iso="##ACK_BUILD_ISO##"
+        set root='hd0,gpt3'
+        loopback loop ($root)/$iso
+        linuxefi (loop)/images/pxeboot/vmlinuz inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks='##ACK_CLIENT_INSTALL_URL##/?build=##ACK_CLIENT_BUILD_URI##&install=##ACK_CLIENT_INSTALL_URI##&recovery' dns=1.1.1.1 ip=1.2.3.4::1.2.3.1:255.255.255.0::eth0:none
+        initrdefi (loop)/images/pxeboot/initrd.img
+    }
+
+}

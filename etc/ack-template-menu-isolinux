@@ -8,7 +8,7 @@ display boot.msg
 # For vesamenu, this means the graphical background is still displayed without
 # the menu itself for as long as the screen remains in graphics mode.
 menu clear
-#menu background splash.png
+menu background #00000000
 menu title ##ACK_BUILD_ISO## [BIOS]
 menu vshift 8
 menu rows 18
@@ -21,7 +21,7 @@ menu tabmsgrow 13
 menu color border * #00000000 #00000000 none
 
 # Selected item
-menu color sel 0 #ffffffff #00000000 none
+menu color sel 0 #00000000 #ffffffff none
 
 # Title bar
 menu color title 0 #ff7ba3d0 #00000000 none
@@ -56,32 +56,29 @@ menu color cmdline 0 #ffffffff #00000000 none
 
 #menu tabmsg Press Tab for full configuration options on menu items.
 
-#menu separator # insert an empty line
-#menu separator # insert an empty line
-
 label rescue-server
   menu indent count 5
-  menu label ^Rescue from ##ACK_INSTALL_SERVER## [BIOS]
+  menu label ^Rescue ##ACK_BUILD_DISTRIBUTION## ##ACK_BUILD_VERSION## from ##ACK_INSTALL_SERVER##
   kernel vmlinuz
-  append initrd=initrd.img biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.stage2=https://##ACK_INSTALL_SERVER####ACK_INSTALL_URI## rescue
+  append initrd=initrd.img inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.stage2=##ACK_CLIENT_INSTALL_URL####ACK_CLIENT_INSTALL_URI## rescue
 
 menu separator
 
-menu begin ^.
-  menu title .
+menu begin ^Install
+  menu title Install ##ACK_BUILD_DISTRIBUTION## ##ACK_BUILD_VERSION## from ##ACK_INSTALL_SERVER##
 
 label dhcp
   menu default
-  menu label ^Install from ##ACK_INSTALL_SERVER## [DHCP]
+  menu label Install ##ACK_BUILD_DISTRIBUTION## ##ACK_BUILD_VERSION## from ##ACK_INSTALL_SERVER## [^DHCP]
   kernel vmlinuz
-  append initrd=initrd.img biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks=https://##ACK_CLIENT_INSTALL_URL##/?build=##ACK_BUILD_URI##&install=##ACK_INSTALL_URI##
+  append initrd=initrd.img inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks=##ACK_CLIENT_INSTALL_URL##/?build=##ACK_CLIENT_BUILD_URI##&install=##ACK_CLIENT_INSTALL_URI####ACK_PARAMETER##
 
 menu separator
 
 label static-ip
-  menu label ^Install from ##ACK_INSTALL_SERVER## [STATIC IP]
+  menu label Install ##ACK_BUILD_DISTRIBUTION## ##ACK_BUILD_VERSION## from ##ACK_INSTALL_SERVER## [^STATIC IP]
   # ip=ip::gateway:netmask:hostname:interface:none
   kernel vmlinuz
-  append initrd=initrd.img biosdevname=0 net.ifnames=0 inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks=https://##ACK_CLIENT_INSTALL_URL##/?build=##ACK_BUILD_URI##&install=##ACK_INSTALL_URI## dns=1.1.1.1 ip=1.2.3.4::1.2.3.1:255.255.255.0::eth0:none
+  append initrd=initrd.img inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks=##ACK_CLIENT_INSTALL_URL##/?build=##ACK_CLIENT_BUILD_URI##&install=##ACK_CLIENT_INSTALL_URI####ACK_PARAMETER## dns=1.1.1.1 ip=1.2.3.4::1.2.3.1:255.255.255.0::##ACK_CLIENT_MAC_INTERFACE_0##:none
 
 menu end
