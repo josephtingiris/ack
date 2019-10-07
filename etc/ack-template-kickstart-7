@@ -42,15 +42,18 @@ curl
 git
 kexec-tools
 net-tools
-nmap
 ntp
 ntpdate
+nmap
 rsync
 svn
 telnet
 vim-enhanced
 wget
-whois
 %end
 
-##ACK_PPI##
+##ACK_PRE##
+
+##ACK_PREINSTALL##
+
+##ACK_POST##

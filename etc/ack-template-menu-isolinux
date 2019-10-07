@@ -60,7 +60,7 @@ label rescue-server
   menu indent count 5
   menu label ^Rescue ##ACK_BUILD_DISTRIBUTION## ##ACK_BUILD_VERSION## from ##ACK_INSTALL_SERVER##
   kernel vmlinuz
-  append initrd=initrd.img inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.stage2=##ACK_CLIENT_INSTALL_URL####ACK_CLIENT_INSTALL_URI## rescue
+  append initrd=initrd.img inst.ks.sendmac inst.ks.sendsn inst.noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.stage2=##ACK_CLIENT_INSTALL_URL####ACK_CLIENT_INSTALL_URI## rescue
 
 menu separator
 
@@ -69,16 +69,32 @@ menu begin ^Install
 
 label dhcp
   menu default
-  menu label Install ##ACK_BUILD_DISTRIBUTION## ##ACK_BUILD_VERSION## from ##ACK_INSTALL_SERVER## [^DHCP]
+  menu label Install ##ACK_BUILD_DISTRIBUTION## [^DHCP]
   kernel vmlinuz
-  append initrd=initrd.img inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks=##ACK_CLIENT_INSTALL_URL##/?build=##ACK_CLIENT_BUILD_URI##&install=##ACK_CLIENT_INSTALL_URI####ACK_PARAMETER##
+  append initrd=initrd.img inst.ks.sendmac inst.ks.sendsn inst.noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks=##ACK_CLIENT_INSTALL_URL##/?build=##ACK_CLIENT_BUILD_URI##&install=##ACK_CLIENT_INSTALL_URI##
 
 menu separator
 
 label static-ip
-  menu label Install ##ACK_BUILD_DISTRIBUTION## ##ACK_BUILD_VERSION## from ##ACK_INSTALL_SERVER## [^STATIC IP]
+  menu label Install ##ACK_BUILD_DISTRIBUTION## ##ACK_BUILD_VERSION## [^STATIC IP]
   # ip=ip::gateway:netmask:hostname:interface:none
   kernel vmlinuz
-  append initrd=initrd.img inst.ks.sendmac inst.ks.sendsn noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks=##ACK_CLIENT_INSTALL_URL##/?build=##ACK_CLIENT_BUILD_URI##&install=##ACK_CLIENT_INSTALL_URI####ACK_PARAMETER## dns=1.1.1.1 ip=1.2.3.4::1.2.3.1:255.255.255.0::##ACK_CLIENT_MAC_INTERFACE_0##:none
+  append initrd=initrd.img inst.ks.sendmac inst.ks.sendsn inst.noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks=##ACK_CLIENT_INSTALL_URL##/?build=##ACK_CLIENT_BUILD_URI##&install=##ACK_CLIENT_INSTALL_URI## dns=1.1.1.1 ip=1.2.3.4::1.2.3.1:255.255.255.0::##ACK_CLIENT_MAC_INTERFACE_0##:none
+
+menu separator
+
+label recovery-dhcp
+  menu default
+  menu label Install ##ACK_BUILD_DISTRIBUTION## with recovery partition [D^HCP]
+  kernel vmlinuz
+  append initrd=initrd.img inst.ks.sendmac inst.ks.sendsn inst.noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks=##ACK_CLIENT_INSTALL_URL##/?build=##ACK_CLIENT_BUILD_URI##&install=##ACK_CLIENT_INSTALL_URI##&recovery
+
+menu separator
+
+label recovery-static-ip
+  menu label Install ##ACK_BUILD_DISTRIBUTION## ##ACK_BUILD_VERSION## with recovery partition [S^TATIC IP]
+  # ip=ip::gateway:netmask:hostname:interface:none
+  kernel vmlinuz
+  append initrd=initrd.img inst.ks.sendmac inst.ks.sendsn inst.noverifyssl inst.sshd console=##ACK_CLIENT_CONSOLE## inst.syslog=##ACK_INSTALL_SERVER## inst.ks=##ACK_CLIENT_INSTALL_URL##/?build=##ACK_CLIENT_BUILD_URI##&install=##ACK_CLIENT_INSTALL_URI##&recovery dns=1.1.1.1 ip=1.2.3.4::1.2.3.1:255.255.255.0::##ACK_CLIENT_MAC_INTERFACE_0##:none
 
 menu end

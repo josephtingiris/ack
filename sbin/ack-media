@@ -1648,5 +1648,5 @@ fi
 
 if [ ${Build_Flag} -eq 0 ]; then
     ackMediaBuild "${Build}"
-    ackMediaBuild "${Build}" recovery
+    #ackMediaBuild "${Build}" recovery
 fi
