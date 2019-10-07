@@ -306,9 +306,17 @@ class Client extends \josephtingiris\Debug
 
         $include_contents=$Ack->ackKeyReplace(file_get_contents($include_file));
 
+        if (empty($include_contents)) {
+            return;
+        }
+
         if ($Ack->is_debug()) {
             $include_basename=basename($include_file);
-            $include_contents.="\n\n# rm /tmp/$include_basename; curl --write-out %{http_code} --silent -k ".$Ack->Client_Install_URL."/?include=$include_basename&debug=10 -o /tmp/$include_basename; bash /tmp/$include_basename\n\n";
+            $include_contents.="\n\n# rm -f /tmp/$include_basename; curl --write-out %{http_code} --silent -k \"".$Ack->Client_Install_URL."/?include=$include_basename&build=".$Ack->Client_Build_URI."&install=".$Ack->Client_Install_URI;
+            if ($Ack->Client_Recovery == 0) {
+                $include_contents.="&recovery";
+            }
+            $include_contents.="&debug=10\" -o /tmp/$include_basename; bash /tmp/$include_basename\n";
         }
 
         return $include_contents;
@@ -346,31 +354,111 @@ class Client extends \josephtingiris\Debug
 
         $client_kickstart_template="\n\n# [".  date("Y-m-d H:i:s") ."]";
         $client_kickstart_template.="- template $template_file - begin\n\n\n";
+
         if (preg_match("/##ACK_PPI##/i",$client_kickstart_template_contents)) {
-            $client_kickstart_include_ppi=$this->clientKickstartInclude($Ack->Client_Kickstart_Include_PPI);
-            if (!empty($client_kickstart_include_ppi)) {
-                $client_kickstart_include_pre="%pre --log=/var/tmp/ack.pre.log\n";
-                $client_kickstart_include_pre.=$client_kickstart_include_ppi;
-                $client_kickstart_include_pre.="%end\n";
-                $client_kickstart_include_pre.="\n";
-                $client_kickstart_include_post="%post --log=/mnt/sysimage/var/tmp/ack/ack.post.log --nochroot\n";
-                $client_kickstart_include_post.=$client_kickstart_include_ppi;
-                $client_kickstart_include_post.="%end\n";
-                $client_kickstart_include_post.="\n";
 
-                $client_kickstart_include_ppi= "%include /tmp/smartpart\n\n";
-                $client_kickstart_include_ppi.=$client_kickstart_include_pre;
-                $client_kickstart_include_ppi.=$client_kickstart_include_post;
-                $client_kickstart_include_ppi.="\n";
-                $client_kickstart_include_basename=basename($Ack->Client_Kickstart_Include_PPI);
+            $client_kickstart_include=null;
+            $client_kickstart_include_ppi=null;
 
+            if (is_readable($Ack->Client_Kickstart_Include_PPI)) {
+                $client_kickstart_include=$this->clientKickstartInclude($Ack->Client_Kickstart_Include_PPI);
+
+                if (!empty($client_kickstart_include)) {
+
+                    # a hack; only include smartpart if the pre include has it
+                    if (strstr($client_kickstart_include,"/tmp/smartpart")) {
+                        $client_kickstart_include_pre="%include /tmp/smartpart\n\n";
+                    } else {
+                        $client_kickstart_include_pre=null;
+                    }
+
+                    $client_kickstart_include_pre.="%pre --log=/var/tmp/ack.pre.log\n";
+                    $client_kickstart_include_pre.=$client_kickstart_include;
+                    $client_kickstart_include_pre.="%end\n";
+                    $client_kickstart_include_pre.="\n";
+
+                    $client_kickstart_include_post="%post --log=/mnt/sysimage/var/tmp/ack/ack.post.log --nochroot\n";
+                    $client_kickstart_include_post.=$client_kickstart_include;
+                    $client_kickstart_include_post.="%end\n";
+                    $client_kickstart_include_post.="\n";
+
+                    $client_kickstart_include_ppi.=$client_kickstart_include_pre;
+                    $client_kickstart_include_ppi.=$client_kickstart_include_post;
+                    $client_kickstart_include_ppi.="\n";
+
+                }
             }
+
             $client_kickstart_template_contents=str_replace("##ACK_PPI##",$client_kickstart_include_ppi,$client_kickstart_template_contents);
         } else {
+
+            // %pre
+            if (preg_match("/##ACK_PRE##/i",$client_kickstart_template_contents)) {
+                $client_kickstart_include=null;
+                $client_kickstart_include_pre=null;
+
+                if (is_readable($Ack->Client_Kickstart_Include_Pre)) {
+                    $client_kickstart_include=$this->clientKickstartInclude($Ack->Client_Kickstart_Include_Pre);
+
+                    if (!empty($client_kickstart_include)) {
+
+                        # a hack; only include smartpart if the pre include has it
+                        if (strstr($client_kickstart_include,"/tmp/smartpart")) {
+                            $client_kickstart_include_pre.="%include /tmp/smartpart\n\n";
+                        }
+
+                        $client_kickstart_include_pre.="%pre --log=/var/tmp/ack.pre.log\n";
+                        $client_kickstart_include_pre.=$client_kickstart_include;
+                        $client_kickstart_include_pre.="%end\n";
+                        $client_kickstart_include_pre.="\n";
+
+                    }
+                }
+
+                $client_kickstart_template_contents=str_replace("##ACK_PRE##",$client_kickstart_include_pre,$client_kickstart_template_contents);
+            }
+
+            // %pre-install
             if (preg_match("/##ACK_PREINSTALL##/i",$client_kickstart_template_contents)) {
+                $client_kickstart_include=null;
+                $client_kickstart_include_preinstall=null;
+
+                if (is_readable($Ack->Client_Kickstart_Include_Preinstall)) {
+                    $client_kickstart_include=$this->clientKickstartInclude($Ack->Client_Kickstart_Include_Preinstall);
+
+                    if (!empty($client_kickstart_include)) {
+
+                        $client_kickstart_include_preinstall.="%pre-install --log=/var/tmp/ack.pre-install.log\n";
+                        $client_kickstart_include_preinstall.=$client_kickstart_include;
+                        $client_kickstart_include_preinstall.="%end\n";
+                        $client_kickstart_include_preinstall.="\n";
+
+                    }
+                }
+
+                $client_kickstart_template_contents=str_replace("##ACK_PREINSTALL##",$client_kickstart_include_preinstall,$client_kickstart_template_contents);
             }
-            if (preg_match("/##ACK_POSTINSTALL##/i",$client_kickstart_template_contents)) {
+
+            // %post
+            if (preg_match("/##ACK_POST##/i",$client_kickstart_template_contents)) {
+                $client_kickstart_include=null;
+                $client_kickstart_include_post=null;
+
+                if (is_readable($Ack->Client_Kickstart_Include_Post)) {
+                    $client_kickstart_include=$this->clientKickstartInclude($Ack->Client_Kickstart_Include_Post);
+
+                    if (!empty($client_kickstart_include)) {
+                        $client_kickstart_include_post.="%post --log=/var/tmp/ack.post.log\n";
+                        $client_kickstart_include_post.=$client_kickstart_include;
+                        $client_kickstart_include_post.="%end\n";
+                        $client_kickstart_include_post.="\n";
+                    }
+
+                }
+
+                $client_kickstart_template_contents=str_replace("##ACK_POST##",$client_kickstart_include_post,$client_kickstart_template_contents);
             }
+
         }
 
         $client_kickstart_template.=$client_kickstart_template_contents;
@@ -390,21 +478,21 @@ class Client extends \josephtingiris\Debug
          * begin function logic
          */
 
-        $provisinging_macs = array();
+        $provisioning_macs = array();
 
         # HTTP_X_RHN_PROVISIONING_MAC_0=eth0 00:0c:29:2f:64:ad
         #$_SERVER["HTTP_X_RHN_PROVISIONING_MAC_0"]="br1 00:0c:29:2f:64:ad";
         for ($interface=0; $interface<=10; $interface++) {
             if (isset($_SERVER["HTTP_X_RHN_PROVISIONING_MAC_".$interface])) {
                 if (strpos($_SERVER["HTTP_X_RHN_PROVISIONING_MAC_".$interface]," ") !== false) {
-                    $provisinging_macs[$interface]=explode(" ",$_SERVER["HTTP_X_RHN_PROVISIONING_MAC_".$interface]);
+                    $provisioning_macs[$interface]=explode(" ",$_SERVER["HTTP_X_RHN_PROVISIONING_MAC_".$interface]);
                 }
             } else {
                 break;
             }
         }
 
-        return $provisinging_macs;
+        return $provisioning_macs;
 
         /*
          * end function logic

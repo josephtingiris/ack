@@ -48,6 +48,10 @@ class Ack extends \josephtingiris\Debug
     public $Authorized_IPs = array();
     public $Basename = null;
     public $Build_Dir = null;
+    public $Build_Distribution = null;
+    public $Build_ISO = null;
+    public $Build_Major = null;
+    public $Build_Version = null;
     public $Component = null;
     public $Config_File = null;
     public $Client_AAA = null;
@@ -65,18 +69,23 @@ class Ack extends \josephtingiris\Debug
     public $Client_IP = null;
     public $Client_IP_Address_0 = null;
     public $Client_IP_Interface_0 = null;
+    // would be helpful to know client IP mask/prefix & default gateway
     public $Client_Log_Level = null;
     public $Client_MAC = null;
     public $Client_MAC_Address_0 = null;
     public $Client_MAC_Interface_0 = null;
+    public $Client_Media_URL = null;
     public $Client_Password = null;
     public $Client_Password_Crypt = null;
+    public $Client_Release_URL = null;
     public $Client_Serial_Number = null;
     public $Client_System_Release = null;
-    public $Client_Kickstart_Include_Postinstall = null;
+    public $Client_Kickstart_Include_Post = null;
     public $Client_Kickstart_Include_PPI = null;
+    public $Client_Kickstart_Include_Pre = null;
     public $Client_Kickstart_Include_Preinstall = null;
     public $Client_Kickstart_Template = null;
+    public $Client_Recovery = null;
     public $Client_Type = null;
     public $CNC_Server = null;
     public $Dir = null;
@@ -667,6 +676,8 @@ class Ack extends \josephtingiris\Debug
         if (empty($this->Client_Build_URI)) {
 
             if (!empty($this->_REQUEST_lower["build"])) {
+                $this->Client_Build_URI=$this->_REQUEST_lower['build'];
+
                 $iso_md5sum=$this->Build_Dir . "/" . $this->_REQUEST_lower["build"] . "/iso.md5sum";
                 if (!is_readable($iso_md5sum)) {
                     $iso_md5sum=$this->Dir . "/" . $this->_REQUEST_lower["build"] . "/iso.md5sum";
@@ -676,9 +687,10 @@ class Ack extends \josephtingiris\Debug
                 $this->debug("/iso.md5sum **************************** ".$iso_md5sum,2);
 
                 if (is_readable($iso_md5sum)) {
-                    $iso_md5sum=str_replace($this->Dir,"",$iso_md5sum);
-                    $iso_md5sum=str_replace("/iso.md5sum","",$iso_md5sum);
-                    $this->Client_Build_URI=$iso_md5sum;
+                    $client_build_uri=dirname($iso_md5sum);
+                    $client_build_uri=basename($client_build_uri);
+                } else {
+                    $this->debug("$iso_md5sum file not found readable",2);
                 }
             }
 
@@ -729,8 +741,63 @@ class Ack extends \josephtingiris\Debug
                 }
                 $this->Client_Install_URL.=$this->Install_Server."/client";
             }
-            if (!empty($this->Client_Install_URI)) {
-                $this->Client_Install_URL.=$this->Client_Install_URI;
+        }
+
+        if (empty($this->Client_Media_URL)) {
+            $this->Client_Media_URL.=$this->Client_Install_URL.$this->Client_Install_URI;
+        }
+
+        if (empty($this->Client_Release_URL)) {
+            $this->Client_Release_URL.=$this->Client_Install_URL."/media/release";
+        }
+
+        if (empty($this->Build_Distribution)) {
+            if (!empty($this->Client_Build_URI)) {
+                $this->Build_Distribution=basename($this->Client_Build_URI);
+                if (strpos($this->Build_Distribution,'-') > 0) {
+                    $this->Build_Distribution=substr($this->Build_Distribution,0,strpos($this->Build_Distribution,'-'));
+                }
+            }
+        }
+
+        if (empty($this->Build_ISO)) {
+            if (!empty($this->Client_Build_URI)) {
+                $this->Build_ISO=basename($this->Client_Build_URI) . ".iso";
+            }
+        }
+
+        if (empty($this->Build_Version)) {
+            if (!empty($this->Client_Build_URI)) {
+                $this->Build_Version=basename($this->Client_Build_URI);
+                if (strpos($this->Build_Version,'-') > 0) {
+                    $build_version=explode("-",$this->Build_Version);
+                    if (!empty($build_version[1])) {
+                        if (is_string($build_version[1])) {
+                            $this->Build_Version=$build_version[1];
+                        }
+                    }
+                    unset($build_version);
+                }
+            }
+        }
+
+        if (!empty($this->Build_Version)) {
+            if (empty($this->Build_Major)) {
+                $this->Build_Major=$this->Build_Version;
+            }
+        }
+
+        if (strpos($this->Build_Major,"-") !== false) {
+            $build_major_exploded=explode("-",$this->Build_Major);
+            if (isset($build_major_exploded[0])) {
+                $this->Build_Major=$build_major_exploded[0];
+            }
+        }
+
+        if (strpos($this->Build_Major,".") !== false) {
+            $build_major_exploded=explode(".",$this->Build_Major);
+            if (isset($build_major_exploded[0])) {
+                $this->Build_Major=$build_major_exploded[0];
             }
         }
 
@@ -817,11 +884,19 @@ class Ack extends \josephtingiris\Debug
             if (empty($GLOBALS['Debug'])) {
                 $GLOBALS['Debug'] = (int)$this->_REQUEST_lower["debug"];
             }
+        } else {
+            if (empty($this->Client_Debug)) {
+                if (!empty($GLOBALS['Debug'])) {
+                    $this->Client_Debug = $GLOBALS['Debug'];
+                } else {
+                    $this->Client_Debug = 0;
+                }
+            }
         }
 
         if (empty($this->Client_MAC_Address_0)) {
             if (!empty($rhn_provisioning_macs[0][1])) {
-                $this->Client_MAC = $this->Ack_Network->networkMAC($rhn_provisioning_macs[0][1],$this->Client_IP);
+                $this->Client_MAC_Address_0 = $this->Ack_Network->networkMAC($rhn_provisioning_macs[0][1],$this->Client_IP);
             } else {
                 $this->Client_MAC_Address_0 = $this->Client_MAC;
             }
@@ -829,7 +904,7 @@ class Ack extends \josephtingiris\Debug
 
         if (empty($this->Client_MAC_Interface_0)) {
             if (!empty($rhn_provisioning_macs[0][0])) {
-                $this->Client_MAC_Address_0 = $this->Ack_Network->networkMAC($rhn_provisioning_macs[0][0],$this->Client_IP);
+                $this->Client_MAC_Interface_0 = $rhn_provisioning_macs[0][0];
             } else {
                 $this->Client_MAC_Interface_0 = $this->Client_IP_Interface_0;
             }
@@ -843,18 +918,21 @@ class Ack extends \josephtingiris\Debug
             $this->Client_Password_Crypt = crypt($this->Client_Password, '$6$ackM');
         }
 
-        if (empty($this->Client_Kickstart_Include_Postinstall)) {
-            $this->Client_Kickstart_Include_Postinstall = $this->ackETCFile("ack-template-postinstall");
+        if (empty($this->Client_Kickstart_Include_Post)) {
+            $this->Client_Kickstart_Include_Post = $this->ackETCFile("ack-template-post");
         }
 
         if (empty($this->Client_Kickstart_Include_PPI)) {
             $this->Client_Kickstart_Include_PPI = $this->ackETCFile("ack-template-ppi");
         }
 
+        if (empty($this->Client_Kickstart_Include_Pre)) {
+            $this->Client_Kickstart_Include_Pre = $this->ackETCFile("ack-template-pre");
+        }
+
         if (empty($this->Client_Kickstart_Include_Preinstall)) {
             $this->Client_Kickstart_Include_Preinstall = $this->ackETCFile("ack-template-preinstall");
         }
-
 
         if (empty($this->Client_Serial_Number)) {
             $this->Client_Serial_Number = $this->Ack_Client->clientAnacondaSystemSerialNumber();
@@ -866,6 +944,14 @@ class Ack extends \josephtingiris\Debug
 
         if (empty($this->Client_Kickstart_Template)) {
             $this->Client_Kickstart_Template = $this->ackETCFile("ack-template-kickstart");
+        }
+
+        if (empty($this->Client_Recovery)) {
+            if (isset($this->_REQUEST_lower["recovery"])) {
+                $this->Client_Recovery = 0; # true
+            } else {
+                $this->Client_Recovery = 1; # false
+            }
         }
 
         if (empty($this->Client_Type)) {
@@ -913,14 +999,17 @@ class Ack extends \josephtingiris\Debug
 
         foreach($this->ETC_Dirs as $etc_dir) {
 
-            $etc_files=array(
-                $etc_dir . "/" . $etc_file . "-" . $this->Client_MAC,
-                $etc_dir . "/" . $etc_file
-            );
+            $etc_files=array();
+
+            if (!empty($this->Client_MAC)) $etc_files[]=$etc_dir . "/" . $etc_file . "-" . $this->Client_MAC;
+            if (!empty($this->Client_Build_URI)) $etc_files[]=$etc_dir . "/" . $etc_file . "-" . strtolower(str_replace(" ","_",basename($this->Client_Build_URI)));
+            if (!empty($this->Client_System_Release)) $etc_files[]=$etc_dir . "/" . $etc_file . "-" . strtolower(str_replace(" ","_",$this->Client_System_Release));
+            if (!empty($this->Build_Major)) $etc_files[]=$etc_dir . "/" . $etc_file . "-" . strtolower(str_replace(" ","_",basename($this->Build_Major)));
+            $etc_files[]=$etc_dir . "/" . $etc_file;
 
             foreach ($etc_files as $etc_search) {
 
-                $this->debug(__FUNCTION__ . " searching for $etc_search",18);
+                $this->debug(__FUNCTION__ . " searching for $etc_search",8);
                 if (is_readable($etc_search)) {
                     $this->debug(__FUNCTION__ . " found $etc_search",8);
                     return "$etc_search";

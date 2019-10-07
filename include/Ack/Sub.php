@@ -217,7 +217,7 @@ class Sub extends \josephtingiris\Debug
         return $return_string;
     }
 
-    public function subMkdir($directory=null, $mode=0775, $recursive=true)
+    public function subMkdir($directory=null, $mode=0775, $recursive=true, $abort=false, $alert=false)
     {
         $tmp_dir="/var/tmp";
 
@@ -230,9 +230,11 @@ class Sub extends \josephtingiris\Debug
         } else {
             if (!is_dir($directory) && !is_link($directory)) {
                 # it doesn't exist and it's not a directory
-                if (mkdir($directory, $mode, $recursive)) {
+                if (@mkdir($directory, $mode, $recursive)) {
                     return $directory;
                 } else {
+                    $failure_reason="ERROR mkdir($directory, $mode, $recursive) failed";
+                    $this->Ack_Alert->alertFail($failure_reason, $abort, $alert);
                     $directory=$tmp_dir;
                 }
 
