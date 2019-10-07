@@ -164,8 +164,6 @@ function ackURI() {
 
     debugValue uri_ext ${debug_level}
 
-    local -i uri_continue=$2
-
     local uri
     local uris=()
     if [ -d "$uri_arg" ]; then
@@ -214,7 +212,7 @@ function ackURI() {
                 uri_cut_dash=${uri_cut%%-*}
                 uri_cut_found=1
 
-                debugValue uri_cut_dash $((${debug_level}+16)) ${uri_cut}
+                debugValue uri_cut_dash $((${debug_level}+15)) ${uri_cut}
 
                 if [ ${#uri_distribution} -eq 0 ]; then
                     for media_distribution in ${Media_Distributions[@]}; do
@@ -225,6 +223,7 @@ function ackURI() {
                         fi
                     done
                     if [ ${uri_cut_found} -eq 0 ]; then 
+                        debugValue uri_distribution ${debug_level+3}
                         uri_cut=${uri_cut#*-}
                         continue
                     fi
@@ -239,6 +238,7 @@ function ackURI() {
                         fi
                     done
                     if [ ${uri_cut_found} -eq 0 ]; then 
+                        debugValue uri_architecture ${debug_level+3}
                         uri_cut=${uri_cut#*-}
                         continue
                     fi
@@ -253,6 +253,7 @@ function ackURI() {
                         fi
                     done
                     if [ ${uri_cut_found} -eq 0 ]; then 
+                        debugValue uri_platform ${debug_level+3}
                         uri_cut=${uri_cut#*-}
                         continue
                     fi
@@ -267,12 +268,13 @@ function ackURI() {
                         fi
                     done
                     if [ ${uri_cut_found} -eq 0 ]; then 
+                        debugValue uri_candidate ${debug_level+3}
                         uri_cut=${uri_cut#*-}
                         continue
                     fi
                 fi
 
-                if [[ ${uri_cut_dash} =~ [0-9]+(\.[0-9]+)* ]]; then
+                if [[ ${uri_cut_dash} =~ ^[0-9]+(\.[0-9]+)* ]]; then
                     if [ ${#uri_major_version} -eq 0 ]; then
                         uri_major_version=${uri_cut_dash}
                         uri_cut=${uri_cut#*-}
@@ -283,6 +285,8 @@ function ackURI() {
                     else
                         uri_minor_version+=-${uri_cut_dash}
                     fi
+                    debugValue uri_major_version ${debug_level+3}
+                    debugValue uri_minor_version ${debug_level+3}
                     uri_cut=${uri_cut#*-}
                     continue
                 fi
